@@ -1,10 +1,10 @@
-# Studio Downloader 🎵
+# Video Downloader 🎵
 
 A sleek, lightning-fast, and open-source media downloader supporting YouTube and 1000+ platforms.
 
 ![App Icon](icon.ico)
 
-Welcome to **Studio Downloader**! This tool is designed to be the ultimate, fastest, and most elegant media downloader for your PC. It supports not only YouTube but over 1000+ different platforms (Twitter, Instagram, TikTok, Reddit, Soundcloud, Twitch, Vimeo, Bilibili, and many more).
+Welcome to **Video Downloader**! This tool is designed to be the ultimate, fastest, and most elegant media downloader for your PC. It supports not only YouTube but over 1000+ different platforms (Twitter, Instagram, TikTok, Reddit, Soundcloud, Twitch, Vimeo, Bilibili, and many more).
 
 ---
 
