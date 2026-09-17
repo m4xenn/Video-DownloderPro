@@ -3,7 +3,7 @@ __pycache__/
 build/
 dist/
 Installer/
-*.spec
+.env
 *.pyc
 
 # Sanal Ortam (Varsa)
