@@ -71,7 +71,7 @@ Found a problem? [Open an issue](https://github.com/m4xenn/Video-DownloderPro/is
 
 ## 🧑‍💻 Source Code
 
-The `v1.2.14` tag contains the matching release source. See [DEVELOPMENT.md](DEVELOPMENT.md) for Windows setup and tests, [RELEASE_PUBLISHING.md](RELEASE_PUBLISHING.md) for publishing, and [RELEASE_ACCEPTANCE_1.2.14.md](RELEASE_ACCEPTANCE_1.2.14.md) for validation results. For normal installation, use [Releases](https://github.com/m4xenn/Video-DownloderPro/releases/latest).
+The `v1.2.14` tag contains the matching release source. Browse the [documentation index](docs/README.md), [development guide](docs/development/DEVELOPMENT.md), [publishing guide](docs/development/RELEASE_PUBLISHING.md), or [1.2.14 acceptance report](docs/releases/RELEASE_ACCEPTANCE_1.2.14.md). For normal installation, use [Releases](https://github.com/m4xenn/Video-DownloderPro/releases/latest).
 
 ## 📄 License
 

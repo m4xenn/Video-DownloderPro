@@ -43,7 +43,7 @@ SHA-256 checks integrity; the project does not currently add a publisher signatu
 
 ## 1.2.14 acceptance
 
-See [RELEASE_ACCEPTANCE_1.2.14.md](RELEASE_ACCEPTANCE_1.2.14.md). Production
+See [RELEASE_ACCEPTANCE_1.2.14.md](../releases/RELEASE_ACCEPTANCE_1.2.14.md). Production
 1.2.8 to 1.2.14 upgrade, personal-data preservation, installed payload hashes,
 shortcuts and frozen-executable download/conversion checks passed. No clean
 Windows VM was used. Local 1.2.13 artifacts are rejected and must not be published.

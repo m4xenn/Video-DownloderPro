@@ -1,5 +1,8 @@
 # Development
 
+Run the commands in this guide from the repository root. See the
+[documentation index](../README.md) for architecture, testing and release reports.
+
 ## Windows setup
 
 Use Python 3.12 with Tkinter, Microsoft Edge WebView2 Runtime, and a virtual environment. Node.js is needed for the JavaScript regression checks. The requirements record direct dependency versions from the 1.2.5 build environment; transitive dependencies are not fully locked.
@@ -54,6 +57,10 @@ The existing v1.2.5 release tag predates this source synchronization; its automa
 - `src/services/`: updates, metadata, previews and persistence.
 - `src/static/` and `src/templates/`: interface and local vendor assets.
 - `build_assets/`, `YoutubePro.spec`, `scripts/build_release.py`: packaging.
+- `docs/development/`: setup, contribution and publishing instructions.
+- `docs/architecture/`: source discovery, players and download behavior.
+- `docs/testing/`: test guides and diagnostic investigations.
+- `docs/releases/`: historical release and acceptance reports.
 
 Local state, downloaded media, credentials and generated installers are intentionally excluded from the repository.
 
@@ -61,37 +68,37 @@ Local state, downloaded media, credentials and generated installers are intentio
 
 Run `python -m unittest discover -s tests -p test_site_resolver.py` and `node tests/test_site_inspection_ui.cjs` for isolated adapter/UI checks. `test_site_local_download.py` uses synthetic local HLS and requires FFmpeg/FFprobe. `python tests/preview_site_native.py` starts an isolated Windows WebView2 manual test on localhost:5056; open that URL to test the real hidden browser flow. It never loads your existing download history or settings. Stop the fixture with Ctrl+C.
 
-See [SITE_SUPPORT_1.2.9.md](SITE_SUPPORT_1.2.9.md) for scope and validation limits.
+See [SITE_SUPPORT_1.2.9.md](../architecture/SITE_SUPPORT_1.2.9.md) for scope and validation limits.
 
 ## Generic embedded discovery (1.2.11 preview)
 
 Run `python -m unittest discover -s tests -p test_generic_discovery.py` for offline discovery/policy checks. Run `python tests/verify_generic_native.py` on Windows for an automated, isolated WebView2 test using only synthetic local HLS, DASH, and MP4 media. It exercises dynamic cross-origin frames, native extraction fallback, HTML5/JW Player/Video.js, cookie scoping, quality selection, real downloads, and helper cleanup. This fixture requires network loopback access, WebView2, and installed FFmpeg/FFprobe; the production public-address guard is relaxed only inside the fixture for its own temporary local server.
 
-See [GENERIC_SOURCE_DISCOVERY_1.2.11.md](GENERIC_SOURCE_DISCOVERY_1.2.11.md) for discovery budgets, supported observation paths, and limitations. Publishing a new release remains a separate step from building a test installer.
+See [GENERIC_SOURCE_DISCOVERY_1.2.11.md](../architecture/GENERIC_SOURCE_DISCOVERY_1.2.11.md) for discovery budgets, supported observation paths, and limitations. Publishing a new release remains a separate step from building a test installer.
 
 ## In-place WebView2 frame inspection (1.2.12 preview)
 
-Run `python -m unittest discover -s tests -p test_webview_frames.py` for frame ancestry, source context, DRM, and visible-control lifecycle checks. The native synthetic fixture now requires the nested player to retain its actual parent window. `probe_site_native.py URL --metadata --continue-in-browser` is an explicit diagnostic for a public page, using an isolated browser. Optional `--sample` reads at most 16 KiB from the first HLS segment without saving media. It never exports request header values or media URLs. See [NESTED_PLAYERS_1.2.12.md](NESTED_PLAYERS_1.2.12.md) for the actual Aniwatch reproduction and validation limits.
+Run `python -m unittest discover -s tests -p test_webview_frames.py` for frame ancestry, source context, DRM, and visible-control lifecycle checks. The native synthetic fixture now requires the nested player to retain its actual parent window. `probe_site_native.py URL --metadata --continue-in-browser` is an explicit diagnostic for a public page, using an isolated browser. Optional `--sample` reads at most 16 KiB from the first HLS segment without saving media. It never exports request header values or media URLs. See [NESTED_PLAYERS_1.2.12.md](../architecture/NESTED_PLAYERS_1.2.12.md) for the actual Aniwatch reproduction and validation limits.
 
 ## Automatic muted player activation (unpublished)
 
-Run `python -m unittest discover -s tests -p test_player_activation.py`, `node tests/test_player_activation_ui.cjs`, and `node tests/test_site_inspection_ui.cjs`. The native fixture `python tests/verify_generic_native.py` now withholds its nested JW Player source until the application calls muted playback. See [AUTOMATIC_PLAYER_ACTIVATION.md](AUTOMATIC_PLAYER_ACTIVATION.md) for activation budgets, verification handling, automatic rechecks after Continue, and validation limits. No CAPTCHA solver or local LLM is required or included.
+Run `python -m unittest discover -s tests -p test_player_activation.py`, `node tests/test_player_activation_ui.cjs`, and `node tests/test_site_inspection_ui.cjs`. The native fixture `python tests/verify_generic_native.py` now withholds its nested JW Player source until the application calls muted playback. See [AUTOMATIC_PLAYER_ACTIVATION.md](../architecture/AUTOMATIC_PLAYER_ACTIVATION.md) for activation budgets, verification handling, automatic rechecks after Continue, and validation limits. No CAPTCHA solver or local LLM is required or included.
 
 ## Persistent diagnostics and public-page matrix (unpublished)
 
-Run `python -m unittest discover -s tests -p test_diagnostics.py` and `node tests/test_diagnostics_ui.cjs` for diagnostic privacy, persistence, concurrency, storage failure and UI checks. Use `python scripts/site_matrix.py --all` to explicitly run the sequential public-page metadata matrix. It does not download full videos. See [DIAGNOSTICS_AND_SITE_TESTS.md](DIAGNOSTICS_AND_SITE_TESTS.md) for scope, the first real baseline, export fields and remaining coverage.
+Run `python -m unittest discover -s tests -p test_diagnostics.py` and `node tests/test_diagnostics_ui.cjs` for diagnostic privacy, persistence, concurrency, storage failure and UI checks. Use `python scripts/site_matrix.py --all` to explicitly run the sequential public-page metadata matrix. It does not download full videos. See [DIAGNOSTICS_AND_SITE_TESTS.md](../testing/DIAGNOSTICS_AND_SITE_TESTS.md) for scope, the first real baseline, export fields and remaining coverage.
 
 ## Lazy player gates and embedded validation (unpublished)
 
-Use `node tests/test_lazy_player_ui.cjs` and `python -m unittest discover -s tests -p test_source_validation.py`. `python scripts/site_matrix.py --all --sample` additionally reads at most 16 KiB from one HLS segment per page and rejects HTML/JSON error samples. The native fixture now requires a labelled play gate to load its lazy iframe. See [LAZY_PLAYERS_AND_SOURCE_VALIDATION.md](LAZY_PLAYERS_AND_SOURCE_VALIDATION.md) and `tests/site_matrix_after_lazy.json` for the real-page results and limits.
+Use `node tests/test_lazy_player_ui.cjs` and `python -m unittest discover -s tests -p test_source_validation.py`. `python scripts/site_matrix.py --all --sample` additionally reads at most 16 KiB from one HLS segment per page and rejects HTML/JSON error samples. The native fixture now requires a labelled play gate to load its lazy iframe. See [LAZY_PLAYERS_AND_SOURCE_VALIDATION.md](../architecture/LAZY_PLAYERS_AND_SOURCE_VALIDATION.md) and `tests/site_matrix_after_lazy.json` for the real-page results and limits.
 
 ## Network-first embedded discovery (unpublished)
 
-Run `python -m unittest discover -s tests -p test_network_media.py`. Native verification now includes an extensionless HLS response with no source URL in the DOM and no known player API. Network selection retains DOM/adapter fallbacks and refuses uncorrelated or ambiguous candidates. See [NETWORK_FIRST_DISCOVERY.md](NETWORK_FIRST_DISCOVERY.md) and `tests/site_matrix_after_network.json` for scope, selection limits and real-page results.
+Run `python -m unittest discover -s tests -p test_network_media.py`. Native verification now includes an extensionless HLS response with no source URL in the DOM and no known player API. Network selection retains DOM/adapter fallbacks and refuses uncorrelated or ambiguous candidates. See [NETWORK_FIRST_DISCOVERY.md](../architecture/NETWORK_FIRST_DISCOVERY.md) and `tests/site_matrix_after_network.json` for scope, selection limits and real-page results.
 
 ## Browser handoff, bounded 403 recovery and error UI (unpublished)
 
-Run `python -m unittest discover -s tests -p test_source_handoff.py`, `python tests/test_source_recovery_local.py` and `node tests/test_source_progress_ui.cjs`. Native verification also checks preview-to-download browser ownership and release after first media bytes. See [SESSION_HANDOFF_AND_ERROR_STATES.md](SESSION_HANDOFF_AND_ERROR_STATES.md) for resource limits, conservative partial-file rules and queue error-copy behavior. `tests/site_matrix_after_handoff.json` contains the four-page bounded-sample regression result.
+Run `python -m unittest discover -s tests -p test_source_handoff.py`, `python tests/test_source_recovery_local.py` and `node tests/test_source_progress_ui.cjs`. Native verification also checks preview-to-download browser ownership and release after first media bytes. See [SESSION_HANDOFF_AND_ERROR_STATES.md](../architecture/SESSION_HANDOFF_AND_ERROR_STATES.md) for resource limits, conservative partial-file rules and queue error-copy behavior. `tests/site_matrix_after_handoff.json` contains the four-page bounded-sample regression result.
 
 ## Cross-format output preservation (1.2.14, unpublished)
 

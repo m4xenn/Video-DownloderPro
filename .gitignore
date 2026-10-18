@@ -8,7 +8,7 @@ env/
 build/
 dist/
 Installer/
-releases/
+/releases/
 # Local state, media and credentials
 .env
 .env.*

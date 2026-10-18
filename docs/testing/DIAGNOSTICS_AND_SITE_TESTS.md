@@ -40,7 +40,7 @@ Tarih ve yapılandırılmış sonuçlar `tests/site_matrix_baseline.json` içind
 
 ### Sonraki ölçüm: lazy iframe desteği
 
-Sonradan iframe yükleyen oynatma kapağı desteğiyle önceki HDFilm bağlantısı ve yeni Esaretin Bedeli bağlantısı da otomatik çözülmüştür. Güncel dört sayfanın tamamında metadata ve bir HLS parçasından 16 KiB veri okunabilmiştir. Bu sonuçların tam indirme anlamına gelmediği raporda ayrıca belirtilir. Ayrıntılar [LAZY_PLAYERS_AND_SOURCE_VALIDATION.md](LAZY_PLAYERS_AND_SOURCE_VALIDATION.md), yapılandırılmış sonuçlar `tests/site_matrix_after_lazy.json` içindedir.
+Sonradan iframe yükleyen oynatma kapağı desteğiyle önceki HDFilm bağlantısı ve yeni Esaretin Bedeli bağlantısı da otomatik çözülmüştür. Güncel dört sayfanın tamamında metadata ve bir HLS parçasından 16 KiB veri okunabilmiştir. Bu sonuçların tam indirme anlamına gelmediği raporda ayrıca belirtilir. Ayrıntılar [LAZY_PLAYERS_AND_SOURCE_VALIDATION.md](../architecture/LAZY_PLAYERS_AND_SOURCE_VALIDATION.md), yapılandırılmış sonuçlar `tests/site_matrix_after_lazy.json` içindedir.
 
 Yerel sentetik testler; HTML5/JW Player/Video.js, çapraz kökenli iç çerçeveler, HLS/DASH/blob, doğrulama ve DRM'de otomasyonun durması, belirsiz oynatıcı seçimi, 429 sonrası eksiksiz devam, gerçek çözünürlük/ses çıktısı ve pencere temizliğini ayrıca kapsar. Bunlar saha örnek sayısını yapay olarak artırmak için kullanılmaz.
 
