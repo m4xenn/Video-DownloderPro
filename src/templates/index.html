@@ -1,0 +1,1662 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Video Downloader Pro</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='vendor/flags/css/flag-icons.min.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='vendor/fontawesome/css/all.min.css') }}">
+    
+    <style>
+        /* global error handler for debug */
+    </style>
+    <script>
+        window.addEventListener('error', event => console.error('UI:', event.message));
+    </script>
+    <style>
+        :root { --primary: #0A84FF; --bg-color: #000; --bg-grad: #1a1a1a; --glass-bg: rgba(28, 28, 30, 0.95); --glass-border: rgba(255, 255, 255, 0.1); --input-bg: #2c2c2e; --hover-bg: #3a3a3c; --text-main: #ffffff; --text-sub: #86868b; --danger: #FF453A; --q-bg: rgba(255,255,255,0.03); --q-hover: rgba(255,255,255,0.06); --opt-bg: #2c2c2e; --opt-hover: rgba(255,255,255,0.02); --slider-bg: #3a3a3c; --thumb-bg: #000; }
+        :root.light-mode { --primary: #007AFF; --bg-color: #f2f2f7; --bg-grad: #ffffff; --glass-bg: rgba(255, 255, 255, 0.85); --glass-border: rgba(0, 0, 0, 0.1); --input-bg: #e5e5ea; --hover-bg: #d1d1d6; --text-main: #1c1c1e; --text-sub: #8e8e93; --danger: #FF3B30; --q-bg: rgba(0,0,0,0.03); --q-hover: rgba(0,0,0,0.06); --opt-bg: #f9f9f9; --opt-hover: rgba(0,0,0,0.03); --slider-bg: #c7c7cc; --thumb-bg: #e5e5ea; }
+        
+        body * { transition: background-color 0.4s ease, border-color 0.4s ease, color 0.4s ease, box-shadow 0.4s ease, opacity 0.4s ease; }
+        /* Prevent body * from completely overwriting other specific transitions where needed, we will explicitly redefine if necessary */
+
+        body { background-color: var(--bg-color); color: var(--text-main); font-family: 'Inter', sans-serif; min-height: 100vh; display: flex; justify-content: center; align-items: center; margin: 0; padding: 20px; box-sizing: border-box; transition: background-color 0.4s ease, color 0.4s ease; -webkit-font-smoothing: antialiased; -moz-osx-font-smoothing: grayscale; }
+        body * { transition: background-color 0.4s ease, border-color 0.4s ease, color 0.4s ease, box-shadow 0.4s ease; }
+        body::before { content: ""; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: radial-gradient(circle at 50% 0%, #1a1a1a 0%, #000 100%); z-index: -2; transition: opacity 0.4s ease; }
+        body::after { content: ""; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: radial-gradient(circle at 50% 0%, #ffffff 0%, #f2f2f7 100%); z-index: -1; transition: opacity 0.4s ease; opacity: 0; }
+        :root.light-mode body::before { opacity: 0; }
+        :root.light-mode body::after { opacity: 1; }
+        .glass-card { background: var(--glass-bg); backdrop-filter: blur(40px); border: 1px solid var(--glass-border); border-radius: 24px; padding: 35px 40px; width: 450px; display: flex; flex-direction: column; gap: 15px; box-shadow: 0 40px 80px -12px rgba(0, 0, 0, 0.6); position: relative; transition: background-color 0.4s ease, border-color 0.4s ease; }
+        h1 { font-weight: 600; font-size: 24px; margin: 0; text-align: center; }
+        p.subtitle { color: var(--text-sub); text-align: center; font-size: 13px; margin-top: 5px; margin-bottom: 5px; }
+        
+        /* KLASÖR */
+        .app-header { display: flex; flex-direction: column; gap: 14px; }
+        .app-brand { display: flex; align-items: center; gap: 10px; min-width: 0; }
+        .app-brand-copy { min-width: 0; }
+        .app-brand h1 { text-align: left; margin: 0; font-size: 22px; line-height: 1.25; }
+        .app-brand .subtitle { text-align: left; margin: 4px 0 0; }
+        .app-toolbar { display: flex; align-items: center; justify-content: flex-end; gap: 8px; }
+        .app-toolbar .language-control { width: 76px; height: 36px; flex: 0 0 76px; z-index: 50; }
+        .app-toolbar #langSelectDiv .custom-select__trigger { height: 36px; box-sizing: border-box; padding: 0 10px; border-radius: 10px; background: transparent; }
+        .header-icon-btn { display: inline-flex; align-items: center; justify-content: center; width: 36px; height: 36px; flex: 0 0 36px; box-sizing: border-box; background: transparent; border: 1px solid var(--glass-border); color: var(--text-sub); border-radius: 10px; padding: 0; font-size: 14px; cursor: pointer; transition: color 0.3s, border-color 0.3s; }
+        .header-icon-btn:focus-visible { outline: 2px solid var(--primary); outline-offset: 3px; }
+        .header-icon-btn:hover { color: var(--text-main); border-color: var(--primary); }
+        .path-button { display: flex; align-items: center; justify-content: space-between; background: var(--input-bg); border: 1px solid var(--glass-border); padding: 12px 15px; border-radius: 12px; cursor: pointer; transition: 0.3s; color: var(--text-sub); font-size: 13px; }
+        .path-button:hover { background: var(--hover-bg); color: var(--text-main); border-color: var(--primary); }
+        .path-button.error { border-color: var(--danger); animation: shake 0.5s; }
+        .path-content { display: flex; align-items: center; overflow: hidden; }
+        .path-content i { margin-right: 10px; color: var(--primary); }
+        .path-text { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 280px; }
+
+        /* INPUT ALANI */
+        .input-wrapper { display: flex; gap: 10px; z-index: 10; position: relative; }
+        .input-group { position: relative; flex: 1; }
+        .input-group i { position: absolute; left: 15px; top: 50%; transform: translateY(-50%); color: var(--text-sub); transition: 0.3s; }
+        input { width: 100%; background: var(--input-bg); border: 1px solid var(--glass-border); padding: 16px 16px 16px 45px; border-radius: 12px; color: var(--text-main); font-size: 14px; outline: none; transition: 0.3s; box-sizing: border-box; }
+        input:focus { background: var(--hover-bg); border-color: var(--primary); }
+        input:focus + i { color: var(--primary); }
+        
+        input[type=number]::-webkit-inner-spin-button, 
+        input[type=number]::-webkit-outer-spin-button { -webkit-appearance: none; margin: 0; }
+        input[type=number] { -moz-appearance: textfield; }
+        
+        .add-btn { background: var(--input-bg); border: 1px solid var(--glass-border); border-radius: 12px; width: 50px; color: var(--primary); cursor: pointer; transition: 0.3s; display: flex; justify-content: center; align-items: center; font-size: 18px; }
+        .add-btn:hover { background: var(--hover-bg); transform: scale(1.05); }
+        .add-btn.loading i { animation: spin 1s infinite linear; color: var(--text-sub); }
+
+        /* SIRA (QUEUE) LİSTESİ */
+        .queue-container { max-height: 180px; overflow-y: auto; display: flex; flex-direction: column; gap: 10px; padding-right: 5px; }
+        .queue-container::-webkit-scrollbar { width: 6px; }
+        .queue-container::-webkit-scrollbar-track { background: transparent; }
+        .queue-container::-webkit-scrollbar-thumb { background: var(--hover-bg); border-radius: 10px; }
+        
+        .queue-item { display: flex; align-items: center; background: var(--q-bg); padding: 8px 12px; border-radius: 12px; border: 1px solid var(--glass-border); gap: 12px; animation: slideDown 0.3s cubic-bezier(0.2, 0.8, 0.2, 1); transition: 0.3s; }
+        .queue-item:hover { background: var(--q-hover); }
+        .queue-thumb { width: 64px; height: 36px; border-radius: 6px; object-fit: cover; background: var(--thumb-bg); }
+        .queue-info { flex: 1; overflow: hidden; }
+        .queue-title { font-size: 12px; color: var(--text-main); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-weight: 600; margin-bottom: 2px; }
+        .queue-url { font-size: 10px; color: var(--text-sub); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .queue-remove { color: var(--text-sub); cursor: pointer; padding: 5px; transition: 0.3s; border: none; background: transparent; font-size: 14px; }
+        .queue-remove:hover { color: var(--danger); transform: scale(1.2); }
+
+        /* MENÜLER */
+        .options-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; position: relative; z-index: 5; }
+        .custom-select-wrapper { position: relative; width: 100%; height: 50px; }
+        .custom-select { position: absolute; top: 0; left: 0; width: 100%; display: flex; flex-direction: column; }
+        .custom-select__trigger { display: flex; align-items: center; justify-content: space-between; padding: 14px 18px; font-size: 14px; color: var(--text-sub); background: var(--input-bg); border-radius: 12px; cursor: pointer; border: 1px solid var(--glass-border); transition: 0.3s; height: 50px; box-sizing: border-box; }
+        .custom-select__trigger:hover { background: var(--hover-bg); color: var(--text-main); }
+        .custom-select.open .custom-select__trigger { border-bottom-left-radius: 0; border-bottom-right-radius: 0; background: var(--input-bg); border: 1px solid var(--glass-border); border-bottom: none; z-index: 30; }
+        .custom-options { position: absolute; top: 100%; left: 0; right: 0; background: var(--opt-bg); border: 1px solid var(--glass-border); border-top: 0; border-bottom-left-radius: 12px; border-bottom-right-radius: 12px; opacity: 0; visibility: hidden; pointer-events: none; transform: translateY(-10px); transition: 0.2s cubic-bezier(0.4, 0, 0.2, 1); z-index: 25; box-shadow: 0 15px 40px rgba(0,0,0,0.8); overflow: hidden; padding: 4px 0; }
+        .custom-select.open .custom-options { opacity: 1; visibility: visible; pointer-events: all; transform: translateY(0); }
+        .custom-option { display: block; width: 100%; box-sizing: border-box; padding: 10px 15px; font-size: 14px; color: var(--text-sub); cursor: pointer; transition: all 0.3s ease; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; position: relative; background: transparent; margin-bottom: 1px; }
+        .custom-option:hover { color: var(--text-main); text-shadow: 0 0 5px rgba(255, 255, 255, 0.3), 0 0 15px var(--primary); padding-left: 20px; background-color: var(--opt-hover); }
+        :root.light-mode .custom-option:hover { text-shadow: none; box-shadow: inset 2px 0 0 var(--primary); }
+        .custom-option.selected { color: var(--primary); font-weight: 600; }
+        .arrow::after { content: '\f078'; font-family: "Font Awesome 6 Free"; font-weight: 900; font-size: 10px; color: var(--text-sub); transition: 0.3s; }
+        .arrow::after { content: '\f078'; font-family: "Font Awesome 6 Free"; font-weight: 900; font-size: 10px; color: var(--text-sub); transition: color 0.3s, transform 0.3s; }
+        .custom-select.open .arrow::after { transform: rotate(180deg); color: var(--primary); }
+        #langSelectDiv.open .custom-select__trigger { border-radius: 8px; border-bottom: 1px solid var(--glass-border); z-index: 55; }
+        #langSelectDiv .custom-options { border-top: 1px solid var(--glass-border); border-radius: 12px; margin-top: 5px; z-index: 54; }
+        .custom-options::-webkit-scrollbar { width: 6px; }
+        .custom-options::-webkit-scrollbar-track { background: transparent; margin: 8px 0; }
+        .custom-options::-webkit-scrollbar-thumb { background: var(--hover-bg); border-radius: 10px; transition: background 0.3s; }
+        .custom-options::-webkit-scrollbar-thumb:hover { background: var(--primary); }
+
+        /* PLAYLIST SWITCH */
+        .playlist-container { display: flex; align-items: center; justify-content: space-between; background: var(--input-bg); padding: 12px 16px; border-radius: 12px; border: 1px solid var(--glass-border); transition: background-color 0.3s, border-color 0.3s; margin-top: 5px; cursor: pointer; }
+        .playlist-container:hover { background: var(--hover-bg); border-color: var(--glass-border); }
+        .playlist-info { font-size: 13px; color: var(--text-sub); display: flex; align-items: center; gap: 10px; }
+        .playlist-info i { color: var(--primary); }
+        .switch { position: relative; display: inline-block; width: 40px; height: 22px; transition: none !important; }
+        .switch * { transition: none !important; }
+        .switch input { opacity: 0; width: 0; height: 0; }
+        .slider { position: absolute; cursor: pointer; top: 0; left: 0; right: 0; bottom: 0; background-color: var(--slider-bg); transition: background-color 0.4s ease !important; border-radius: 34px; }
+        .slider:before { position: absolute; content: ""; height: 16px; width: 16px; left: 3px; bottom: 3px; background-color: white; transition: transform 0.4s ease !important; border-radius: 50%; }
+        input:checked + .slider { background-color: var(--primary); }
+        input:checked + .slider:before { transform: translateX(18px); }
+
+        /* PROGRESS */
+        .progress-container { width: 100%; height: 6px; background: rgba(0, 0, 0, 0.1); border-radius: 10px; overflow: hidden; margin-top: 5px; display: none; }
+        :root:not(.light-mode) .progress-container { background: rgba(255, 255, 255, 0.1); }
+        .progress-fill { height: 100%; width: 0%; background: var(--primary); border-radius: 10px; transition: width 0.4s ease; box-shadow: 0 0 10px rgba(10, 132, 255, 0.5); }
+        .status-text { font-size: 12px; color: var(--text-sub); text-align: center; margin-top: 6px; min-height: 15px; display: none; font-weight: 600; }
+
+        .download-btn { width: 100%; background: var(--primary); color: white; border: none; margin-top: 5px; padding: 16px; border-radius: 14px; font-size: 15px; font-weight: 600; cursor: pointer; transition: 0.2s; position: relative; z-index: 1; }
+        .download-btn:hover { background: #0077ED; transform: scale(1.02); box-shadow: 0 0 20px rgba(10, 132, 255, 0.4); }
+        .download-btn:active { transform: scale(0.98); }
+        .download-btn:disabled { opacity: 0.7; cursor: not-allowed; transform: none; background: var(--input-bg); color: var(--text-sub); box-shadow: none; }
+
+        /* Settings actions share the existing theme tokens in both themes. */
+        .feature-overlay { display: none; position: fixed; inset: 0; z-index: 1005; background: rgba(0,0,0,0.6); backdrop-filter: blur(5px); align-items: center; justify-content: center; padding: 20px; box-sizing: border-box; }
+        .feature-card { display: flex; flex-direction: column; gap: 14px; box-sizing: border-box; width: 560px; max-width: 100%; max-height: 85vh; padding: 24px; background: var(--glass-bg); border: 1px solid var(--glass-border); border-radius: 20px; box-shadow: 0 20px 40px rgba(0,0,0,0.5); color: var(--text-main); }
+        .feature-heading { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+        .feature-heading h3 { margin: 0; font-size: 16px; font-weight: 600; }
+        .feature-list { overflow-y: auto; min-height: 0; display: flex; flex-direction: column; gap: 10px; padding-right: 3px; }
+        .feature-row { background: var(--q-bg); border: 1px solid var(--glass-border); border-radius: 12px; padding: 12px; font-size: 13px; line-height: 1.5; overflow-wrap: anywhere; }
+        .feature-row-title { display: block; font-size: 13px; font-weight: 600; color: var(--text-main); }
+        .feature-muted { font-size: 12px; color: var(--text-sub); margin: 5px 0 0; white-space: pre-wrap; line-height: 1.6; }
+        .feature-actions { display: flex; flex-wrap: wrap; gap: 8px; }
+        .feature-actions .settings-action { width: auto; flex: 1 1 130px; }
+        .feature-row .feature-actions { margin-top: 10px; }
+        .feature-row .settings-action { font-size: 12px; padding: 8px 10px; }
+        .playlist-entry { display: grid; grid-template-columns: 18px minmax(0,1fr); align-items: start; gap: 10px; cursor: pointer; }
+        .playlist-entry input { width: 16px; height: 16px; padding: 0; margin: 3px 0 0; accent-color: var(--primary); }
+        .playlist-entry[data-unavailable="true"] { opacity: 0.5; cursor: default; }
+        .restore-notice { padding: 12px; background: var(--q-bg); border: 1px solid var(--primary); border-radius: 12px; font-size: 12px; line-height: 1.6; }
+        .restore-notice .settings-action { margin-top: 8px; }
+        .q-estimate { margin-top: 4px; color: var(--text-sub); font-size: 10px; line-height: 1.5; }
+        .storage-warning { color: var(--danger); font-size: 12px; line-height: 1.6; }
+        .setting-label { display: block; margin-bottom: 10px; font-size: 13px; font-weight: 600; color: var(--primary); }
+        .settings-select, .settings-number { box-sizing: border-box; width: 100%; padding: 10px 12px; border: 1px solid var(--glass-border); border-radius: 10px; background: var(--input-bg); color: var(--text-main); font: inherit; font-size: 13px; }
+        .settings-select:focus-visible { outline: 2px solid var(--primary); outline-offset: 2px; }
+        .settings-number:disabled { opacity: 0.45; cursor: not-allowed; }
+        .advanced-download-settings { margin-top: 14px; padding-top: 12px; border-top: 1px solid var(--glass-border); }
+        .advanced-download-settings summary { margin-bottom: 12px; font-size: 12px; color: var(--text-sub); cursor: pointer; }
+        .download-summary { margin: 0; padding: 10px 12px; background: var(--q-bg); border: 1px solid var(--glass-border); border-radius: 10px; font-size: 12px; line-height: 1.6; color: var(--text-sub); }
+        .app-update-card { margin-top: 20px; padding: 16px; background: var(--q-bg); border: 1px solid var(--glass-border); border-radius: 12px; }
+        .app-update-heading { display: flex; align-items: center; gap: 10px; margin-bottom: 14px; }
+        .app-update-icon { display: flex; align-items: center; justify-content: center; flex: 0 0 34px; height: 34px; border-radius: 10px; background: var(--input-bg); color: var(--primary); font-size: 15px; }
+        .app-update-name { flex: 1; min-width: 0; font-size: 13px; font-weight: 600; line-height: 1.5; color: var(--text-main); }
+        .app-version-badge { flex-shrink: 0; padding: 4px 8px; border: 1px solid var(--glass-border); border-radius: 6px; background: var(--input-bg); color: var(--text-sub); font-size: 11px; font-weight: 500; }
+        .settings-action { display: flex; align-items: center; justify-content: center; gap: 8px; width: 100%; box-sizing: border-box; padding: 12px 14px; background: var(--input-bg); border: 1px solid var(--glass-border); border-radius: 12px; color: var(--text-main); font-family: inherit; font-size: 13px; font-weight: 600; line-height: 1.4; cursor: pointer; transition: background-color 0.2s, border-color 0.2s, box-shadow 0.2s; }
+        .settings-action:hover:not(:disabled) { background: var(--hover-bg); border-color: var(--primary); }
+        .settings-action:focus-visible { outline: 2px solid var(--primary); outline-offset: 3px; }
+        .settings-action:disabled { opacity: 0.55; cursor: wait; }
+        .settings-action-primary { background: var(--primary); border-color: transparent; color: #fff; }
+        .settings-action-primary:hover:not(:disabled) { background: var(--primary); box-shadow: 0 0 15px rgba(10,132,255,0.25); }
+        .settings-save { margin-top: 20px; }
+        .app-update-status { margin: 10px 0 0; color: var(--text-sub); font-size: 12px; font-weight: 400; line-height: 1.6; overflow-wrap: anywhere; white-space: pre-wrap; }
+        .app-update-status:empty { display: none; }
+        .app-update-progress { width: 100%; height: 6px; margin: 12px 0 16px; border: 0; border-radius: 6px; overflow: hidden; background: var(--input-bg); accent-color: var(--primary); }
+        .app-update-progress::-webkit-progress-bar { background: var(--input-bg); border-radius: 6px; }
+        .app-update-progress::-webkit-progress-value { background: var(--primary); border-radius: 6px; }
+        .app-update-progress::-moz-progress-bar { background: var(--primary); border-radius: 6px; }
+        .component-dialog { width: 400px; max-width: 100%; box-sizing: border-box; max-height: 85vh; overflow-y: auto; padding: 24px; background: var(--glass-bg); border: 1px solid var(--glass-border); border-radius: 20px; box-shadow: 0 20px 40px rgba(0,0,0,0.5); }
+        .component-dialog h3 { flex: 1; margin: 0; color: var(--text-main); font-size: 16px; font-weight: 600; }
+        .component-versions { display: flex; flex-direction: column; gap: 10px; margin-top: 16px; }
+        .component-version-row { background: var(--q-bg); border: 1px solid var(--glass-border); border-radius: 12px; padding: 12px; font-size: 12px; line-height: 1.6; overflow-wrap: anywhere; white-space: pre-wrap; color: var(--text-sub); }
+        .component-version-row strong { display: block; font-size: 13px; color: var(--primary); margin-bottom: 5px; }
+        #appUpdateAction { margin-top: 14px; }
+        
+        #snackbar { visibility: hidden; min-width: 280px; background: var(--glass-bg); backdrop-filter: blur(20px); border: 1px solid var(--glass-border); color: var(--text-main); font-weight: 500; font-size: 14px; text-align: center; border-radius: 12px; padding: 16px 20px; position: fixed; bottom: 30px; left: 50%; transform: translateX(-50%) translateY(30px); opacity: 0; transition: transform 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275), opacity 0.4s ease; box-shadow: 0 15px 30px rgba(0,0,0,0.3); z-index: 2000; display: flex; align-items: center; justify-content: center; gap: 12px; }
+        #snackbar.show { visibility: visible; transform: translateX(-50%) translateY(0); opacity: 1; }
+        #snackbar i.success-icon { color: #32D74B; font-size: 18px; }
+        #snackbar i.error-icon { color: var(--danger); font-size: 18px; }
+        
+        @keyframes shake { 0% { transform: translateX(0); } 25% { transform: translateX(-5px); } 50% { transform: translateX(5px); } 75% { transform: translateX(-5px); } 100% { transform: translateX(0); } }
+        @keyframes slideDown { from { opacity: 0; transform: translateY(-10px); } to { opacity: 1; transform: translateY(0); } }
+        @keyframes spin { 100% { transform: rotate(360deg); } }
+        
+        /* Custom Player */
+        .cp-controls-hidden #cpControls { opacity: 0; transform: translateY(10px); pointer-events: none; }
+        .cp-controls-hidden { cursor: none !important; }
+        .cp-controls-hidden * { cursor: none !important; }
+        .cp-timeline:hover #cpProgress > div { transform: scale(1.2); }
+        .cp-menu { position: absolute; bottom: 40px; right: 0; background: var(--glass-bg); backdrop-filter: blur(10px); border: 1px solid var(--glass-border); border-radius: 8px; padding: 5px 0; display: none; flex-direction: column; min-width: 100px; box-shadow: 0 5px 15px rgba(0,0,0,0.5); z-index: 20; }
+        .cp-menu.show { display: flex; }
+        .cp-menu-item { padding: 8px 16px; margin: 2px 8px; border-radius: 8px; color: var(--text-main); font-size: 13px; cursor: pointer; transition: 0.2s; text-align: left; background: transparent; border: none; width: calc(100% - 16px); display: flex; align-items: center; gap: 10px; box-sizing: border-box; }
+        .cp-menu-item:hover { background: rgba(255,255,255,0.1); }
+        .cp-menu-item.active { color: var(--primary); font-weight: 600; background: rgba(10,132,255,0.1); }
+        
+        .lib-card .heart-icon { opacity: 0; transform: scale(0.8); transition: 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275); }
+        .lib-card:hover .heart-icon { opacity: 1; transform: scale(1); }
+        .lib-card .heart-icon.favorited { opacity: 1; transform: scale(1); }
+        .next-preview { position: absolute; bottom: 85px; right: 20px; background: rgba(15,15,20,0.95); border: 1px solid var(--glass-border); border-radius: 12px; padding: 15px; color: white; display: flex; align-items: center; gap: 20px; z-index: 15; cursor: pointer; box-shadow: 0 10px 30px rgba(0,0,0,0.7); backdrop-filter: blur(10px); opacity: 0; pointer-events: none; transform: translateY(30px) scale(0.9); transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275); }
+        .next-preview.show { opacity: 1; pointer-events: auto; transform: translateY(0) scale(1); }
+        .cp-controls-hidden .next-preview { cursor: pointer !important; }
+        
+        .cp-timeline-container { width: 100%; height: 20px; display: flex; align-items: center; cursor: pointer; position: relative; }
+        .cp-timeline-track { width: 100%; height: 3px; background: rgba(255,255,255,0.3); position: relative; transition: height 0.15s ease; }
+        .cp-timeline-container:hover .cp-timeline-track { height: 5px; }
+        .cp-timeline-progress { height: 100%; width: 0%; background: var(--primary); position: relative; pointer-events: none; transition: width 0.1s linear; }
+        .cp-timeline-thumb { position: absolute; right: -6px; top: 50%; transform: translateY(-50%) scale(0); width: 12px; height: 12px; background: var(--primary); border-radius: 50%; transition: transform 0.15s ease; pointer-events: none; }
+        .cp-timeline-container:hover .cp-timeline-thumb { transform: translateY(-50%) scale(1); }
+        
+        #cpWrapper:fullscreen #cpVideo { max-height: 100vh !important; height: 100% !important; }
+        #cpWrapper:-webkit-full-screen { max-height: 100vh !important; width: 100vw !important; height: 100vh !important; border-radius: 0 !important; }
+        #cpWrapper:-webkit-full-screen #cpVideo { max-height: 100vh !important; height: 100% !important; }
+
+        .cp-fullscreen {
+            position: fixed !important;
+            top: 0 !important;
+            left: 0 !important;
+            width: 100vw !important;
+            height: 100vh !important;
+            max-height: 100vh !important;
+            z-index: 99999 !important;
+            border-radius: 0 !important;
+        }
+        .cp-fullscreen #cpVideo {
+            max-height: 100vh !important;
+            height: 100% !important;
+            width: 100% !important;
+        }
+        ::-webkit-scrollbar {
+            width: 6px;
+        }
+        ::-webkit-scrollbar-track {
+            background: transparent;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: rgba(255,255,255,0.2);
+            border-radius: 3px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: rgba(255,255,255,0.4);
+        }
+    </style>
+    <link rel="stylesheet" href="{{ url_for('static', filename='studio.css') }}">
+</head>
+<body>
+
+    <div id="updateOverlay" style="display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.6); z-index: 1004; flex-direction: column; justify-content: center; align-items: center; backdrop-filter: blur(5px); padding: 20px; box-sizing: border-box;">
+        <section class="component-dialog" role="dialog" aria-modal="true" aria-labelledby="updateTitle">
+            <div class="app-update-heading">
+                <span class="app-update-icon" aria-hidden="true"><i class="fa-solid fa-rotate"></i></span>
+                <h3 id="updateTitle">Bileşen güncellemeleri</h3>
+                <button class="header-icon-btn" onclick="closeComponentUpdate()" aria-label="Kapat"><i class="fa-solid fa-xmark" aria-hidden="true"></i></button>
+            </div>
+            <p id="updateDesc" class="app-update-status" role="status" aria-live="polite">Sürümler kontrol ediliyor...</p>
+            <div id="componentVersions" class="component-versions"></div>
+            <progress id="componentProgress" class="app-update-progress" max="100" value="0" style="display: none;"></progress>
+            <p id="componentTransfer" class="app-update-status"></p>
+            <button id="componentAction" class="settings-action settings-action-primary" onclick="downloadComponentUpdates()" style="display: none; margin-top: 16px;">Güncellemeleri indir</button>
+        </section>
+    </div>
+
+    <main class="glass-card">
+        <div class="app-header">
+            <div class="app-brand">
+                <span class="brand-mark" aria-hidden="true"><svg viewBox="0 0 32 32" fill="none"><path d="M16 6v15m-6-6 6 6 6-6M7 23v3h18v-3" stroke="currentColor" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round"/></svg></span>
+                <div class="app-brand-copy">
+                    <h1>Video Downloader Pro</h1>
+                    <p class="subtitle">Video & Audio Studio</p>
+                </div>
+            </div>
+            
+            <div class="app-toolbar" role="toolbar" aria-label="Uygulama araçları">
+                <div class="custom-select-wrapper language-control">
+                    <div class="custom-select" id="langSelectDiv">
+                        <div class="custom-select__trigger">
+                            <span id="currentLangFlag"><span class="fi fi-tr"></span></span><div class="arrow"></div>
+                        </div>
+                        <div class="custom-options" style="width: 140px; right: 0; left: auto; max-height: 250px; overflow-y: auto;">
+                            <span class="custom-option" onclick="setLanguage('tr')"><span class="fi fi-tr"></span> Türkçe</span>
+                            <span class="custom-option" onclick="setLanguage('en')"><span class="fi fi-gb"></span> English</span>
+                            <span class="custom-option" onclick="setLanguage('es')"><span class="fi fi-es"></span> Español</span>
+                            <span class="custom-option" onclick="setLanguage('fr')"><span class="fi fi-fr"></span> Français</span>
+                            <span class="custom-option" onclick="setLanguage('de')"><span class="fi fi-de"></span> Deutsch</span>
+                            <span class="custom-option" onclick="setLanguage('ru')"><span class="fi fi-ru"></span> Русский</span>
+                            <span class="custom-option" onclick="setLanguage('pt')"><span class="fi fi-pt"></span> Português</span>
+                            <span class="custom-option" onclick="setLanguage('zh')"><span class="fi fi-cn"></span> 中文</span>
+                            <span class="custom-option" onclick="setLanguage('ja')"><span class="fi fi-jp"></span> 日本語</span>
+                            <span class="custom-option" onclick="setLanguage('hi')"><span class="fi fi-in"></span> हिन्दी</span>
+                        </div>
+                    </div>
+                </div>
+
+                <button class="header-icon-btn" onclick="openHistory()" title="İndirme geçmişi" aria-label="İndirme geçmişi"><i class="fa-solid fa-clock-rotate-left" aria-hidden="true"></i></button>
+                <button class="header-icon-btn" onclick="openSettings()" title="Ayarlar" aria-label="Ayarlar">
+                    <i class="fa-solid fa-gear"></i>
+                </button>
+
+                <button id="themeToggleBtn" class="header-icon-btn" onclick="toggleTheme()" title="Temayı Değiştir" aria-label="Temayı değiştir">
+                    <i class="fa-solid fa-moon" id="themeIcon"></i>
+                </button>
+                <button class="header-icon-btn" onclick="forceUpdate()" title="yt-dlp / FFmpeg bileşenlerini güncelle" aria-label="Bileşen güncellemeleri">
+                    <i class="fa-solid fa-rotate-right"></i>
+                </button>
+            </div>
+        </div>
+
+        <div class="studio-layout">
+        <section class="download-studio" aria-labelledby="studioTitle">
+        <div class="studio-intro"><span class="eyebrow" id="studioEyebrow" hidden></span><h2 id="studioTitle">Yeni indirme</h2><p id="studioDescription">Bağlantıları ekle, formatı seç ve indir.</p></div>
+        <label class="field-label" for="urlInput" id="linkFieldLabel">Video veya playlist bağlantısı</label>
+        <div class="input-wrapper">
+            <div class="input-group">
+                <textarea id="urlInput" rows="1" placeholder="Bir veya birden fazla bağlantı yapıştırın..." autocomplete="off" spellcheck="false" aria-describedby="bulkStatus"></textarea>
+                <i class="fa-solid fa-link" aria-hidden="true"></i>
+            </div>
+            <button class="add-btn" id="addBtn" onclick="addToQueue()" title="Sıraya Ekle" aria-label="Sıraya ekle"><i class="fa-solid fa-plus" aria-hidden="true"></i></button>
+        </div>
+        <div id="linkPreview" class="link-preview" role="status" aria-live="polite" hidden><strong id="linkPreviewTitle"></strong><span id="linkPreviewMeta"></span></div>
+        <p id="bulkStatus" class="feature-muted input-feedback" role="status" aria-live="polite"></p>
+        <div class="field-label" id="destinationLabel">Kayıt konumu</div>
+        <div class="path-button" role="button" tabindex="0" onclick="selectFolder()" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();selectFolder()}" id="pathBtn" aria-labelledby="destinationLabel pathDisplay">
+            <div class="path-content"><i class="fa-regular fa-folder-open"></i><span class="path-text" id="pathDisplay">{{ default_path }}</span></div>
+            <i class="fa-solid fa-chevron-right" style="font-size: 10px; color: var(--text-sub); margin: 0;"></i>
+        </div>
+
+        <div class="field-label" id="outputLabel">Çıktı tercihleri</div>
+        <div class="options-grid" style="z-index: 20;">
+            <div class="custom-select-wrapper" style="z-index: 10;">
+                <div class="custom-select" id="formatSelectDiv">
+                    <div class="custom-select__trigger">
+                        <span id="formatText">Video (MP4)</span><div class="arrow"></div>
+                    </div>
+                    <div class="custom-options">
+                        <span class="custom-option selected" data-value="video">Video (MP4)</span>
+                        <span class="custom-option" data-value="audio">Ses (MP3/WAV)</span>
+                    </div>
+                </div>
+                <input type="hidden" id="formatValue" value="video">
+            </div>
+
+            <div class="custom-select-wrapper" id="qualityWrapper" style="z-index: 9;">
+                <div class="custom-select" id="qualitySelectDiv">
+                    <div class="custom-select__trigger">
+                        <span id="qualityText">En Yüksek</span><div class="arrow"></div>
+                    </div>
+                    <div class="custom-options" id="qualityOptionsContainer"></div>
+                </div>
+                <input type="hidden" id="qualityValue" value="max">
+            </div>
+        </div>
+
+        <div class="quality-feedback"><span id="qualityHint" class="feature-muted"></span><button id="refreshQuality" type="button" onclick="refreshSourceQuality(true)" title="Kaynak kalitelerini yenile" aria-label="Kaynak kalitelerini yenile"><i class="fa-solid fa-rotate-right"></i></button></div>
+        <div id="formatInfoLinkContainer" style="display: none; justify-content: flex-end; margin-top: -5px; margin-bottom: 5px;">
+             <span onclick="openFormatInfo()" style="font-size: 12px; color: var(--primary); cursor: pointer; transition: 0.3s;" onmouseover="this.style.opacity='0.8'" onmouseout="this.style.opacity='1'"><i class="fa-solid fa-circle-info" style="margin-right: 4px;"></i>Ses Formatları Özellikleri</span>
+        </div>
+
+        <div class="options-grid" style="margin-top: 10px; margin-bottom: 5px; z-index: 5;">
+            <label class="playlist-container" style="margin-top: 0; padding: 0 16px; height: 50px;">
+                <span class="playlist-info" id="subLabel"><i class="fa-solid fa-closed-captioning"></i>Altyazı (Soft Sub)</span>
+                <span class="switch"><input type="checkbox" id="subCheck"><span class="slider"></span></span>
+            </label>
+            <label class="playlist-container" style="margin-top: 0; padding: 0 16px; height: 50px;">
+                <span class="playlist-info" id="playlistLabel"><i class="fa-solid fa-list-ul"></i>Oynatma Listesi Olarak İndir</span>
+                <span class="switch"><input type="checkbox" id="playlistCheck"><span class="slider"></span></span>
+            </label>
+        </div>
+
+        <button class="download-btn" onclick="startDownload()" id="dlBtn">İndirmeyi Başlat</button>
+        <p class="studio-footnote" id="studioFootnote"><i class="fa-solid fa-shield-halved" aria-hidden="true"></i><span>Dosyaların, seçtiğin klasörde.</span></p>
+        </section>
+        <aside class="queue-panel" aria-labelledby="queueTitle">
+            <div class="queue-heading"><div><span class="eyebrow" id="queueEyebrow">ÇALIŞMA ALANIN</span><h2 id="queueTitle">İndirme kuyruğu</h2></div><span id="queueCount" class="queue-count">0</span></div>
+            <div id="restoredQueueNotice" class="restore-notice" style="display:none"><span id="restoredQueueText"></span><button class="settings-action" onclick="resumeRestoredQueue()">Tümüne devam et</button></div>
+            <p id="storageWarning" class="storage-warning" role="alert" style="display:none"></p>
+            <p id="downloadSummary" class="download-summary" role="status" style="display:none"></p>
+            <div id="queueContainer" class="queue-container"></div>
+            <div class="queue-empty" id="queueEmpty"><span class="empty-symbol" aria-hidden="true"><svg viewBox="0 0 48 48" fill="none"><rect x="10" y="9" width="28" height="30" rx="7" stroke="currentColor" stroke-width="1.5"/><path d="m21 19 8 5-8 5V19Z" fill="currentColor"/><path d="M17 5h14M17 43h14" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg></span><h3 id="emptyTitle">Sıradaki favorin burada.</h3><p id="emptyDescription">Bir bağlantı eklediğinde indirmelerin<br>bu alanda görünecek.</p><span class="empty-hint">MP4 <span>·</span> MP3 <span>·</span> WAV <span>·</span> M4A</span></div>
+            <button class="queue-history-link" onclick="openHistory()"><i class="fa-solid fa-clock-rotate-left" aria-hidden="true"></i><span id="historyLinkLabel">İndirme geçmişini aç</span><span aria-hidden="true">↗</span></button>
+        </aside>
+        </div>
+        <p class="app-footer" id="platformFootnote">
+            <i class="fa-solid fa-cloud-arrow-down" style="margin-right: 4px;"></i> 1000'den fazla platformdan dilediğiniz videoyu indirebilir ve<br>
+            <i class="fa-solid fa-tower-broadcast" style="margin-right: 4px;"></i> aktif canlı yayınları anlık olarak cihazınıza kaydedebilirsiniz!
+        </p>
+    </main>
+
+    <div id="playlistModal" class="feature-overlay" role="dialog" aria-modal="true" aria-labelledby="playlistTitle">
+        <section class="feature-card">
+            <div class="feature-heading"><h3 id="playlistTitle">Listeden video seç</h3><button class="header-icon-btn" onclick="closeFeature('playlistModal')" aria-label="Kapat"><i class="fa-solid fa-xmark"></i></button></div>
+            <p id="playlistStatus" class="feature-muted" role="status" aria-live="polite">Liste taranıyor...</p>
+            <input id="playlistSearch" class="settings-number" placeholder="Listede ara..." aria-label="Listede ara" oninput="renderPlaylistSelection()">
+            <div class="feature-actions"><button class="settings-action" onclick="selectPlaylistResults()">Sonuçları seç</button><button class="settings-action" onclick="clearPlaylistSelection()">Seçimi temizle</button></div>
+            <p id="playlistCount" class="feature-muted"></p>
+            <div id="playlistEntries" class="feature-list"></div>
+            <button id="playlistMore" class="settings-action" onclick="showMorePlaylist()" style="display:none;">Daha fazla göster</button>
+            <button id="playlistDownload" class="settings-action settings-action-primary" onclick="downloadSelectedPlaylist()" disabled>Seçilenleri indir</button>
+        </section>
+    </div>
+    <div id="duplicateModal" class="feature-overlay" style="z-index: 1006;" role="dialog" aria-modal="true" aria-labelledby="duplicateTitle">
+        <section class="feature-card">
+            <div class="feature-heading"><h3 id="duplicateTitle">Bu içerikler daha önce indirilmiş</h3><button class="header-icon-btn" onclick="cancelDuplicate()" aria-label="Kapat"><i class="fa-solid fa-xmark"></i></button></div>
+            <p class="feature-muted">Aynı format, kalite ve altyazı seçimiyle kaydedilmiş dosyalar hâlâ mevcut. Tekrar indirirsen eski dosyalar korunur.</p>
+            <div id="duplicateEntries" class="feature-list"></div>
+            <div class="feature-actions"><button id="duplicateSkip" class="settings-action" onclick="confirmDuplicate('skip')">Mevcutları atla</button><button id="duplicateAgain" class="settings-action settings-action-primary" onclick="confirmDuplicate('again')">Yine de indir</button></div>
+        </section>
+    </div>
+    <div id="historyModal" class="feature-overlay" role="dialog" aria-modal="true" aria-labelledby="historyTitle">
+        <section class="feature-card">
+            <div class="feature-heading"><h3 id="historyTitle">İndirme geçmişi</h3><button class="header-icon-btn" onclick="closeFeature('historyModal')" aria-label="Kapat"><i class="fa-solid fa-xmark"></i></button></div>
+            <input id="historySearch" class="settings-number" placeholder="Başlık veya bağlantıda ara..." aria-label="Geçmişte ara" oninput="searchHistory()">
+            <p id="historyStatus" class="feature-muted" role="status" aria-live="polite"></p>
+            <div id="historyEntries" class="feature-list"></div>
+            <button id="historyMore" class="settings-action" onclick="loadHistory(true)" style="display:none;">Daha fazla göster</button>
+        </section>
+    </div>
+
+    <div id="snackbar">Bildirim</div>
+
+    <div id="appUpdateModal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.6); z-index: 1003; flex-direction: column; justify-content: center; align-items: center; backdrop-filter: blur(5px); opacity: 0; transition: opacity 0.3s ease;">
+        <div style="background: var(--glass-bg); border: 1px solid var(--glass-border); border-radius: 20px; padding: 30px; width: 400px; max-width: 90%; color: var(--text-main); position: relative; box-shadow: 0 20px 40px rgba(0,0,0,0.5); transform: translateY(20px); transition: transform 0.3s ease;">
+            <button onclick="closeAppUpdate()" style="position: absolute; top: 15px; right: 20px; background: transparent; border: none; color: var(--text-sub); font-size: 18px; cursor: pointer; transition: 0.3s;" onmouseover="this.style.color='var(--danger)'" onmouseout="this.style.color='var(--text-sub)'"><i class="fa-solid fa-xmark"></i></button>
+            <h3 style="margin-top: 0; margin-bottom: 20px; font-weight: 600; text-align: center;"><i class="fa-solid fa-gift" style="color: var(--primary); margin-right: 8px;"></i>Yeni Güncelleme Mevcut!</h3>
+            <p style="text-align: center; color: var(--text-sub); font-size: 14px; margin-bottom: 20px;">Uygulamanın <strong><span id="appUpdateVersion"></span></strong> sürümü yayınlandı.</p>
+            <div style="background: var(--input-bg); border: 1px solid var(--glass-border); border-radius: 12px; padding: 15px; font-size: 13px; max-height: 150px; overflow-y: auto; color: var(--text-sub); margin-bottom: 20px;">
+                <div id="appUpdateNotes" style="font-family: inherit; margin: 0; white-space: pre-wrap; line-height: 1.5;"></div>
+            </div>
+            <p id="appUpdateStatus" class="app-update-status" role="status" aria-live="polite"></p>
+            <progress id="appUpdateProgress" class="app-update-progress" max="100" value="0" style="display: none;"></progress>
+            <button id="appUpdateAction" class="settings-action settings-action-primary" onclick="downloadAppUpdate()">Güncellemeyi indir</button>
+        </div>
+    </div>
+
+    <!-- SETTINGS MODAL -->
+    <div id="settingsModal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.6); z-index: 1001; flex-direction: column; justify-content: center; align-items: center; backdrop-filter: blur(5px); opacity: 0; transition: opacity 0.3s ease;">
+        <div style="background: var(--glass-bg); border: 1px solid var(--glass-border); border-radius: 20px; padding: 30px; width: 400px; max-width: 90%; color: var(--text-main); position: relative; box-shadow: 0 20px 40px rgba(0,0,0,0.5); transform: translateY(20px); transition: transform 0.3s ease; max-height: 80vh; overflow-y: auto; overflow-x: hidden;">
+            <button onclick="closeSettings()" style="position: absolute; top: 15px; right: 20px; background: transparent; border: none; color: var(--text-sub); font-size: 18px; cursor: pointer; transition: 0.3s;" onmouseover="this.style.color='var(--danger)'" onmouseout="this.style.color='var(--text-sub)'"><i class="fa-solid fa-xmark"></i></button>
+            <h3 style="margin-top: 0; margin-bottom: 20px; font-weight: 600; text-align: center;"><i class="fa-solid fa-gear" style="color: var(--primary); margin-right: 8px;"></i>Ayarlar</h3>
+            
+            <div style="display: flex; flex-direction: column; gap: 15px;">
+                <div class="app-update-card" style="margin-top: 0;">
+                    <label for="settingMode" class="setting-label">İndirme yönetimi</label>
+                    <select id="settingMode" class="settings-select" onchange="updateConcurrencyUI()">
+                        <option value="auto">Otomatik (önerilen)</option>
+                        <option value="manual">Manuel — gelişmiş ayar</option>
+                    </select>
+                    <p class="app-update-status">Otomatik mod 2 indirmeyle başlar; hız ve işlemci yüküne göre 1–4 arasında ayarlanır.</p>
+                    <details class="advanced-download-settings">
+                        <summary>Gelişmiş ayarlar</summary>
+                        <label for="settingConcurrent" class="setting-label">Manuel eşzamanlı indirme sayısı</label>
+                        <input type="number" id="settingConcurrent" min="1" max="10" value="3" disabled class="settings-number">
+                        <p class="app-update-status">Yalnız manuel modda etkindir. Sınır tüm kuyruğa uygulanır.</p>
+                    </details>
+                </div>
+                <div class="app-update-card" style="margin-top: 0;">
+                    <label for="settingSpeed" class="setting-label">Toplam indirme hızı sınırı (Mbps)</label>
+                    <input type="number" id="settingSpeed" min="0" max="100000" step="0.1" value="0" placeholder="0 = Sınırsız" class="settings-number">
+                    <p class="app-update-status">Tüm medya indirmeleri ve parçalar bu sınırı paylaşır. 8 Mbps ≈ 1 MB/s. 0 = sınırsız.</p>
+                </div>
+                <input type="hidden" id="settingCompressMode" value="false">
+            </div>
+            
+            <div class="app-update-card">
+                <div class="app-update-heading">
+                    <span class="app-update-icon" aria-hidden="true"><i class="fa-solid fa-cloud-arrow-down"></i></span>
+                    <span class="app-update-name">Video Downloader Pro</span>
+                    <span id="installedVersion" class="app-version-badge">{{ current_version }}</span>
+                </div>
+                <button id="checkAppUpdateBtn" class="settings-action" onclick="checkAppUpdate(true)">Uygulama güncellemelerini kontrol et</button>
+                <p id="appUpdateCheckStatus" class="app-update-status" role="status" aria-live="polite"></p>
+            </div>
+            <button class="settings-action settings-action-primary settings-save" onclick="saveSettings()">Kaydet</button>
+        </div>
+    </div>
+
+
+
+
+    <div id="formatInfoModal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.6); z-index: 1000; flex-direction: column; justify-content: center; align-items: center; backdrop-filter: blur(5px); opacity: 0; transition: opacity 0.3s ease;">
+        <div style="background: var(--glass-bg); border: 1px solid var(--glass-border); border-radius: 20px; padding: 30px; width: 400px; max-width: 90%; color: var(--text-main); position: relative; box-shadow: 0 20px 40px rgba(0,0,0,0.5); transform: translateY(20px); transition: transform 0.3s ease;" id="formatInfoModalContent">
+            <button onclick="closeFormatInfo()" style="position: absolute; top: 15px; right: 20px; background: transparent; border: none; color: var(--text-sub); font-size: 18px; cursor: pointer; transition: 0.3s;" onmouseover="this.style.color='var(--danger)'" onmouseout="this.style.color='var(--text-sub)'"><i class="fa-solid fa-xmark"></i></button>
+            <h3 style="margin-top: 0; margin-bottom: 20px; font-weight: 600; text-align: center;"><i class="fa-solid fa-music" style="color: var(--primary); margin-right: 8px;"></i>Ses Formatları Bilgisi</h3>
+            <div style="display: flex; flex-direction: column; gap: 15px; font-size: 13.5px; line-height: 1.5;">
+                <div style="background: var(--q-bg); padding: 12px; border-radius: 12px; border: 1px solid var(--glass-border);">
+                    <strong style="color: var(--primary);">MP3 & M4A:</strong> İdeal kalite ve boyut dengesi. <span style="color: #32D74B; font-weight: 600;">Şarkı kapağı destekler.</span> Çoğu cihazla tam uyumludur.
+                </div>
+                <div style="background: var(--q-bg); padding: 12px; border-radius: 12px; border: 1px solid var(--glass-border);">
+                    <strong style="color: var(--primary);">WAV:</strong> Kayıpsız, en yüksek ses kalitesi ancak dosya boyutu büyüktür. <span style="color: var(--danger); font-weight: 600;">Şarkı kapağı desteklemez.</span>
+                </div>
+                <div style="background: var(--q-bg); padding: 12px; border-radius: 12px; border: 1px solid var(--glass-border);">
+                    <strong style="color: var(--primary);">Opus:</strong> Düşük boyutta yüksek kalite sunan modern bir formattır. <span style="color: var(--danger); font-weight: 600;">Şarkı kapağı desteklemez.</span>
+                </div>
+            </div>
+            <button onclick="closeFormatInfo()" style="width: 100%; background: var(--input-bg); border: 1px solid var(--glass-border); color: var(--text-main); padding: 12px; border-radius: 12px; margin-top: 20px; cursor: pointer; font-weight: 600; transition: 0.3s;" onmouseover="this.style.background='var(--hover-bg)'" onmouseout="this.style.background='var(--input-bg)'">Anladım</button>
+        </div>
+    </div>
+
+    <script>
+        // --- i18n LOGIC ---
+        const translations = {
+            tr: {
+                flag: '<span class="fi fi-tr"></span>', name: "Türkçe",
+                title: "Video Downloader Pro", sub: "Premium Video & Audio Converter",
+                defPath: "Lütfen Klasör Seçiniz...", placeholder: "Link yapıştırın ve Enter'a basın...",
+                video: "Video (MP4)", audio: "Ses (MP3/WAV)", maxQuality: "En Yüksek",
+                formatInfo: "Ses Formatları Özellikleri", playlist: "Oynatma Listesi Olarak İndir",
+                startBtn: "İndirmeyi Başlat",
+                startBtnWait: "Başlatılıyor...", downloading: "İndiriliyor...", converting: "Dönüştürülüyor...",
+                finishedAll: "Tüm İndirmeler Tamamlandı!", errUnknown: "Bilinmeyen",
+                errPrefix: "Hata:", tSuccess: "İşlem Başarılı!", tErrPath: "Lütfen klasör seçin!",
+                tErrLink: "Link girmediniz!", tErrQueue: "Sırada indirilecek link yok!",
+                tErrExist: "Bu link zaten sırada!", tErrInfo: "Video bilgisi alınamadı!", tErrConn: "Bağlantı hatası!",
+                bottom1: "1000'den fazla platformdan dilediğiniz videoyu indirebilir ve",
+                bottom2: "aktif canlı yayınları anlık olarak cihazınıza kaydedebilirsiniz!",
+                modalTitle: "Ses Formatları Bilgisi",
+                mp3d: "İdeal kalite ve boyut dengesi.", mp3c: "Şarkı kapağı destekler.",
+                wavd: "Kayıpsız, en yüksek ses kalitesi ancak dosya boyutu büyüktür.", wavc: "Şarkı kapağı desteklemez.",
+                opusd: "Düşük boyutta yüksek kalite sunan modern bir formattır.", opusc: "Şarkı kapağı desteklemez.",
+                okBtn: "Anladım", tQualityBest: "En Yüksek", tSubtitle: "Altyazı (Soft Sub)"
+            },
+            en: {
+                flag: '<span class="fi fi-gb"></span>', name: "English",
+                title: "Video Downloader Pro", sub: "Premium Video & Audio Converter",
+                defPath: "Please Select a Folder...", placeholder: "Paste link and press Enter...",
+                video: "Video (MP4)", audio: "Audio (MP3/WAV)", maxQuality: "Highest",
+                formatInfo: "Audio Format Features", playlist: "Download as Playlist",
+                startBtn: "Start Download",
+                startBtnWait: "Starting...", downloading: "Downloading...", converting: "Converting...",
+                finishedAll: "All Downloads Completed!", errUnknown: "Unknown",
+                errPrefix: "Error:", tSuccess: "Operation Successful!", tErrPath: "Please select a folder!",
+                tErrLink: "No link entered!", tErrQueue: "Queue is empty!",
+                tErrExist: "This link is already in queue!", tErrInfo: "Failed to fetch video info!", tErrConn: "Connection error!",
+                bottom1: "Download videos from over 1000+ platforms and",
+                bottom2: "record active live streams to your device instantly!",
+                modalTitle: "Audio Formats Info",
+                mp3d: "Ideal balance of quality and size.", mp3c: "Supports cover art.",
+                wavd: "Lossless, highest audio quality but large file size.", wavc: "No cover art support.",
+                opusd: "Modern format offering high quality at small size.", opusc: "No cover art support.",
+                okBtn: "Got it", tQualityBest: "Highest", tSubtitle: "Subtitle (Soft Sub)"
+            },
+            es: {
+                flag: '<span class="fi fi-es"></span>', name: "Español",
+                title: "Video Downloader Pro", sub: "Premium Video & Audio Converter",
+                defPath: "Seleccione una carpeta...", placeholder: "Pegue el enlace y presione Enter...",
+                video: "Video (MP4)", audio: "Audio (MP3/WAV)", maxQuality: "Máxima",
+                formatInfo: "Características del Formato", playlist: "Descargar como Lista",
+                startBtn: "Iniciar Descarga",
+                startBtnWait: "Iniciando...", downloading: "Descargando...", converting: "Convirtiendo...",
+                finishedAll: "¡Todas las descargas completadas!", errUnknown: "Desconocido",
+                errPrefix: "Error:", tSuccess: "¡Operación Exitosa!", tErrPath: "¡Seleccione una carpeta!",
+                tErrLink: "¡No se ingresó enlace!", tErrQueue: "¡La cola está vacía!",
+                tErrExist: "¡Este enlace ya está en la cola!", tErrInfo: "¡Fallo al obtener información!", tErrConn: "¡Error de conexión!",
+                bottom1: "Descarga videos de más de 1000+ plataformas y",
+                bottom2: "graba transmisiones en vivo activas al instante!",
+                modalTitle: "Información de Formatos",
+                mp3d: "Equilibrio ideal entre calidad y tamaño.", mp3c: "Soporta carátula.",
+                wavd: "Sin pérdida, máxima calidad pero tamaño grande.", wavc: "No soporta carátula.",
+                opusd: "Formato moderno de alta calidad en tamaño reducido.", opusc: "No soporta carátula.",
+                okBtn: "Entendido", tQualityBest: "Máxima", tSubtitle: "Subtítulo (Soft Sub)"
+            },
+            fr: {
+                flag: '<span class="fi fi-fr"></span>', name: "Français",
+                title: "Video Downloader Pro", sub: "Premium Video & Audio Converter",
+                defPath: "Veuillez choisir un dossier...", placeholder: "Collez le lien et appuyez sur Entrée...",
+                video: "Vidéo (MP4)", audio: "Audio (MP3/WAV)", maxQuality: "Maximale",
+                formatInfo: "Caractéristiques du Format", playlist: "Télécharger en Playlist",
+                startBtn: "Démarrer le Téléchargement",
+                startBtnWait: "Démarrage...", downloading: "Téléchargement...", converting: "Conversion...",
+                finishedAll: "Tous les téléchargements terminés !", errUnknown: "Inconnu",
+                errPrefix: "Erreur:", tSuccess: "Opération réussie !", tErrPath: "Veuillez choisir un dossier !",
+                tErrLink: "Aucun lien saisi !", tErrQueue: "La file est vide !",
+                tErrExist: "Ce lien est déjà dans la file !", tErrInfo: "Échec d'obtention des infos !", tErrConn: "Erreur de connexion !",
+                bottom1: "Téléchargez des vidéos sur plus de 1000 plateformes et",
+                bottom2: "enregistrez les diffusions en direct instantanément !",
+                modalTitle: "Infos Formats Audio",
+                mp3d: "Équilibre idéal qualité/taille.", mp3c: "Prend en charge la pochette.",
+                wavd: "Sans perte, très haute qualité mais fichier lourd.", wavc: "Pas de pochette.",
+                opusd: "Format moderne offrant une haute qualité pour une petite taille.", opusc: "Pas de pochette.",
+                okBtn: "Compris", tQualityBest: "Maximale", tSubtitle: "Sous-titre (Soft Sub)"
+            },
+            de: {
+                flag: '<span class="fi fi-de"></span>', name: "Deutsch",
+                title: "Video Downloader Pro", sub: "Premium Video & Audio Converter",
+                defPath: "Bitte Ordner wählen...", placeholder: "Link einfügen und Enter drücken...",
+                video: "Video (MP4)", audio: "Audio (MP3/WAV)", maxQuality: "Höchste",
+                formatInfo: "Audioformat-Funktionen", playlist: "Als Playlist Herunterladen",
+                startBtn: "Download Starten",
+                startBtnWait: "Startet...", downloading: "Wird heruntergeladen...", converting: "Wird konvertiert...",
+                finishedAll: "Alle Downloads Abgeschlossen!", errUnknown: "Unbekannt",
+                errPrefix: "Fehler:", tSuccess: "Erfolgreich!", tErrPath: "Bitte Ordner wählen!",
+                tErrLink: "Kein Link eingegeben!", tErrQueue: "Warteschlange ist leer!",
+                tErrExist: "Link ist bereits in der Warteschlange!", tErrInfo: "Video-Info konnte nicht abgerufen werden!", tErrConn: "Verbindungsfehler!",
+                bottom1: "Lade Videos von über 1000+ Plattformen herunter und",
+                bottom2: "zeichne Live-Streams sofort auf deinem Gerät auf!",
+                modalTitle: "Audioformate Info",
+                mp3d: "Ideales Gleichgewicht zwischen Qualität und Größe.", mp3c: "Unterstützt Cover.",
+                wavd: "Verlustfrei, höchste Qualität, aber große Datei.", wavc: "Kein Cover.",
+                opusd: "Modernes Format mit hoher Qualität bei kleiner Größe.", opusc: "Kein Cover.",
+                okBtn: "Verstanden", tQualityBest: "Höchste", tSubtitle: "Untertitel (Soft Sub)"
+            },
+            ru: {
+                flag: '<span class="fi fi-ru"></span>', name: "Русский",
+                title: "Video Downloader Pro", sub: "Premium Video & Audio Converter",
+                defPath: "Пожалуйста, выберите папку...", placeholder: "Вставьте ссылку и нажмите Enter...",
+                video: "Видео (MP4)", audio: "Аудио (MP3/WAV)", maxQuality: "Лучшее",
+                formatInfo: "Особенности форматов", playlist: "Скачать как плейлист",
+                startBtn: "Начать скачивание",
+                startBtnWait: "Запуск...", downloading: "Скачивание...", converting: "Конвертация...",
+                finishedAll: "Все загрузки завершены!", errUnknown: "Неизвестно",
+                errPrefix: "Ошибка:", tSuccess: "Успешно!", tErrPath: "Выберите папку!",
+                tErrLink: "Ссылка не введена!", tErrQueue: "Очередь пуста!",
+                tErrExist: "Эта ссылка уже в очереди!", tErrInfo: "Не удалось получить информацию!", tErrConn: "Ошибка соединения!",
+                bottom1: "Скачивайте видео с более чем 1000+ платформ и",
+                bottom2: "сохраняйте прямые трансляции на свое устройство мгновенно!",
+                modalTitle: "Информация о форматах",
+                mp3d: "Идеальный баланс качества и размера.", mp3c: "Поддержка обложки.",
+                wavd: "Без потерь, лучшее качество, но большой размер.", wavc: "Нет обложки.",
+                opusd: "Современный формат, высокое качество при малом размере.", opusc: "Нет обложки.",
+                okBtn: "Понятно", tQualityBest: "Лучшее", tSubtitle: "Субтитры (Soft Sub)"
+            },
+            pt: {
+                flag: '<span class="fi fi-pt"></span>', name: "Português",
+                title: "Video Downloader Pro", sub: "Premium Video & Audio Converter",
+                defPath: "Selecione uma pasta...", placeholder: "Cole o link e pressione Enter...",
+                video: "Vídeo (MP4)", audio: "Áudio (MP3/WAV)", maxQuality: "Máxima",
+                formatInfo: "Recursos de Áudio", playlist: "Baixar como Playlist",
+                startBtn: "Iniciar Download",
+                startBtnWait: "Iniciando...", downloading: "Baixando...", converting: "Convertendo...",
+                finishedAll: "Todos os Downloads Concluídos!", errUnknown: "Desconhecido",
+                errPrefix: "Erro:", tSuccess: "Sucesso!", tErrPath: "Selecione uma pasta!",
+                tErrLink: "Nenhum link inserido!", tErrQueue: "Fila vazia!",
+                tErrExist: "Este link já está na fila!", tErrInfo: "Falha ao obter info!", tErrConn: "Erro de conexão!",
+                bottom1: "Baixe vídeos de mais de 1000 plataformas e",
+                bottom2: "grave transmissões ao vivo no seu dispositivo instantaneamente!",
+                modalTitle: "Info de Formatos",
+                mp3d: "Equilíbrio ideal entre qualidade e tamanho.", mp3c: "Suporta capa.",
+                wavd: "Sem perda, maior qualidade, mas arquivo grande.", wavc: "Sem capa.",
+                opusd: "Formato moderno com alta qualidade e tamanho pequeno.", opusc: "Sem capa.",
+                okBtn: "Entendido", tQualityBest: "Máxima", tSubtitle: "Legenda (Soft Sub)"
+            },
+            zh: {
+                flag: '<span class="fi fi-cn"></span>', name: "中文",
+                title: "Video Downloader Pro", sub: "Premium Video & Audio Converter",
+                defPath: "请选择一个文件夹...", placeholder: "粘贴链接并按回车...",
+                video: "视频 (MP4)", audio: "音频 (MP3/WAV)", maxQuality: "最高",
+                formatInfo: "音频格式功能", playlist: "作为播放列表下载",
+                startBtn: "开始下载",
+                startBtnWait: "启动中...", downloading: "下载中...", converting: "转换中...",
+                finishedAll: "所有下载已完成！", errUnknown: "未知",
+                errPrefix: "错误：", tSuccess: "操作成功！", tErrPath: "请选择文件夹！",
+                tErrLink: "未输入链接！", tErrQueue: "队列为空！",
+                tErrExist: "此链接已在队列中！", tErrInfo: "获取视频信息失败！", tErrConn: "连接错误！",
+                bottom1: "从超过1000个平台下载视频，并",
+                bottom2: "将实时直播立即保存到您的设备！",
+                modalTitle: "音频格式信息",
+                mp3d: "质量和大小的理想平衡。", mp3c: "支持封面。",
+                wavd: "无损，最高音质，但文件较大。", wavc: "不支持封面。",
+                opusd: "现代格式，文件小但音质高。", opusc: "不支持封面。",
+                okBtn: "明白了", tQualityBest: "最高", tSubtitle: "字幕 (Soft Sub)"
+            },
+            ja: {
+                flag: '<span class="fi fi-jp"></span>', name: "日本語",
+                title: "Video Downloader Pro", sub: "Premium Video & Audio Converter",
+                defPath: "フォルダを選択してください...", placeholder: "リンクを貼り付けてEnterを押す...",
+                video: "ビデオ (MP4)", audio: "オーディオ (MP3/WAV)", maxQuality: "最高",
+                formatInfo: "フォーマットの機能", playlist: "プレイリストとしてダウンロード",
+                startBtn: "ダウンロード開始",
+                startBtnWait: "開始中...", downloading: "ダウンロード中...", converting: "変換中...",
+                finishedAll: "すべてのダウンロードが完了しました！", errUnknown: "不明",
+                errPrefix: "エラー:", tSuccess: "成功しました！", tErrPath: "フォルダを選択してください！",
+                tErrLink: "リンクが入力されていません！", tErrQueue: "キューが空です！",
+                tErrExist: "このリンクはすでにキューにあります！", tErrInfo: "情報の取得に失敗しました！", tErrConn: "接続エラー！",
+                bottom1: "1000以上のプラットフォームからビデオをダウンロードし、",
+                bottom2: "アクティブなライブストリームをすぐに保存できます！",
+                modalTitle: "フォーマット情報",
+                mp3d: "品質とサイズの理想的なバランス。", mp3c: "カバーアート対応。",
+                wavd: "ロスレス、最高音質ですがファイルは大きいです。", wavc: "カバーアート非対応。",
+                opusd: "小さいサイズで高品質を提供するモダンなフォーマット。", opusc: "カバーアート非対応。",
+                okBtn: "了解", tQualityBest: "最高", tSubtitle: "字幕 (Soft Sub)"
+            },
+            hi: {
+                flag: '<span class="fi fi-in"></span>', name: "हिन्दी",
+                title: "Video Downloader Pro", sub: "Premium Video & Audio Converter",
+                defPath: "कृपया एक फ़ोल्डर चुनें...", placeholder: "लिंक पेस्ट करें और Enter दबाएं...",
+                video: "वीडियो (MP4)", audio: "ऑडियो (MP3/WAV)", maxQuality: "सर्वश्रेष्ठ",
+                formatInfo: "ऑडियो प्रारूप विशेषताएँ", playlist: "प्लेलिस्ट के रूप में डाउनलोड करें",
+                startBtn: "डाउनलोड शुरू करें",
+                startBtnWait: "शुरू हो रहा है...", downloading: "डाउनलोड हो रहा है...", converting: "परिवर्तित हो रहा है...",
+                finishedAll: "सभी डाउनलोड पूरे हुए!", errUnknown: "अज्ञात",
+                errPrefix: "त्रुटि:", tSuccess: "सफल!", tErrPath: "कृपया फ़ोल्डर चुनें!",
+                tErrLink: "कोई लिंक नहीं डाला गया!", tErrQueue: "कतार खाली है!",
+                tErrExist: "यह लिंक पहले से कतार में है!", tErrInfo: "जानकारी प्राप्त करने में विफल!", tErrConn: "कनेक्शन त्रुटि!",
+                bottom1: "1000+ से अधिक प्लेटफार्मों से वीडियो डाउनलोड करें और",
+                bottom2: "लाइव स्ट्रीम को तुरंत अपने डिवाइस पर सहेजें!",
+                modalTitle: "ऑडियो प्रारूप जानकारी",
+                mp3d: "गुणवत्ता और आकार का आदर्श संतुलन।", mp3c: "कवर आर्ट का समर्थन करता है।",
+                wavd: "हानिरहित, उच्चतम गुणवत्ता लेकिन बड़ी फ़ाइल।", wavc: "कवर आर्ट समर्थित नहीं।",
+                opusd: "आधुनिक प्रारूप, कम आकार में उच्च गुणवत्ता।", opusc: "कवर आर्ट समर्थित नहीं।",
+                okBtn: "समझ गया", tQualityBest: "सर्वश्रेष्ठ", tSubtitle: "उपशीर्षक (Soft Sub)"
+            }
+        };
+
+        let currentLang = localStorage.getItem('ytpro_lang') || 'tr';
+
+        function updateTexts() {
+            const t = translations[currentLang];
+            document.querySelector("h1").innerText = t.title;
+            document.querySelector(".subtitle").innerText = t.sub;
+            
+            let pathDisplay = document.getElementById('pathDisplay');
+            if (pathDisplay.innerText.includes("Lütfen") || pathDisplay.innerText.includes("Please") || pathDisplay.innerText.includes("Seleccione") || pathDisplay.innerText.includes("Veuillez") || pathDisplay.innerText.includes("Bitte") || pathDisplay.innerText.includes("Пожалуйста") || pathDisplay.innerText.includes("Selecione") || pathDisplay.innerText.includes("请") || pathDisplay.innerText.includes("フォルダ") || pathDisplay.innerText.includes("कृपया")) {
+                pathDisplay.innerText = t.defPath;
+            }
+            
+            document.getElementById('urlInput').placeholder = t.placeholder;
+            
+            // Format options
+            const formatSelected = document.getElementById('formatValue').value;
+            const formatTrigger = document.querySelector("#formatSelectDiv .custom-select__trigger span");
+            document.querySelectorAll("#formatSelectDiv .custom-option")[0].innerText = t.video;
+            document.querySelectorAll("#formatSelectDiv .custom-option")[1].innerText = t.audio;
+            if (formatSelected === 'video') formatTrigger.innerText = t.video;
+            else formatTrigger.innerText = t.audio;
+            
+            document.querySelector("#formatInfoLinkContainer span").innerHTML = `<i class="fa-solid fa-circle-info" style="margin-right: 4px;"></i>${t.formatInfo}`;
+            document.getElementById("playlistLabel").innerHTML = `<i class="fa-solid fa-list-ul"></i>${t.playlist}`;
+            
+            updateDownloadButtonText();
+            
+            document.querySelector("#formatInfoModalContent h3").innerHTML = `<i class="fa-solid fa-music" style="color: var(--primary); margin-right: 8px;"></i>${t.modalTitle}`;
+            const divs = document.querySelectorAll("#formatInfoModalContent > div > div");
+            divs[0].innerHTML = `<strong style="color: var(--primary);">MP3 & M4A:</strong> ${t.mp3d} <span style="color: #32D74B; font-weight: 600;">${t.mp3c}</span>`;
+            divs[1].innerHTML = `<strong style="color: var(--primary);">WAV:</strong> ${t.wavd} <span style="color: var(--danger); font-weight: 600;">${t.wavc}</span>`;
+            divs[2].innerHTML = `<strong style="color: var(--primary);">Opus:</strong> ${t.opusd} <span style="color: var(--danger); font-weight: 600;">${t.opusc}</span>`;
+            
+            document.querySelector("#formatInfoModalContent button:last-child").innerText = t.okBtn;
+            
+            document.getElementById('platformFootnote').textContent = `${t.bottom1} ${t.bottom2}`;
+            videoQualities[0].label = t.tQualityBest;
+            updateQualityMenu(document.getElementById("formatValue").value);
+            
+            document.getElementById('subLabel').innerHTML = `<i class="fa-solid fa-closed-captioning"></i>${t.tSubtitle}`;
+            
+
+
+            
+            document.getElementById('currentLangFlag').innerHTML = t.flag;
+            if (typeof updateStudioTexts === 'function') updateStudioTexts();
+            if (typeof updateQualityHint === 'function') updateQualityHint();
+        }
+
+        function setLanguage(langCode) {
+            currentLang = langCode;
+            localStorage.setItem('ytpro_lang', langCode);
+            updateTexts();
+            document.getElementById('langSelectDiv').classList.remove('open');
+            fetch('/set-lang', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ lang: langCode })
+            }).catch(e => {});
+        }
+
+        // --- 0. AUTO UPDATER LOGIC ---
+        let appUpdatePoll = null;
+        let appUpdateBusy = false;
+
+        async function checkAppUpdate(manual = false) {
+            const label = document.getElementById('appUpdateCheckStatus');
+            const checkButton = document.getElementById('checkAppUpdateBtn');
+            if (checkButton.disabled) return;
+            checkButton.disabled = true;
+            if (manual) label.textContent = 'Kontrol ediliyor...';
+            try {
+                const response = await fetch('/check-app-update');
+                if (!response.ok) throw new Error('Güncelleme kontrol edilemedi.');
+                const data = await response.json();
+                if (data.status === 'error') throw new Error(data.message);
+                if (data.update_available) {
+                    label.textContent = 'Yeni sürüm: ' + data.latest_version;
+                    document.getElementById('appUpdateVersion').textContent = data.latest_version;
+                    document.getElementById('appUpdateNotes').textContent = data.release_notes || 'Sürüm notu eklenmemiş.';
+                    const modal = document.getElementById('appUpdateModal');
+                    modal.style.display = 'flex';
+                    setTimeout(() => { modal.style.opacity = '1'; modal.firstElementChild.style.transform = 'translateY(0)'; }, 10);
+                    await refreshAppUpdate();
+                } else {
+                    label.textContent = 'Uygulamanız güncel (' + data.current_version + ').';
+                }
+            } catch (error) {
+                label.textContent = error.message || 'Güncelleme kontrol edilemedi.';
+            } finally {
+                checkButton.disabled = false;
+            }
+        }
+
+        async function refreshAppUpdate() {
+            const response = await fetch('/app-update/status');
+            if (!response.ok) throw new Error('Güncelleme durumu alınamadı.');
+            const data = await response.json();
+            const button = document.getElementById('appUpdateAction');
+            const label = document.getElementById('appUpdateStatus');
+            const progress = document.getElementById('appUpdateProgress');
+            appUpdateBusy = ['checking', 'downloading', 'installing'].includes(data.status);
+            button.disabled = appUpdateBusy;
+            progress.style.display = data.status === 'downloading' ? 'block' : 'none';
+            progress.value = data.percent || 0;
+            if (data.status === 'ready') {
+                document.getElementById('appUpdateVersion').textContent = data.latest_version;
+                label.textContent = 'Dosya doğrulandı. Kurulum başlatılınca uygulama kapanacak. Kurulum sihirbazını tamamlayın.';
+                button.textContent = 'Kurulumu başlat';
+                button.onclick = installAppUpdate;
+            } else {
+                button.textContent = 'Güncellemeyi indir';
+                button.onclick = downloadAppUpdate;
+                const messages = {checking: 'Sürüm doğrulanıyor...', downloading: 'İndiriliyor: %' + data.percent, installing: 'Kurulum başlatıldı. Uygulama kapanıyor...'};
+                label.textContent = data.message || messages[data.status] || '';
+            }
+            clearTimeout(appUpdatePoll);
+            if (appUpdateBusy) appUpdatePoll = setTimeout(() => refreshAppUpdate().catch(error => {
+                label.textContent = error.message;
+                appUpdateBusy = false;
+                button.disabled = false;
+            }), 750);
+        }
+
+        async function downloadAppUpdate() {
+            const button = document.getElementById('appUpdateAction');
+            button.disabled = true;
+            try {
+                const response = await fetch('/app-update/download', {method: 'POST', headers: {'Content-Type': 'application/json'}, body: '{}'});
+                const data = await response.json();
+                if (!response.ok) throw new Error(data.message);
+                await refreshAppUpdate();
+            } catch (error) {
+                document.getElementById('appUpdateStatus').textContent = error.message;
+                button.disabled = false;
+            }
+        }
+
+        async function installAppUpdate() {
+            const button = document.getElementById('appUpdateAction');
+            button.disabled = true;
+            try {
+                const response = await fetch('/app-update/install', {method: 'POST', headers: {'Content-Type': 'application/json'}, body: '{}'});
+                const data = await response.json();
+                if (!response.ok) throw new Error(data.message);
+                await refreshAppUpdate();
+            } catch (error) {
+                document.getElementById('appUpdateStatus').textContent = error.message;
+                button.disabled = false;
+            }
+        }
+
+        function closeAppUpdate() {
+            const modal = document.getElementById('appUpdateModal');
+            modal.style.opacity = '0';
+            modal.firstElementChild.style.transform = 'translateY(20px)';
+            setTimeout(() => { modal.style.display = 'none'; }, 300);
+        }
+
+        // --- THEME TOGGLE LOGIC ---
+        function toggleTheme(forceDark = null) {
+            const isDark = document.documentElement.classList.contains('light-mode');
+            const targetLight = forceDark !== null ? !forceDark : !isDark;
+            
+            if (targetLight) {
+                document.documentElement.classList.add('light-mode');
+                document.getElementById('themeToggleBtn').innerHTML = '<i class="fa-solid fa-moon" id="themeIcon"></i>';
+            } else {
+                document.documentElement.classList.remove('light-mode');
+                document.getElementById('themeToggleBtn').innerHTML = '<i class="fa-solid fa-sun" id="themeIcon"></i>';
+            }
+            if (forceDark === null) localStorage.setItem('ytpro_theme', targetLight ? 'light' : 'dark');
+            document.getElementById('themeToggleBtn').setAttribute('aria-pressed', String(targetLight));
+        }
+        
+        // Auto-detect and set theme on load
+        (function() {
+            const savedTheme = localStorage.getItem('ytpro_theme');
+            if (savedTheme === 'light') {
+                toggleTheme(false);
+            } else if (savedTheme === 'dark') {
+                toggleTheme(true);
+            } else {
+                if (window.matchMedia && window.matchMedia('(prefers-color-scheme: light)').matches) {
+                    toggleTheme(false);
+                } else {
+                    toggleTheme(true);
+                }
+            }
+            window.matchMedia('(prefers-color-scheme: light)').addEventListener('change', e => {
+                if (!localStorage.getItem('ytpro_theme')) {
+                    toggleTheme(!e.matches);
+                }
+            });
+        })();
+
+        document.addEventListener("DOMContentLoaded", () => {
+            checkComponentsStatus();
+            updateTexts();
+            checkAppUpdate();
+            initializeDownloads();
+        });
+
+        let componentPoll = null;
+        const componentText = () => currentLang === 'tr' ? {
+            title: 'Bileşen güncellemeleri', checking: 'Sürümler kontrol ediliyor...',
+            download: 'Güncellemeleri indir', retry: 'Tekrar kontrol et',
+            installed: 'Kullanılan', latest: 'Son yayın', available: 'Güncelleme mevcut',
+            current: 'Güncel', pending: 'Yeniden başlatınca etkinleşecek',
+            untracked: 'Aynı derleme yeniden indirilebilir. Doğrulanmış paketi yeniden kurmak isteğe bağlıdır.',
+            verify: 'Kurulum doğrulanamadı', verifyAction: 'Doğrulanmış paketi yeniden kur',
+            failed: 'Bileşen sunucusuna ulaşılamadı. Tekrar deneyin.'
+        } : {
+            title: 'Component updates', checking: 'Checking versions...',
+            download: 'Download updates', retry: 'Check again', installed: 'In use',
+            latest: 'Latest release', available: 'Update available', current: 'Up to date',
+            pending: 'Will activate after restarting',
+            untracked: 'This may download the same build. Reinstalling the verified package is optional.',
+            verify: 'Installation not verified', verifyAction: 'Reinstall verified package',
+            failed: 'Could not reach the component server. Try again.'
+        };
+
+        async function checkComponentsStatus() {
+            try {
+                const response = await fetch('/check-components');
+                if (!response.ok) return;
+                const data = await response.json();
+                if (!data.ready) await forceUpdate();
+            } catch (error) { console.error(error); }
+        }
+
+        function closeComponentUpdate() {
+            document.getElementById('updateOverlay').style.display = 'none';
+        }
+
+        async function forceUpdate() {
+            const t = componentText();
+            document.getElementById('updateOverlay').style.display = 'flex';
+            document.getElementById('updateTitle').textContent = t.title;
+            document.getElementById('updateDesc').textContent = t.checking;
+            document.getElementById('componentAction').style.display = 'none';
+            document.getElementById('componentProgress').style.display = 'none';
+            document.getElementById('componentTransfer').textContent = '';
+            document.getElementById('componentVersions').replaceChildren();
+            clearTimeout(componentPoll);
+            try {
+                const statusResponse = await fetch('/components/status');
+                if (!statusResponse.ok) throw new Error(t.failed);
+                const state = await statusResponse.json();
+                if (!['checking', 'downloading'].includes(state.status)) {
+                    const response = await fetch('/components/check', {method: 'POST', headers: {'Content-Type': 'application/json'}, body: '{}'});
+                    const data = await response.json();
+                    if (!response.ok) throw new Error(data.message || t.failed);
+                }
+                await pollComponentUpdate();
+            } catch (error) { componentUpdateError(error.message || t.failed); }
+        }
+
+        function componentUpdateError(message) {
+            clearTimeout(componentPoll);
+            document.getElementById('updateDesc').textContent = message;
+            document.getElementById('componentProgress').style.display = 'none';
+            const button = document.getElementById('componentAction');
+            button.style.display = 'flex';
+            button.textContent = componentText().retry;
+            button.disabled = false;
+            button.onclick = forceUpdate;
+        }
+
+        async function pollComponentUpdate() {
+            const response = await fetch('/components/status');
+            if (!response.ok) throw new Error(componentText().failed);
+            const data = await response.json();
+            const t = componentText();
+            const busy = ['checking', 'downloading'].includes(data.status);
+            document.getElementById('updateDesc').textContent = data.message || t.checking;
+            const container = document.getElementById('componentVersions');
+            container.replaceChildren();
+            (data.components || []).forEach(item => {
+                const row = document.createElement('div');
+                row.className = 'component-version-row';
+                const name = document.createElement('strong');
+                name.textContent = item.name === 'ffmpeg' ? 'FFmpeg / FFprobe' : 'yt-dlp';
+                const details = document.createElement('span');
+                details.textContent = `${t.installed}: ${item.installed}\n${t.latest}: ${item.latest}\n${item.verification_required ? t.verify : item.update_available ? t.available : item.pending ? t.pending : t.current}`;
+                if (item.untracked) details.textContent += '\n' + t.untracked;
+                row.append(name, details);
+                container.append(row);
+            });
+            const progress = document.getElementById('componentProgress');
+            progress.style.display = data.status === 'downloading' ? 'block' : 'none';
+            progress.value = data.percent || 0;
+            document.getElementById('componentTransfer').textContent = data.status === 'downloading'
+                ? `%${data.percent || 0} · ${((data.downloaded || 0) / 1048576).toFixed(1)} / ${((data.total || 0) / 1048576).toFixed(1)} MB` : '';
+            const button = document.getElementById('componentAction');
+            button.style.display = data.status === 'available' ? 'flex' : 'none';
+            button.disabled = busy;
+            button.textContent = data.verification_only ? t.verifyAction : t.download;
+            button.onclick = downloadComponentUpdates;
+            if (data.status === 'up_to_date' && data.restart_required) {
+                document.getElementById('updateDesc').textContent += ' ' + t.pending + '.';
+            }
+            if (data.status === 'error') componentUpdateError(data.message || t.failed);
+            clearTimeout(componentPoll);
+            if (busy) componentPoll = setTimeout(() => pollComponentUpdate().catch(error => componentUpdateError(error.message)), 750);
+        }
+
+        async function downloadComponentUpdates() {
+            const button = document.getElementById('componentAction');
+            button.disabled = true;
+            try {
+                const response = await fetch('/update-components', {method: 'POST', headers: {'Content-Type': 'application/json'}, body: '{}'});
+                const data = await response.json();
+                if (!response.ok) throw new Error(data.message || componentText().failed);
+                await pollComponentUpdate();
+            } catch (error) { componentUpdateError(error.message || componentText().failed); }
+        }
+
+        // --- 1. SIRA (QUEUE) MANTIĞI ---
+        let downloadQueue = [];
+
+        document.getElementById('urlInput').addEventListener('keypress', function(e) {
+            if (e.key === 'Enter' && !e.shiftKey) {
+                e.preventDefault();
+                addToQueue();
+            }
+        });
+
+        async function addToQueue() {
+            await addLinksToQueue();
+        }
+
+        function queueSourceName(url) {
+            try {
+                const host = new URL(url).hostname.replace(/^www\./,'');
+                if (/(^|\.)tiktok\.com$/.test(host)) return 'TikTok';
+                if (/(^|\.)instagram\.com$/.test(host)) return 'Instagram';
+                if (/(^|\.)youtube\.com$/.test(host) || host === 'youtu.be') return 'YouTube';
+                return host;
+            } catch (_) { return 'Video'; }
+        }
+        function updateQueueThumbnail(image, value) {
+            const source = /^https?:\/\//i.test(value || '') || /^\/previews\/[a-f0-9]{32}\.jpg$/.test(value || '') ? value : '/static/media-placeholder.svg';
+            if (image.dataset.previewSource === source) return;
+            image.dataset.previewSource = source;
+            image.onerror = () => { image.onerror = null; image.src = '/static/media-placeholder.svg'; };
+            image.src = source;
+        }
+        function renderQueueItem(url, title, thumbnail, metadata = {}) {
+            const container = document.getElementById('queueContainer');
+            const existing = document.getElementById('queue-' + btoa(encodeURIComponent(url)).replace(/=/g, ''));
+            if (existing) existing.remove();
+            const div = document.createElement('div');
+            div.className = 'queue-item';
+            div.id = 'queue-' + btoa(encodeURIComponent(url)).replace(/=/g, '');
+            
+            div.innerHTML = `
+                <img class="queue-thumb" alt="">
+                <div class="queue-info">
+                    <div class="queue-title"></div>
+                    <div class="queue-meta"><span class="queue-url"></span><span class="q-format"></span><span class="q-estimate"></span></div>
+                    <div class="queue-progress-wrapper" style="display: none; margin-top: 6px;">
+                        <div style="display: flex; justify-content: space-between; font-size: 10.5px; color: var(--primary); margin-bottom: 4px; font-weight: 600;">
+                            <span class="q-percent">%0</span>
+                            <span class="q-speed" style="color: var(--text-sub);">Başlıyor...</span>
+                        </div>
+                        <div class="progress-container" style="display: block; height: 5px; margin-top: 0; background: rgba(128, 128, 128, 0.2); border-radius: 10px; overflow: hidden;">
+                            <div class="progress-fill q-fill" style="width: 0%; height: 100%; background: var(--primary); transition: width 0.3s;"></div>
+                        </div>
+                    </div>
+                </div>
+                <div style="display: flex; gap: 8px;">
+                    <button class="queue-pause" style="display: none; color: var(--text-sub); cursor: pointer; padding: 5px; transition: 0.3s; border: none; background: transparent; font-size: 14px;" title="Duraklat" aria-label="Duraklat">
+                        <i class="fa-solid fa-pause"></i>
+                    </button>
+                    <button class="queue-resume" style="display: none; color: var(--primary); cursor: pointer; padding: 5px; transition: 0.3s; border: none; background: transparent; font-size: 14px;" title="Devam Et" aria-label="Devam et">
+                        <i class="fa-solid fa-play"></i>
+                    </button>
+                    <button class="queue-remove" title="Kaldır" aria-label="Kaldır">
+                        <i class="fa-solid fa-xmark"></i>
+                    </button>
+                </div>
+            `;
+            div.querySelector('.queue-title').textContent = title;
+            div.querySelector('.queue-title').title = title;
+            div.querySelector('.queue-url').textContent = queueSourceName(url);
+            div.querySelector('.queue-url').title = url;
+            const image = div.querySelector('.queue-thumb');
+            updateQueueThumbnail(image,thumbnail);
+            div.querySelector('.q-estimate').textContent = metadata.total_bytes ? '≈ ' + formatBytes(metadata.total_bytes) : '';
+            div.querySelector('.queue-pause').onclick = () => pauseItem(url);
+            div.querySelector('.queue-resume').onclick = () => resumeItem(url);
+            div.querySelector('.queue-remove').onclick = () => removeFromQueue(url, div.id);
+            container.prepend(div);
+            updateDownloadButtonText();
+        }
+
+        async function removeFromQueue(url, divId) {
+            if (managedQueueURLs.has(url)) {
+                try {
+                    const response = await fetch('/queue/remove', {method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify({url})});
+                    const data = await response.json();
+                    if (!response.ok) throw new Error(data.message);
+                    managedQueueURLs.delete(url);
+                } catch (error) { showToast(error.message, true); return; }
+            }
+            downloadQueue = downloadQueue.filter(item => item !== url);
+            draftItems.delete(url);
+            await saveDraftQueue();
+            const div = document.getElementById(divId);
+            if (div) div.remove();
+            updateDownloadButtonText();
+            await pollDownloadProgress();
+            await refreshSourceQuality();
+        }
+
+        function updateDownloadButtonText() {
+            const btn = document.getElementById('dlBtn');
+            if (downloadQueue.length > 0) {
+                btn.innerText = `${translations[currentLang].startBtn} (${downloadQueue.length} Video)`;
+            } else {
+                btn.innerText = translations[currentLang].startBtn;
+            }
+        }
+
+        // --- 2. KLASÖR & MENÜ MANTIĞI ---
+        const videoQualities = [
+            { label: "En Yüksek", value: "max" }, { label: "8K (4320p)", value: "8k" },
+            { label: "4K (2160p)", value: "4k" }, { label: "1080p (Full HD)", value: "1080p" },
+            { label: "720p (HD)", value: "720p" }
+        ];
+        const audioFormats = [
+            { label: "MP3", value: "mp3" }, { label: "WAV", value: "wav" },
+            { label: "M4A", value: "m4a" }, { label: "Opus", value: "opus" }
+        ];
+
+        function updateQualityMenu(type) {
+            const container = document.getElementById("qualityOptionsContainer");
+            const hiddenInput = document.getElementById("qualityValue");
+            const triggerText = document.getElementById("qualityText");
+            const previous = hiddenInput.value;
+            container.innerHTML = "";
+            const options = (type === "video") ? (typeof getVideoQualityOptions === "function" ? getVideoQualityOptions() : videoQualities) : audioFormats;
+            
+            options.forEach((opt, index) => {
+                const span = document.createElement("span");
+                span.className = "custom-option";
+                if (opt.value === previous || (index === 0 && !options.some(item => item.value === previous))) span.classList.add("selected");
+                span.setAttribute("data-value", opt.value);
+                span.innerText = opt.label;
+                
+                span.addEventListener("click", function() {
+                    container.querySelectorAll(".custom-option").forEach(o => o.classList.remove("selected"));
+                    this.classList.add("selected");
+                    triggerText.innerText = opt.label;
+                    hiddenInput.value = opt.value;
+                    document.getElementById("qualitySelectDiv").classList.remove("open");
+                    document.getElementById("qualityWrapper").style.zIndex = "9";
+                });
+                container.appendChild(span);
+            });
+            const selected = options.find(item => item.value === previous) || options[0];
+            triggerText.innerText = selected.label;
+            hiddenInput.value = selected.value;
+        }
+
+        async function selectFolder() {
+            try {
+                document.getElementById('pathBtn').classList.remove('error');
+                const response = await fetch('/select-folder', { method: 'POST' });
+                const data = await response.json();
+                if (data.status === 'success') {
+                    document.getElementById('pathDisplay').innerText = data.path;
+                    document.getElementById('pathDisplay').style.color = "var(--text-main)";
+                    showToast(translations[currentLang].tSuccess);
+                }
+            } catch (error) { console.error(error); }
+        }
+
+        document.querySelectorAll('.custom-select-wrapper').forEach(wrapper => {
+            const select = wrapper.querySelector('.custom-select');
+            const trigger = select.querySelector('.custom-select__trigger');
+            
+            trigger.addEventListener('click', (e) => {
+                const isOpen = select.classList.contains('open');
+                document.querySelectorAll('.custom-select').forEach(other => other.classList.remove('open'));
+                if (!isOpen) { select.classList.add('open'); wrapper.style.zIndex = "100"; } 
+                else { select.classList.remove('open'); setTimeout(() => wrapper.style.zIndex = "10", 300); }
+                e.stopPropagation();
+            });
+        });
+
+        document.querySelectorAll('#formatSelectDiv .custom-option').forEach(option => {
+            option.addEventListener('click', function() {
+                const parent = this.parentElement;
+                parent.querySelectorAll('.custom-option').forEach(o => o.classList.remove('selected'));
+                this.classList.add("selected");
+                document.getElementById('formatText').innerText = this.innerText;
+                const selectedFormat = this.getAttribute('data-value');
+                document.getElementById('formatValue').value = selectedFormat;
+                document.getElementById('formatSelectDiv').classList.remove('open');
+                updateQualityMenu(selectedFormat);
+                
+                if (selectedFormat === 'audio') {
+                    document.getElementById('formatInfoLinkContainer').style.display = 'flex';
+                } else {
+                    document.getElementById('formatInfoLinkContainer').style.display = 'none';
+                }
+            });
+        });
+
+        function openFormatInfo() {
+            const modal = document.getElementById('formatInfoModal');
+            const content = document.getElementById('formatInfoModalContent');
+            modal.style.display = 'flex';
+            setTimeout(() => {
+                modal.style.opacity = '1';
+                content.style.transform = 'translateY(0)';
+            }, 10);
+        }
+
+        function closeFormatInfo() {
+            const modal = document.getElementById('formatInfoModal');
+            const content = document.getElementById('formatInfoModalContent');
+            modal.style.opacity = '0';
+            content.style.transform = 'translateY(20px)';
+            setTimeout(() => {
+                modal.style.display = 'none';
+            }, 300);
+        }
+
+        window.addEventListener('click', () => { document.querySelectorAll('.custom-select').forEach(s => s.classList.remove('open')); });
+
+        function showToast(msg, isError = false) {
+            const x = document.getElementById("snackbar");
+            const iconClass = isError ? "fa-solid fa-circle-exclamation error-icon" : "fa-solid fa-circle-check success-icon";
+            const icon = document.createElement('i'); icon.className = iconClass;
+            const label = document.createElement('span'); label.textContent = msg;
+            x.replaceChildren(icon, label);
+            x.className = "show";
+            setTimeout(() => x.className = x.className.replace("show", ""), 3000);
+        }
+
+        function resetUI() {
+            const btn = document.getElementById('dlBtn');
+            if (btn) {
+                btn.disabled = false;
+                updateDownloadButtonText();
+            }
+        }
+
+        // --- 3. İNDİRME VE PROGRESS MANTIĞI ---
+        let progressInterval;
+        let managedQueueURLs = new Set();
+        let activeQueueURLs = new Set();
+        let pollingInFlight = false;
+
+        function startProgressPolling() {
+            clearInterval(progressInterval);
+            pollDownloadProgress();
+            progressInterval = setInterval(pollDownloadProgress, 500);
+        }
+
+        async function pollDownloadProgress() {
+            if (pollingInFlight) return;
+            pollingInFlight = true;
+            try {
+                const response = await fetch('/progress');
+                if (!response.ok) throw new Error('İndirme durumu alınamadı.');
+                const data = await response.json();
+                const notice = document.getElementById('restoredQueueNotice');
+                notice.style.display = data.restored_count ? 'block' : 'none';
+                document.getElementById('restoredQueueText').textContent = `${data.restored_count || 0} yarım kalan iş önceki oturumdan geri yüklendi.`;
+                const warning = document.getElementById('storageWarning');
+                warning.style.display = data.storage_error ? 'block' : 'none';
+                warning.textContent = data.storage_error || '';
+                const currentURLs = new Set((data.items || []).map(item => item.url));
+                managedQueueURLs.forEach(url => {
+                    if (!currentURLs.has(url)) {
+                        const row = document.getElementById('queue-' + btoa(encodeURIComponent(url)).replace(/=/g, ''));
+                        if (row) row.remove();
+                    }
+                });
+                managedQueueURLs = currentURLs;
+                activeQueueURLs = new Set((data.items || []).filter(item => item.status !== 'finished').map(item => item.url));
+                (data.items || []).forEach(item => {
+                    let row = document.getElementById('queue-' + btoa(encodeURIComponent(item.url)).replace(/=/g, ''));
+                    if (!row) {
+                        renderQueueItem(item.url, item.title || 'Video', item.thumbnail || '');
+                        row = document.getElementById('queue-' + btoa(encodeURIComponent(item.url)).replace(/=/g, ''));
+                    }
+                    row.querySelector('.queue-progress-wrapper').style.display = 'block';
+                    row.querySelector('.q-fill').style.width = item.percent + '%';
+                    row.querySelector('.q-percent').textContent = '%' + item.percent;
+                    const labels = {retry_wait:`${item.retry_in || 0} sn sonra yeniden denenecek (${item.retry_count}/2)`, queued:'Sırada...', starting:'Hazırlanıyor...', paused:'Duraklatıldı', pausing:'Duraklatılıyor...', converting:'İşleniyor...', finished:'Tamamlandı', error:'Hata — tekrar deneyebilirsiniz'};
+                    row.querySelector('.q-speed').textContent = labels[item.status] || item.speed || '';
+                    row.querySelector('.q-speed').title = item.error || '';
+                    row.querySelector('.queue-title').textContent = item.title || 'Video';
+                    row.querySelector('.queue-title').title = item.title || 'Video';
+                    row.dataset.status = item.status;
+                    updateQueueThumbnail(row.querySelector('.queue-thumb'),item.thumbnail);
+                    row.querySelector('.q-format').textContent = item.format === 'video' ? 'MP4' : item.format === 'audio' ? String(item.quality || '').toUpperCase() : '';
+                    const size = item.total_bytes ? `${item.size_estimated ? '≈ ' : ''}${formatBytes(item.total_bytes)}` : 'Boyut: bilinmiyor';
+                    const eta = item.status === 'downloading' ? ` · Kalan indirme: ${formatETA(item.eta)}` : '';
+                    row.querySelector('.q-estimate').textContent = `${size}${eta}`;
+                    row.querySelector('.queue-pause').style.display = ['queued','starting','downloading','retry_wait'].includes(item.status) ? 'block' : 'none';
+                    const resume = row.querySelector('.queue-resume');
+                    resume.style.display = ['paused','error'].includes(item.status) ? 'block' : 'none';
+                    resume.title = item.status === 'error' ? 'Tekrar dene' : 'Devam et';
+                    resume.setAttribute('aria-label', resume.title);
+                    row.querySelector('.queue-remove').style.display = ['queued','paused','error','finished','retry_wait'].includes(item.status) ? 'block' : 'none';
+                });
+                const summary = document.getElementById('downloadSummary');
+                summary.style.display = data.total_items && data.status === 'downloading' ? 'block' : 'none';
+                const mode = data.concurrency_mode === 'auto' ? 'Otomatik' : 'Manuel';
+                const speed = ((data.total_speed_bps || 0) / 1000000).toFixed(2);
+                const cap = data.speed_limit_bps ? ` · Sınır: ${(data.speed_limit_bps * 8 / 1000000).toFixed(1)} Mbps` : '';
+                summary.textContent = `${mode} · ${data.active_count || 0}/${data.concurrency_limit || 2} aktif · ${speed} MB/s${cap}`;
+                if (['finished_all','error','paused','idle'].includes(data.status)) {
+                    clearInterval(progressInterval);
+                    if (data.status === 'error') showToast(data.error || 'İndirme tamamlanamadı.', true);
+                    resetUI();
+                }
+            } catch (error) { console.error(error); }
+            finally { pollingInFlight = false; }
+        }
+
+        async function pauseItem(url) { await queueCommand('/pause', url); }
+        async function resumeItem(url) {
+            if (await queueCommand('/resume', url)) startProgressPolling();
+        }
+        async function queueCommand(endpoint, url) {
+            try {
+                const response = await fetch(endpoint, {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({url})});
+                const data = await response.json();
+                if (!response.ok) throw new Error(data.message);
+                await pollDownloadProgress();
+                return true;
+            } catch (error) { showToast(error.message, true); return false; }
+        }
+
+        function updateConcurrencyUI() {
+            document.getElementById('settingConcurrent').disabled = document.getElementById('settingMode').value !== 'manual';
+        }
+
+        async function loadDownloadSettings() {
+            try {
+                const response = await fetch('/get-settings');
+                if (!response.ok) throw new Error('Ayarlar yüklenemedi.');
+                const data = await response.json();
+                document.getElementById('settingMode').value = data.concurrency_mode || 'auto';
+                document.getElementById('settingConcurrent').value = data.concurrent_downloads || 3;
+                document.getElementById('settingSpeed').value = data.speed_limit_mbps || '0';
+                setCompressModeUI(data.auto_compress ? 'true' : 'false');
+                updateConcurrencyUI();
+            } catch (error) { showToast(error.message, true); }
+        }
+
+        function openSettings() {
+            const modal = document.getElementById('settingsModal');
+            modal.style.display = 'flex';
+            setTimeout(() => { modal.style.opacity = '1'; modal.firstElementChild.style.transform = 'translateY(0)'; }, 10);
+        }
+        
+
+        function setCompressModeUI(mode) {
+            // Compression was exposed by the old UI but has no download implementation.
+            document.getElementById('settingCompressMode').value = 'false';
+        }
+
+        function closeSettings() {
+            const modal = document.getElementById('settingsModal');
+            modal.style.opacity = '0';
+            modal.firstElementChild.style.transform = 'translateY(20px)';
+            setTimeout(() => { modal.style.display = 'none'; }, 300);
+        }
+        
+        async function saveSettings() {
+            const payload = {
+                concurrency_mode: document.getElementById('settingMode').value,
+                concurrent_downloads: document.getElementById('settingConcurrent').value,
+                speed_limit_mbps: document.getElementById('settingSpeed').value || '0',
+                auto_compress: document.getElementById('settingCompressMode').value === 'true'
+            };
+            try {
+                const response = await fetch('/save-settings', {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(payload)});
+                const data = await response.json();
+                if (!response.ok) throw new Error(data.message || 'Ayarlar kaydedilemedi.');
+                closeSettings();
+                showToast(translations[currentLang].tSuccess);
+            } catch (error) { showToast(error.message, true); }
+        }
+
+        const draftItems = new Map();
+        let draftSavePromise = Promise.resolve();
+        let pendingSubmissionURLs = [];
+        let duplicateToken = null;
+        let playlistPreview = null;
+        let pendingPlaylistPayload = null;
+        let playlistPoll = null;
+        let playlistVisibleCount = 100;
+        const playlistChosen = new Set();
+        let historyOffset = 0;
+        let historySearchTimer = null;
+        let historyRequest = 0;
+
+        function formatBytes(value) {
+            if (!Number.isFinite(value) || value <= 0) return 'Bilinmiyor';
+            const units = ['B','KB','MB','GB','TB'];
+            const index = Math.min(4, Math.floor(Math.log(value) / Math.log(1024)));
+            return (value / Math.pow(1024,index)).toFixed(index > 0 ? 1 : 0) + ' ' + units[index];
+        }
+        function formatETA(value) {
+            if (!Number.isFinite(value) || value < 0) return 'bilinmiyor';
+            const seconds = Math.ceil(value);
+            if (seconds < 60) return seconds + ' sn';
+            if (seconds < 3600) return Math.floor(seconds / 60) + ' dk ' + seconds % 60 + ' sn';
+            return Math.floor(seconds / 3600) + ' sa ' + Math.floor(seconds % 3600 / 60) + ' dk';
+        }
+        function mediaDescription(entry) {
+            const format = entry.format === 'video' ? 'Video (MP4)' : 'Ses';
+            const quality = ['best','max'].includes(entry.quality) ? 'Otomatik · En yüksek kalite' : String(entry.quality || '').startsWith('source:') ? entry.quality.split(':')[1] + 'p' + (Number(entry.quality.split(':')[2]) ? ' · ' + entry.quality.split(':')[2] + ' FPS' : '') : String(entry.quality || '').toUpperCase();
+            return `${format} · ${quality}${entry.embed_subs ? ' · Altyazılı' : ''}`;
+        }
+        function closeFeature(id) { document.getElementById(id).style.display = 'none'; }
+        function openFeature(id) { document.getElementById(id).style.display = 'flex'; }
+        async function postJSON(url, payload) {
+            const response = await fetch(url, {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload)});
+            const data = await response.json();
+            if (!response.ok && data.status !== 'duplicate') throw new Error(data.message || 'İşlem tamamlanamadı.');
+            return data;
+        }
+        function saveDraftQueue() {
+            const entries = downloadQueue.map(url => ({url, title:draftItems.get(url)?.title || 'Video', thumbnail:draftItems.get(url)?.thumbnail || ''}));
+            draftSavePromise = draftSavePromise.catch(() => {}).then(() => postJSON('/queue/drafts',{items:entries})).catch(error => showToast('Bağlantı kuyruğu kaydedilemedi: ' + error.message,true));
+            return draftSavePromise;
+        }
+        async function initializeDownloads() {
+            await loadDownloadSettings();
+            await pollDownloadProgress();
+            try {
+                const response = await fetch('/queue/drafts');
+                if (!response.ok) throw new Error('Bekleyen bağlantılar okunamadı.');
+                const data = await response.json();
+                for (const entry of data.items || []) {
+                    if (managedQueueURLs.has(entry.url) || downloadQueue.includes(entry.url)) continue;
+                    draftItems.set(entry.url,entry);
+                    downloadQueue.push(entry.url);
+                    renderQueueItem(entry.url,entry.title,entry.thumbnail,entry);
+                }
+            } catch (error) { showToast(error.message,true); }
+            startProgressPolling();
+            if (typeof refreshSourceQuality === "function") await refreshSourceQuality();
+        }
+        async function resumeRestoredQueue() {
+            try { await postJSON('/queue/resume-all',{}); startProgressPolling(); }
+            catch(error) { showToast(error.message,true); }
+        }
+        async function sendDownload(payload) {
+            const button = document.getElementById('dlBtn');
+            button.disabled = true;
+            try {
+                await draftSavePromise;
+                const data = await postJSON('/download',payload);
+                await handleDownloadResult(data);
+            } catch(error) { showToast(error.message,true); resetUI(); }
+        }
+        async function handleDownloadResult(data) {
+            if (data.status === 'duplicate') {
+                duplicateToken = data.confirmation_token;
+                const list = document.getElementById('duplicateEntries');
+                list.replaceChildren();
+                for (const item of data.duplicates || []) {
+                    const row = document.createElement('div');
+                    row.className = 'feature-row';
+                    const title = document.createElement('strong');
+                    title.className = 'feature-row-title'; title.textContent = item.title;
+                    const details = document.createElement('p');
+                    details.className = 'feature-muted';
+                    details.textContent = `${mediaDescription(item)}\n${item.path}`;
+                    row.append(title,details); list.append(row);
+                }
+                document.getElementById('duplicateSkip').disabled = false;
+                document.getElementById('duplicateAgain').disabled = false;
+                openFeature('duplicateModal');
+                return;
+            }
+            if (!['success','skipped'].includes(data.status)) throw new Error(data.message || 'İşlem tamamlanamadı.');
+            const accepted = new Set(pendingSubmissionURLs);
+            if (data.status === 'success') managedQueueURLs = new Set([...managedQueueURLs,...accepted]);
+            downloadQueue = downloadQueue.filter(url => !accepted.has(url));
+            accepted.forEach(url => {
+                draftItems.delete(url);
+                if (data.status === 'skipped') {
+                    const row = document.getElementById('queue-' + btoa(encodeURIComponent(url)).replace(/=/g,''));
+                    if (row) row.remove();
+                }
+            });
+            await saveDraftQueue();
+            closeFeature('playlistModal'); closeFeature('duplicateModal'); closeFeature('historyModal');
+            if (typeof refreshSourceQuality === 'function') await refreshSourceQuality();
+            duplicateToken = null;
+            pendingSubmissionURLs = [];
+            if (data.status === 'skipped') { showToast(data.message); resetUI(); }
+            else startProgressPolling();
+        }
+        async function confirmDuplicate(action) {
+            if (!duplicateToken) return;
+            document.getElementById('duplicateSkip').disabled = true;
+            document.getElementById('duplicateAgain').disabled = true;
+            try {
+                const data = await postJSON('/download/confirm',{token:duplicateToken,action});
+                await handleDownloadResult(data);
+            } catch(error) { showToast(error.message,true); closeFeature('duplicateModal'); resetUI(); }
+        }
+        async function cancelDuplicate() {
+            const token = duplicateToken;
+            duplicateToken = null;
+            closeFeature('duplicateModal'); resetUI();
+            if (token) { try { await postJSON('/download/confirm',{token,action:'cancel'}); } catch(_) {} }
+        }
+        async function beginPlaylistSelection(payload, refresh = false) {
+            pendingPlaylistPayload = payload;
+            openFeature('playlistModal');
+            document.getElementById('playlistStatus').textContent = 'Liste taranıyor...';
+            document.getElementById('playlistDownload').disabled = true;
+            document.getElementById('playlistDownload').textContent = 'Seçilenleri indir';
+            document.getElementById('playlistDownload').onclick = downloadSelectedPlaylist;
+            try {
+                if (refresh || !playlistPreview || JSON.stringify(playlistPreview.urls) !== JSON.stringify(payload.urls)) {
+                    const data = await postJSON('/playlist/preview',{urls:payload.urls});
+                    playlistPreview = {token:data.token,urls:payload.urls.slice(),entries:[],status:'checking'};
+                    playlistChosen.clear();
+                    document.getElementById('playlistEntries').replaceChildren();
+                }
+                clearTimeout(playlistPoll);
+                await pollPlaylistPreview();
+            } catch(error) { playlistError(error.message); }
+        }
+        function playlistError(message) {
+            clearTimeout(playlistPoll);
+            document.getElementById('playlistStatus').textContent = message;
+            const button = document.getElementById('playlistDownload');
+            button.textContent = 'Tekrar tara'; button.disabled = false;
+            button.onclick = () => beginPlaylistSelection(pendingPlaylistPayload,true);
+        }
+        async function pollPlaylistPreview() {
+            const response = await fetch('/playlist/preview/' + playlistPreview.token);
+            const data = await response.json();
+            if (!response.ok || data.status === 'error') throw new Error(data.message || 'Liste taranamadı.');
+            if (data.status === 'checking') {
+                playlistPoll = setTimeout(() => pollPlaylistPreview().catch(error => playlistError(error.message)),750);
+                return;
+            }
+            const first = playlistPreview.status !== 'ready';
+            playlistPreview.status = 'ready'; playlistPreview.entries = data.entries || [];
+            if (first) playlistPreview.entries.filter(entry => entry.available).forEach(entry => playlistChosen.add(entry.id));
+            document.getElementById('playlistStatus').textContent = data.truncated
+                ? 'İlk 2000 öğe gösteriliyor. İndirmek istediğiniz videoları seçin.' : 'İndirmek istediğiniz videoları seçin. Kullanılamayan öğeler seçilemez.';
+            renderPlaylistSelection();
+        }
+        function matchingPlaylistEntries() {
+            const query = document.getElementById('playlistSearch').value.toLocaleLowerCase('tr');
+            return (playlistPreview?.entries || []).filter(entry => (entry.title + ' ' + entry.group).toLocaleLowerCase('tr').includes(query));
+        }
+        function renderPlaylistSelection() {
+            const container = document.getElementById('playlistEntries'); container.replaceChildren();
+            const matches = matchingPlaylistEntries();
+            for (const entry of matches.slice(0,playlistVisibleCount)) {
+                const row = document.createElement('label'); row.className = 'feature-row playlist-entry';
+                row.dataset.unavailable = String(!entry.available);
+                const checkbox = document.createElement('input'); checkbox.type = 'checkbox';
+                checkbox.disabled = !entry.available; checkbox.checked = playlistChosen.has(entry.id);
+                checkbox.onchange = () => { if (checkbox.checked) playlistChosen.add(entry.id); else playlistChosen.delete(entry.id); updatePlaylistCount(); };
+                const content = document.createElement('span');
+                const title = document.createElement('strong'); title.className = 'feature-row-title'; title.textContent = entry.title;
+                const details = document.createElement('span'); details.className = 'feature-muted';
+                details.textContent = [entry.group,entry.available ? (entry.duration ? formatETA(entry.duration) : 'Süre bilinmiyor') : 'Kullanılamıyor',entry.total_bytes ? '≈ ' + formatBytes(entry.total_bytes) : 'Boyut bilinmiyor'].filter(Boolean).join(' · ');
+                content.append(title,details); row.append(checkbox,content); container.append(row);
+            }
+            document.getElementById('playlistMore').style.display = matches.length > playlistVisibleCount ? 'flex' : 'none';
+            updatePlaylistCount();
+        }
+        function updatePlaylistCount() {
+            const total = (playlistPreview?.entries || []).filter(entry => entry.available).length;
+            document.getElementById('playlistCount').textContent = `${playlistChosen.size} / ${total} kullanılabilir video seçili`;
+            document.getElementById('playlistDownload').disabled = !playlistChosen.size || playlistPreview?.status !== 'ready';
+        }
+        function showMorePlaylist() { playlistVisibleCount += 100; renderPlaylistSelection(); }
+        function selectPlaylistResults() { matchingPlaylistEntries().filter(entry => entry.available).forEach(entry => playlistChosen.add(entry.id)); renderPlaylistSelection(); }
+        function clearPlaylistSelection() { playlistChosen.clear(); renderPlaylistSelection(); }
+        async function downloadSelectedPlaylist() {
+            if (!playlistChosen.size || !pendingPlaylistPayload) return;
+            document.getElementById('playlistDownload').disabled = true;
+            await sendDownload({...pendingPlaylistPayload,playlist_selection:{token:playlistPreview.token,ids:[...playlistChosen]}});
+            updatePlaylistCount();
+        }
+        async function openHistory() { openFeature('historyModal'); await loadHistory(); }
+        function searchHistory() { clearTimeout(historySearchTimer); historySearchTimer = setTimeout(() => loadHistory(),250); }
+        async function loadHistory(more = false) {
+            const requestId = ++historyRequest;
+            const container = document.getElementById('historyEntries');
+            if (!more) { historyOffset = 0; container.replaceChildren(); }
+            document.getElementById('historyStatus').textContent = 'Geçmiş yükleniyor...';
+            try {
+                const query = document.getElementById('historySearch').value;
+                const response = await fetch('/history?q=' + encodeURIComponent(query) + '&offset=' + historyOffset);
+                const data = await response.json();
+                if (!response.ok) throw new Error(data.message || 'Geçmiş okunamadı.');
+                if (requestId !== historyRequest) return;
+                for (const entry of data.items || []) {
+                    const row = document.createElement('div'); row.className = 'feature-row';
+                    const title = document.createElement('strong'); title.className = 'feature-row-title'; title.textContent = entry.title;
+                    const details = document.createElement('p'); details.className = 'feature-muted';
+                    details.textContent = `${mediaDescription(entry)} · ${formatBytes(entry.size)} · ${new Date(entry.completed_at).toLocaleString()}\n${entry.file_exists ? entry.path : 'Dosya taşınmış veya silinmiş.'}`;
+                    const actions = document.createElement('div'); actions.className = 'feature-actions';
+                    for (const [action,label] of [['open','Dosyayı aç'],['folder','Klasörde göster'],['repeat','Tekrar indir']]) {
+                        const button = document.createElement('button'); button.className = 'settings-action'; button.textContent = label;
+                        button.disabled = action !== 'repeat' && !entry.file_exists;
+                        button.onclick = () => historyAction(entry.id,action); actions.append(button);
+                    }
+                    row.append(title,details,actions); container.append(row);
+                }
+                historyOffset += (data.items || []).length;
+                document.getElementById('historyStatus').textContent = data.total ? `${data.total} kayıt · ${historyOffset} gösteriliyor` : 'Henüz indirme kaydı yok.';
+                document.getElementById('historyMore').style.display = historyOffset < data.total ? 'flex' : 'none';
+            } catch(error) { document.getElementById('historyStatus').textContent = error.message; }
+        }
+        async function historyAction(id,action) {
+            try {
+                if (action === 'repeat') pendingSubmissionURLs = [];
+                const data = await postJSON('/history/action',{id,action});
+                if (action === 'repeat') await handleDownloadResult(data);
+            } catch(error) { showToast(error.message,true); }
+        }
+
+        async function startDownload() {
+            if (typeof addingLinks !== 'undefined' && addingLinks) { showToast('Bağlantıların incelenmesini bekleyin.',true); return; }
+            if (!downloadQueue.length && document.getElementById('urlInput').value.trim()) await addToQueue();
+            if (!downloadQueue.length) { showToast(translations[currentLang].tErrQueue, true); return; }
+            const payload = {
+                urls: downloadQueue.slice(), format: document.getElementById('formatValue').value,
+                quality: document.getElementById('qualityValue').value,
+                is_playlist: document.getElementById('playlistCheck').checked,
+                embed_subs: document.getElementById('subCheck').checked
+            };
+            pendingSubmissionURLs = payload.urls.slice();
+            if (payload.is_playlist) { await beginPlaylistSelection(payload); return; }
+            await sendDownload(payload);
+        }
+    </script>
+    <script src="{{ url_for('static', filename='bulk-quality.js') }}"></script>
+    <script src="{{ url_for('static', filename='studio.js') }}"></script>
+</body>
+</html>

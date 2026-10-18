@@ -66,7 +66,7 @@ Found a problem? [Open an issue](https://github.com/m4xenn/Video-DownloderPro/is
 
 ## 🧑‍💻 Source Code
 
-The files currently in this repository predate the 1.2.5 desktop release and do not yet reflect all features described above. For the current application, use the installer from [Releases](https://github.com/m4xenn/Video-DownloderPro/releases/latest).
+The `main` branch contains the source synchronized with the 1.2.5 desktop release. See [DEVELOPMENT.md](DEVELOPMENT.md) for Windows setup, tests, and packaging instructions. For normal installation, use [Releases](https://github.com/m4xenn/Video-DownloderPro/releases/latest).
 
 ## 📄 License
 

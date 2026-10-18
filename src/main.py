@@ -1,14 +1,15 @@
-import webview
 import sys
 import os
 
 # app.py'den Flask uygulamamızı içe aktarıyoruz
-from app import app
 
 def start_window():
+    import webview
+    from app import app, download_manager, ensure_download_state
+    ensure_download_state()
     # Uygulama başlığını ve başlangıç sayfası özelliklerini ayarlıyoruz
     window = webview.create_window(
-        'YoutubePro Downloader', 
+        'Video Downloader Pro',
         app, 
         width=900, 
         height=750, 
@@ -17,7 +18,10 @@ def start_window():
     )
     
     # Masaüstü penceresi başlatılıyor
-    webview.start()
+    try:
+        webview.start()
+    finally:
+        download_manager.close()
 
 if __name__ == '__main__':
     # freeze support

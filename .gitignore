@@ -1,16 +1,33 @@
-# Python / Derleme / Sistem Klasörleri
+# Python and virtual environments
 __pycache__/
+*.py[cod]
+.venv/
+venv/
+env/
+# Build output (keep YoutubePro.spec tracked)
 build/
 dist/
 Installer/
+releases/
+# Local state, media and credentials
 .env
-*.pyc
-
-# Sanal Ortam (Varsa)
-venv/
-env/
-.venv/
-
-# Sistem Gizli Dosyaları
+.env.*
+!.env.example
+settings.json
+history.json
+folders.json
+downloads.json
+library-preview-*/
+Toplu_Indirmeler/
+*.mp4
+*.mp3
+*.m4a
+*.wav
+*.opus
+*.part
+cookies*.txt
+# Editor / OS files
+.vscode/
+.idea/
 .DS_Store
 Thumbs.db
