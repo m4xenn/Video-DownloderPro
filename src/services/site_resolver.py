@@ -81,6 +81,9 @@ def rapidvid_source(html):
 
 class SiteResolver:
     extractor_key = 'FullHDFilmizlesene'
+
+    def media_identity(self, url):
+        return urlsplit(url).path.strip('/').split('/')[-1] or 'embedded-video'
     def __init__(self, browser=site_browser, clock=time.monotonic):
         self.browser=browser
         self.clock=clock
@@ -201,7 +204,7 @@ class SiteResolver:
         if not info or info.get('has_drm'):
             raise ValueError('Video kaynağı kullanılamıyor veya korumalı.')
         info.update(title=data['title'],webpage_url=url,original_url=url,
-                    id=urlsplit(url).path.strip('/').split('/')[-1] or 'embedded-video',extractor_key=self.extractor_key)
+                    id=self.media_identity(url),extractor_key=self.extractor_key)
         if len(streams)>1:
             info=ydl.process_ie_result(info,download=False)
         if data['thumbnail']:info['thumbnail']=data['thumbnail']

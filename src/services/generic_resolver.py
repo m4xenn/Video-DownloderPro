@@ -1,5 +1,6 @@
 """Bounded player discovery, independent of the film or page hostname."""
 from copy import copy
+import hashlib
 from http.cookiejar import Cookie, DefaultCookiePolicy
 from http.cookies import SimpleCookie
 import threading
@@ -49,6 +50,10 @@ def apply_source_context(ydl, source, headers):
 
 class GenericResolver(SiteResolver):
     extractor_key='EmbeddedMedia'
+
+    def media_identity(self,url):
+        from services.download_store import media_key
+        return hashlib.sha256(media_key(url).encode('utf-8')).hexdigest()[:24]
 
     def __init__(self, **kwargs):
         super().__init__(**kwargs)

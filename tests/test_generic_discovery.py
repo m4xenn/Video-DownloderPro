@@ -115,6 +115,12 @@ class GenericTraversalTests(unittest.TestCase):
         self.guard=patch('services.generic_resolver.public_url',side_effect=lambda value,resolve=False:public_url(value))
         self.guard.start();self.addCleanup(self.guard.stop)
 
+    def test_history_identity_includes_site_and_meaningful_query(self):
+        identity=self.resolver.media_identity
+        self.assertNotEqual(identity('https://first.example/watch/123'),identity('https://second.example/watch/123'))
+        self.assertNotEqual(identity('https://first.example/watch?id=1'),identity('https://first.example/watch?id=2'))
+        self.assertEqual(identity(PAGE),identity(PAGE+'?utm_source=share'))
+
     def test_nested_frames_keep_top_page_identity(self):
         nested='https://another-player.example/watch/xyz'
         self.browser.discover.side_effect=[observation(embeds_unused=True)|{'embeds':[{'url':FRAME,'area':1000}]},
