@@ -6,7 +6,7 @@ a = Analysis(
     ['src/main.py'],
     pathex=[],
     binaries=[],
-    datas=[('src/templates', 'templates'), ('src/static', 'static'), ('src/core', 'core'), ('src/state', 'state'), ('src/services', 'services'), ('src/utils', 'utils'), ('antigravity_config.py', '.'), ('version.json', '.')] + copy_metadata('yt-dlp'),
+    datas=[('build_assets/icon.ico', '.'), ('src/templates', 'templates'), ('src/static', 'static'), ('src/core', 'core'), ('src/state', 'state'), ('src/services', 'services'), ('src/utils', 'utils'), ('antigravity_config.py', '.'), ('version.json', '.')] + copy_metadata('yt-dlp'),
     hiddenimports=[],
     hookspath=[],
     hooksconfig={},
