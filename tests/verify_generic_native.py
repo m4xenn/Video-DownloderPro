@@ -21,7 +21,7 @@ sys.path.insert(0,str(ROOT/'src'))
 class Handler(http.server.SimpleHTTPRequestHandler):
     def log_message(self,*args):pass
     def end_headers(self):
-        if self.path=='/player.html':self.send_header('Set-Cookie','media_session=fixture; HttpOnly; SameSite=Lax; Path=/')
+        if self.path in ('/player.html','/cookie.html'):self.send_header('Set-Cookie','media_session=fixture; HttpOnly; SameSite=Lax; Path=/')
         super().end_headers()
 
 
@@ -44,9 +44,10 @@ def main():
         </script>''')
         (base/'outer.html').write_text('''<script>setTimeout(()=>{const f=document.createElement('iframe');f.width=640;f.height=360;f.src=location.origin.replace('localhost','127.0.0.1')+'/player.html';document.body.append(f)},150)</script>''')
         (base/'player.html').write_text('''<div id="player" style="width:640px;height:360px"></div><script>
-          fetch('/master.m3u8',{credentials:'same-origin'}).then(r=>r.text()).then(()=>{
+          if(window.parent!==window) fetch('/master.m3u8',{credentials:'same-origin'}).then(r=>r.text()).then(()=>{
             window.jwplayer=()=>({getPlaylist:()=>[{file:location.origin+'/master.m3u8',duration:2}],getContainer:()=>document.getElementById('player')});
           });</script>''')
+        (base/'cookie.html').write_text('<h1>Cookie fixture</h1>'+ (base/'player.html').read_text().replace('if(window.parent!==window) ',''))
         subprocess.run([str(bin_dir/'ffmpeg.exe'),'-hide_banner','-loglevel','error','-i',str(base/'360.m3u8'),'-c','copy',str(base/'native.mp4')],check=True,timeout=30)
         subprocess.run([str(bin_dir/'ffmpeg.exe'),'-hide_banner','-loglevel','error','-i',str(base/'native.mp4'),'-c','copy','-f','dash',str(base/'native.mpd')],check=True,timeout=30)
         (base/'html5.html').write_text('''<h1>HTML5 fixture</h1><script>setTimeout(()=>{
@@ -83,16 +84,17 @@ def main():
                     assert info['webpage_url']==page and info['extractor_key']=='EmbeddedMedia'
                     heights=sorted({f.get('height') for f in info['formats'] if f.get('height')})
                     assert heights==[180,360],heights
-                    context=generic_resolver.cache[page][1]['source_headers'][origin+'master.m3u8']
-                    assert 'media_session=fixture' in context.get('Cookie',''),'Native request cookie missing'
-                    result['checks']+=['native yt-dlp failure -> hidden browser fallback','cross-origin dynamic nested iframe traversal','runtime JW Player API','180p/360p source qualities','scoped native request cookie capture']
-                    for route,title in [('html5','HTML5 fixture'),('videojs','Video.js fixture'),('dash','DASH fixture'),('blob','Network blob fixture')]:
+                    result['checks']+=['native yt-dlp failure -> hidden browser fallback','cross-origin dynamic nested iframe traversal preserving real parent','runtime JW Player API','180p/360p source qualities','scoped native request cookie capture']
+                    for route,title in [('html5','HTML5 fixture'),('videojs','Video.js fixture'),('dash','DASH fixture'),('blob','Network blob fixture'),('cookie','Cookie fixture')]:
                         with YoutubeDL(options) as ydl:
                             extra=extract_media_info(ydl,origin+route+'.html')
                         assert extra['title']==title,(route,extra.get('title'))
                         if route=='dash':
                             assert any(f.get('height')==360 for f in extra['formats'])
                             assert any(f.get('acodec') not in ('none',None) for f in extra['formats'])
+                        if route=='cookie':
+                            context=generic_resolver.cache[origin+'cookie.html'][1]['source_headers'][origin+'master.m3u8']
+                            assert 'media_session=fixture' in context.get('Cookie',''),'Native request cookie missing'
                         result['checks'].append(route+': dynamic source inspection and metadata')
                     for label,selector,expected in [('selected','best[height<=180]',180),('maximum','best',360)]:
                         with YoutubeDL(dict(options,format=selector,outtmpl=str(base/f'{label}.%(ext)s'))) as ydl:

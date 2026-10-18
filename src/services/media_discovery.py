@@ -119,4 +119,4 @@ def choose_media(snapshot, network=()):
         headers[source] = dict(observed.get('headers') or {})
         headers[source].setdefault('Referer', best[3].get('document') or snapshot.get('url') or '')
         headers[source].setdefault('User-Agent', snapshot.get('user_agent') or '')
-    return {'sources': best[2], 'source_headers': headers}
+    return {'sources': best[2], 'source_headers': headers, 'document':best[3].get('document') or snapshot.get('url')}

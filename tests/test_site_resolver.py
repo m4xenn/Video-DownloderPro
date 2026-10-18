@@ -139,12 +139,12 @@ class GeneralPlayerTests(unittest.TestCase):
         window=Mock();window.events=SimpleNamespace(**{name:Event(window) for name in ['loaded','closed','request_sent','response_received']})
         window.events.loaded.set()
         window.evaluate_js.return_value={'sources':[STREAM],'user_agent':'Browser-UA'}
+        request=SimpleNamespace(url=EMBED,headers={})
+        window.load_url.side_effect=lambda _:window.events.request_sent.set(request)
         with patch('webview.windows',[object()]),patch('webview.create_window',return_value=window) as create,patch('services.site_browser.threading.Timer'):
             result=browser.inspect_player(EMBED,PAGE)
         self.assertEqual(result['sources'],[STREAM]);self.assertTrue(create.call_args.kwargs['hidden'])
         window.load_url.assert_called_once_with(EMBED)
-        request=SimpleNamespace(url=EMBED,headers={})
-        window.events.request_sent.set(request)
         self.assertEqual(request.headers['Referer'],PAGE)
         window.destroy.assert_called_once()
 

@@ -46,6 +46,50 @@ class SiteBrowser:
         self.session = None
         self.enabled = False
 
+    def _create_window(self,session,visible=False):
+        import webview
+        url=session['url']
+        discovery=session.get('discovery',False)
+        player_url=session['target'] if discovery or session['target']!=url else None
+        window = webview.create_window('Video Downloader Pro · Kaynak inceleme', html='<html><body></body></html>',
+            hidden=not visible, focus=visible, width=1000, height=760, js_api=None)
+        session['window'] = window
+        window.events.loaded += lambda: session['loaded'].set() if session.get('window') is window else None
+        window.events.closed += lambda: self._closed(session) if session.get('window') is window else None
+        if discovery:
+            # Initialise the blank document first so FrameCreated is
+            # attached before the actual page creates its iframes.
+            from services.webview_frames import NativeFrames
+            if window.events.loaded.wait(8):
+                probe=NativeFrames(window)
+                if probe.attach():session['frame_probe']=probe
+        if player_url or discovery:
+            from webview.event import Event
+            # Apply navigation headers synchronously before WebView2 sends them.
+            window.events.request_sent = Event(window, should_lock=True)
+            def on_request(request):
+                if session.get('window') is not window or session['closed']:return
+                if player_url and player_url != url and request.url.split('#')[0] == player_url.split('#')[0]:
+                    request.headers['Referer'] = url
+                if discovery:
+                    # Credentials stay in memory and only follow their exact media URL.
+                    names={'referer':'Referer','origin':'Origin','user-agent':'User-Agent','cookie':'Cookie'}
+                    captured={names[k.lower()]:str(v) for k,v in request.headers.items() if k.lower() in names}
+                    with self.lock:
+                        if len(session['requests'])>=128:session['requests'].pop(next(iter(session['requests'])))
+                        session['requests'][request.url]=captured
+            def on_response(response):
+                if session.get('window') is not window or session['closed']:return
+                content_type=next((str(v).split(';')[0].strip().lower() for k,v in response.headers.items() if k.lower()=='content-type'),'')
+                manifest=urlsplit(response.url).path.lower().endswith(('.m3u8','.mpd'))
+                if response.status_code in (200,206) and (manifest or content_type in ('application/vnd.apple.mpegurl','application/x-mpegurl','application/mpegurl','audio/mpegurl','audio/x-mpegurl','application/dash+xml','video/mp4','video/webm')):
+                    with self.lock:
+                        if len(session['candidates'])<20:
+                            session['candidates'].append({'url':response.url,'headers':dict(session['requests'].get(response.url) or {})} if discovery else response.url)
+            window.events.request_sent += on_request
+            window.events.response_received += on_response
+        window.load_url(player_url or url)
+
     def inspect(self, url, player_url=None, discovery=False):
         import webview
         if not self.enabled or not webview.windows:
@@ -58,35 +102,7 @@ class SiteBrowser:
                 session = {'url': url, 'target':player_url or url, 'discovery':discovery, 'requests':{}, 'candidates':[], 'token': uuid.uuid4().hex, 'loaded': threading.Event(), 'closed': False}
                 self.session = session
                 try:
-                    window = webview.create_window('Video Downloader Pro · Kaynak inceleme', html='<html><body></body></html>',
-                        hidden=True, focus=False, width=1000, height=760, js_api=None)
-                    session['window'] = window
-                    window.events.loaded += lambda: session['loaded'].set()
-                    window.events.closed += lambda: self._closed(session)
-                    if player_url or discovery:
-                        from webview.event import Event
-                        # Apply navigation headers synchronously before WebView2 sends them.
-                        window.events.request_sent = Event(window, should_lock=True)
-                        def on_request(request):
-                            if player_url and player_url != url and request.url.split('#')[0] == player_url.split('#')[0]:
-                                request.headers['Referer'] = url
-                            if discovery:
-                                # Credentials stay in memory and only follow their exact media URL.
-                                names={'referer':'Referer','origin':'Origin','user-agent':'User-Agent','cookie':'Cookie'}
-                                captured={names[k.lower()]:str(v) for k,v in request.headers.items() if k.lower() in names}
-                                with self.lock:
-                                    if len(session['requests'])>=128:session['requests'].pop(next(iter(session['requests'])))
-                                    session['requests'][request.url]=captured
-                        def on_response(response):
-                            content_type=next((str(v).split(';')[0].strip().lower() for k,v in response.headers.items() if k.lower()=='content-type'),'')
-                            manifest=urlsplit(response.url).path.lower().endswith(('.m3u8','.mpd'))
-                            if response.status_code in (200,206) and (manifest or content_type in ('application/vnd.apple.mpegurl','application/x-mpegurl','application/mpegurl','audio/mpegurl','audio/x-mpegurl','application/dash+xml','video/mp4','video/webm')):
-                                with self.lock:
-                                    if len(session['candidates'])<20:
-                                        session['candidates'].append({'url':response.url,'headers':dict(session['requests'].get(response.url) or {})} if discovery else response.url)
-                        window.events.request_sent += on_request
-                        window.events.response_received += on_response
-                    window.load_url(player_url or url)
+                    self._create_window(session)
                     timer = threading.Timer(180, lambda: self.close(session['token']))
                     timer.daemon = True
                     session['timer'] = timer
@@ -107,6 +123,9 @@ class SiteBrowser:
                         try:
                             from services.media_discovery import DISCOVERY_SNAPSHOT
                             target['result'] = session['window'].evaluate_js(DISCOVERY_SNAPSHOT if discovery else (PLAYER_SNAPSHOT if player_url else SNAPSHOT))
+                            if discovery and session.get('frame_probe'):
+                                from services.webview_frames import merge_frames
+                                target['result']=merge_frames(target['result'],session['frame_probe'].read(DISCOVERY_SNAPSHOT))
                         except Exception:
                             pass
                         finally:
@@ -137,14 +156,25 @@ class SiteBrowser:
                                 if time.monotonic()-session['selected_at']<2:
                                     time.sleep(.25)
                                     continue
+                                native_headers=session['frame_probe'].headers(selected['sources']) if session.get('frame_probe') else {}
+                                # An iframe's initial configuration can precede
+                                # its real request or require visible playback.
+                                # Keep its parent alive until that context exists.
+                                if session.get('frame_probe') and selected.get('document')!=result.get('url') and not any(native_headers.values()) and not any(item['url'] in selected['sources'] for item in observed):
+                                    session['awaiting_frame_request']=True
+                                    continue
+                                session['awaiting_frame_request']=False
                                 # Direct DOM URLs can have headers even before a response arrives.
                                 for source in selected['sources']:
                                     request=next((item for item in observed if item['url']==source),None)
                                     if request:selected['source_headers'][source].update(request['headers'])
+                                if session.get('frame_probe'):
+                                    for source,headers in native_headers.items():
+                                        selected['source_headers'][source].update(headers)
                                 result.update(selected)
                                 self.close(session['token'])
                                 return result
-                            if result.get('embeds') and time.monotonic()-session.setdefault('discovered_at',time.monotonic())>=2:
+                            if result.get('embeds') and not session.get('frame_probe') and time.monotonic()-session.setdefault('discovered_at',time.monotonic())>=2:
                                 self.close(session['token'])
                                 return result
                         elif player_url:
@@ -160,6 +190,12 @@ class SiteBrowser:
                             self.close(session['token'])
                             return result
             time.sleep(.75)
+        if discovery and isinstance(session.get('evaluation_result'),dict) and session['evaluation_result'].get('embeds'):
+            result=session['evaluation_result']
+            if session.get('frame_probe') and (result.get('interaction') or session.get('awaiting_frame_request')):
+                raise BrowserRequired(session['token'])
+            self.close(session['token'])
+            return result
         if discovery and isinstance(session.get('evaluation_result'), dict) and not session['evaluation_result'].get('interaction'):
             self.close(session['token'])
             raise ValueError('Bu çerçevede kullanılabilir video oynatıcısı bulunamadı.')
@@ -179,13 +215,36 @@ class SiteBrowser:
                 self.session = None
             if session.get('timer'):
                 session['timer'].cancel()
+            if session.get('frame_probe'):session['frame_probe'].close()
 
     def show(self, token):
         with self.lock:
-            session = self.session
-            if not session or session['token'] != token or session['closed']:
+            session=self.session
+            if not session or session['token']!=token or session['closed']:
                 raise ValueError('Site incelemesi sona erdi. Bağlantıyı tekrar kontrol edin.')
-            session['window'].show()
+            old=session['window']
+            recreate=session.get('discovery') and not session.get('shown')
+            session['shown']=True
+            if recreate:
+                # A control initially created hidden can remain background-only
+                # on Windows. Start a visible control only after explicit Continue.
+                # Keep the token/frontier, but do not keep stale DOM observations.
+                session['window']=None
+                probe=session.pop('frame_probe',None)
+                if probe:probe.close()
+                session['loaded'].clear()
+                session['requests']={};session['candidates']=[]
+                for key in ('evaluation','evaluation_result','selected_signature','selected_at','discovered_at','awaiting_frame_request'):
+                    session.pop(key,None)
+        # Never hold the capture lock while invoking the UI thread.
+        if recreate:
+            old.destroy()
+            try:self._create_window(session,visible=True)
+            except Exception:
+                self.close(token)
+                raise ValueError('Kaynak inceleme penceresi açılamadı. Bağlantıyı tekrar kontrol edin.')
+        else:
+            old.show()
 
     def close(self, token=None):
         with self.lock:
@@ -197,6 +256,7 @@ class SiteBrowser:
             session['loaded'].set()
             if session.get('timer'):
                 session['timer'].cancel()
+            if session.get('frame_probe'):session['frame_probe'].close()
         if session.get('window'):
             try:
                 session['window'].destroy()
