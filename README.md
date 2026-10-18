@@ -6,6 +6,8 @@ A Windows video and audio downloader with a refined glass-inspired interface, so
 
 ## ✨ Features
 
+- 🌍 **Automatic language selection** — starts in your system UI language when supported, falls back to English, and remembers your manual language choice.
+
 - 🪟 **A refined desktop interface** — a clean graphite design, subtle reflections, light/dark themes, and 10 interface languages.
 - 🔎 **Inspect before downloading** — paste a single video link to see its title, duration, and available resolution/FPS choices before adding it to the queue. Estimated size is shown when supplied by the source.
 - 🎬 **Source-based video quality** — select a resolution the video actually offers, or use **Auto · Highest quality**. Batch downloads choose the highest available quality for each video, without a fixed 1080p cap.
@@ -66,7 +68,7 @@ Found a problem? [Open an issue](https://github.com/m4xenn/Video-DownloderPro/is
 
 ## 🧑‍💻 Source Code
 
-The `main` branch contains the source synchronized with the 1.2.5 desktop release. See [DEVELOPMENT.md](DEVELOPMENT.md) for Windows setup, tests, and packaging instructions. For normal installation, use [Releases](https://github.com/m4xenn/Video-DownloderPro/releases/latest).
+The `main` branch contains the source synchronized with the 1.2.6 desktop release. See [DEVELOPMENT.md](DEVELOPMENT.md) for Windows setup, tests, and packaging instructions. For normal installation, use [Releases](https://github.com/m4xenn/Video-DownloderPro/releases/latest).
 
 ## 📄 License
 

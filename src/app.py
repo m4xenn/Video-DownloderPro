@@ -44,6 +44,7 @@ from utils.download_settings import normalize_settings, bytes_per_second
 from services.app_update_service import AppUpdater
 from services.download_store import DownloadStore
 from services.media_catalog import MediaCatalog
+from services.language_service import SUPPORTED_LANGUAGES, system_language
 # --- FAZ 1: Utils modülleri ---
 from utils.i18n import py_i18n, get_i18n
 from utils.file_helpers import (
@@ -162,10 +163,21 @@ def open_folder_endpoint():
 
 @app.route('/set-lang', methods=['POST'])
 def set_lang():
-    lang = request.json.get('lang')
-    if lang:
-        state["current_lang"] = lang
-    return jsonify({"status": "success"})
+    data = request.get_json(silent=True)
+    lang = data.get('lang') if isinstance(data, dict) else None
+    if not isinstance(lang, str) or lang not in SUPPORTED_LANGUAGES:
+        return jsonify(status='error', message='Unsupported language.'), 400
+    try:
+        with operation_lock:
+            if data.get('persist', True):
+                settings = load_settings()
+                settings['language'] = lang
+                save_settings_to_file(settings)
+            state['current_lang'] = lang
+        return jsonify(status='success')
+    except OSError:
+        return jsonify(status='error', message='Language preference could not be saved.'), 500
+
 
 @app.route('/toggle-fullscreen', methods=['POST'])
 def toggle_fullscreen():
@@ -176,7 +188,7 @@ def toggle_fullscreen():
 @app.route('/')
 def home():
     ensure_download_state()
-    return render_template('index.html', default_path=state.get('current_download_path') or "Lütfen Klasör Seçiniz...", current_version=CURRENT_VERSION)
+    return render_template('index.html', default_path=state.get('current_download_path') or "Lütfen Klasör Seçiniz...", current_version=CURRENT_VERSION, system_language=system_language(), saved_language=load_settings().get('language'))
 
 @app.route('/select-folder', methods=['POST'])
 def select_folder():

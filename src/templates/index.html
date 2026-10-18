@@ -705,7 +705,16 @@
             }
         };
 
-        let currentLang = localStorage.getItem('ytpro_lang') || 'tr';
+        const languageBootstrap = {{ {'system': system_language, 'saved': saved_language}|tojson }};
+        function initialLanguage() {
+            let previous;
+            try { previous = localStorage.getItem('ytpro_lang'); } catch (_) {}
+            return [languageBootstrap.saved, previous, languageBootstrap.system, 'en']
+                .find(code => Object.prototype.hasOwnProperty.call(translations, code));
+        }
+        let currentLang = initialLanguage();
+        fetch('/set-lang', {method:'POST', headers:{'Content-Type':'application/json'},
+            body:JSON.stringify({lang:currentLang, persist:Boolean(languageBootstrap.saved || (()=>{try{return localStorage.getItem('ytpro_lang') === currentLang;}catch(_){return false;}})())})}).catch(()=>{});
 
         function updateTexts() {
             const t = translations[currentLang];
@@ -755,8 +764,9 @@
         }
 
         function setLanguage(langCode) {
+            if (!Object.prototype.hasOwnProperty.call(translations, langCode)) return;
             currentLang = langCode;
-            localStorage.setItem('ytpro_lang', langCode);
+            try { localStorage.setItem('ytpro_lang', langCode); } catch (_) {}
             updateTexts();
             document.getElementById('langSelectDiv').classList.remove('open');
             fetch('/set-lang', {
