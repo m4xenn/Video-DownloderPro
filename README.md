@@ -1,68 +1,73 @@
-# Video Downloader 🎵
+# Video Downloader Pro 🎬
 
-A sleek, lightning-fast, and open-source media downloader supporting YouTube and 1000+ platforms.
+A Windows video and audio downloader with a refined glass-inspired interface, source-based quality selection, and a persistent download queue.
 
-![App Icon](icon.ico)
+[⬇️ Download the latest release](https://github.com/m4xenn/Video-DownloderPro/releases/latest) · [📋 Release notes](https://github.com/m4xenn/Video-DownloderPro/releases) · [🐛 Report an issue](https://github.com/m4xenn/Video-DownloderPro/issues)
 
-Welcome to **Video Downloader**! This tool is designed to be the ultimate, fastest, and most elegant media downloader for your PC. It supports not only YouTube but over 1000+ different platforms (Twitter, Instagram, TikTok, Reddit, Soundcloud, Twitch, Vimeo, Bilibili, and many more).
+## ✨ Features
 
----
+- 🪟 **A refined desktop interface** — a clean graphite design, subtle reflections, light/dark themes, and 10 interface languages.
+- 🔎 **Inspect before downloading** — paste a single video link to see its title, duration, and available resolution/FPS choices before adding it to the queue. Estimated size is shown when supplied by the source.
+- 🎬 **Source-based video quality** — select a resolution the video actually offers, or use **Auto · Highest quality**. Batch downloads choose the highest available quality for each video, without a fixed 1080p cap.
+- 🎵 **Video and audio output** — MP4 video and MP3, M4A, WAV, or Opus audio, with metadata and supported cover-art embedding.
+- 📋 **Single, batch, and playlist downloads** — paste several links at once, or choose individual entries from a playlist before downloading.
+- 💾 **Persistent queue** — pending work is saved between sessions, with pause/resume controls and automatic retries for temporary failures.
+- ⚡ **Automatic scheduling** — the app manages concurrent downloads, with an optional download speed limit in settings.
+- 🕘 **Download history** — revisit completed downloads and receive a warning before downloading the same video again. Completed items stay in history after restarting.
+- 🖼️ **Better previews** — platform cover images are preferred, with frames from inside the downloaded video as a fallback.
+- 💬 **Optional subtitles** — embed available subtitles as soft subtitles in supported video output.
+- 🔄 **Separate update controls** — application updates and yt-dlp/FFmpeg component updates are managed independently.
 
-## 🚀 Core Features
+Platform support is provided by yt-dlp. YouTube, TikTok, Instagram, and many other sites are supported where their content is accessible; availability can change with platform restrictions, login requirements, or extractor updates.
 
-- **Batch & Playlist Downloading:** You can download single videos, entire playlists, or paste multiple links at once. Just toggle the "Download as Playlist" switch if the link is a playlist, and the app will automatically fetch all videos within it.
-- **Auto-Update System:** You never have to worry about the downloader breaking. The app has a built-in auto-updater for its core engines (`yt-dlp` and `FFmpeg`). It silently keeps itself up-to-date with the latest web standards so downloads never fail.
-- **Smart UI & Multi-Language Support:** The interface is highly responsive and supports both Light and Dark themes. More importantly, it natively supports **10 different languages** with real-time switching!
-- **Native OS Notifications:** You don't need to keep the app open to check progress. Once all your downloads are successfully completed, you will receive a native Windows notification right on your desktop.
+## 📦 Install on Windows
 
----
+1. Open the [latest release](https://github.com/m4xenn/Video-DownloderPro/releases/latest).
+2. Download **VideoDownloaderPro_Setup.exe** from **Assets**.
+3. Close any running copy of the app, run the installer, and follow the setup steps.
+4. Choose a destination folder when you open the app.
 
-## 🎥 Video Downloads
+The installer includes the Python runtime; you do not need to install Python separately. Use the component update controls to check or install the required yt-dlp/FFmpeg components.
 
-When you select **"Video (MP4)"**, the app intelligently fetches the absolute highest quality video available and merges it perfectly with the highest quality audio.
-- **Supported Resolutions:** 8K (4320p), 4K (2160p), 1080p (Full HD), and 720p (HD).
-- **Codec Conversion:** If a video is originally in an unsupported or heavy codec (like VP9), the app will automatically convert it to a standard, highly compatible MP4 format using FFmpeg so it works perfectly in editors like Premiere Pro and After Effects.
+**Upgrading from an older release?** Install the current version manually once to get the new in-app update system. The installer allows upgrades and prevents reinstalling the same or an older version over a registered newer installation.
 
----
+## 🛠️ How to Use
 
-## 🎵 Audio Formats & Cover Art (Metadata)
+### Download a single video
 
-When you select **"Audio (MP3/WAV)"**, the application behaves like a high-end music ripper. However, you must pay attention to the format you choose, as they have different capabilities regarding cover arts (thumbnails) and ID3 tags.
+1. Paste its URL and wait for the video details to appear.
+2. Choose your destination, output format, and quality.
+3. Click **Start Download** directly, or use **+** to add it to the queue first.
 
-1. **MP3 & M4A (Highly Recommended)**
-   - *Quality:* Excellent balance of high-quality sound and small file size.
-   - *Cover Art Support:* **YES!** The application will automatically download the video's thumbnail, crop it into a perfect square, and embed it deep inside the audio file. When you play the song on your phone, car, or media player, you will see the album cover perfectly.
+Quality options reflect the source. File size or remaining time may be unavailable until the source provides enough information.
 
-2. **WAV**
-   - *Quality:* Pure, lossless, uncompressed audio. This is the absolute highest quality you can get, but the file size will be significantly larger.
-   - *Cover Art Support:* **NO.** The WAV container format does not natively support embedded image tags. The app will skip cover art embedding to prevent corruption.
+### Download several videos
 
-3. **Opus**
-   - *Quality:* A modern, highly efficient format that provides incredible sound quality at incredibly small file sizes.
-   - *Cover Art Support:* **NO.** Similar to WAV, embedding cover arts is not fully supported across most standard players for Opus files.
+Paste multiple links, separated by spaces or line breaks, and add them with **+**. Review the queue, then start downloading. With automatic highest quality, each video uses its own best available resolution.
 
----
+### Select videos from a playlist
 
-## 🛠️ How To Use & Playlist Downloading
+Add the playlist link, enable **Download as Playlist**, and start the download flow. Review the available entries and select the videos you want before confirming.
 
-1. **CHOOSE A DESTINATION FOLDER**
-   Click the "Please Select a Folder..." button at the top to choose where your files will be saved.
+### Export audio
 
-2. **SELECT FORMAT & QUALITY**
-   Use the two dropdown menus to select your desired format (e.g., Video MP4 or Audio MP3) and the maximum quality you want.
+Choose **Audio**, then select MP3, M4A, WAV, or Opus. Metadata and cover-art behavior depend on the output format and player support. WAV produces uncompressed audio, but converting a compressed source to WAV does not restore lost detail or improve the original recording.
 
-3. **ADDING LINKS TO THE QUEUE**
-   Paste the URL of your video or song into the input box and press ENTER (or click the "+" button). The item will instantly appear in the "Queue" list below. You can repeat this process to add as many videos as you want before starting the download.
+## 🔄 Updates
 
-4. **THE PLAYLIST FEATURE (CRUCIAL DETAIL)**
-   There are two distinct ways to download multiple videos:
-   - **The Manual Queue (Custom Playlist):** If you manually paste 5 different links into the queue one by one, the app will download all 5 of them together. To keep things organized, it will automatically create a sub-folder named "Toplu_Indirmeler" (Batch Downloads) in your chosen directory and place all 5 files in there.
-   - **The "Download as Playlist" Toggle:** If you have a link to an actual YouTube Playlist (or Spotify Album) that contains 50 songs, you DO NOT need to paste 50 links. Instead, simply paste the ONE link of the playlist into the box, and **TURN ON the "Download as Playlist" switch** (the toggle button below the format options). When you start the download with this switch turned on, the app will scan the link, find all 50 videos inside that playlist, and download them sequentially. It will also automatically create a folder named after the actual Playlist's title!
+- **Application:** the app checks for newer stable releases at startup; you can also check manually in settings. Download the update in the app, then launch its installer when your active downloads are finished.
+- **Components:** the component update button checks yt-dlp and FFmpeg separately. Review the available updates before downloading them. A yt-dlp engine update may require restarting the app.
 
-5. **START THE DOWNLOAD**
-   Once your queue is ready and your playlist switch is set according to your needs, click "Start Download". 
+Updates are user-controlled. The app verifies the downloaded application installer against the SHA-256 information supplied by GitHub. A newer component version does not necessarily mean a newer application version.
 
-*The progress bar will show you exact percentages and states ("Downloading..." means it's fetching data from the internet, "Converting..." means FFmpeg is attaching cover arts or fixing codecs). Do not close the application while it is converting.*
+## 🐛 Feedback
 
-=============================================================
-**Enjoy your downloads!**
+Found a problem? [Open an issue](https://github.com/m4xenn/Video-DownloderPro/issues) with your app version, Windows version, reproduction steps, and the error message. Remove private links or personal information before sharing logs or screenshots.
+
+## 🧑‍💻 Source Code
+
+The files currently in this repository predate the 1.2.5 desktop release and do not yet reflect all features described above. For the current application, use the installer from [Releases](https://github.com/m4xenn/Video-DownloderPro/releases/latest).
+
+## 📄 License
+
+This project is licensed under the [MIT License](LICENSE).
