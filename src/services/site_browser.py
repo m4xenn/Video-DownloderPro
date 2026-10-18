@@ -2,6 +2,7 @@
 import threading
 import time
 import uuid
+from urllib.parse import urlsplit
 
 SNAPSHOT = """(() => ({
  title: document.querySelector('h1')?.textContent || document.title,
@@ -45,16 +46,16 @@ class SiteBrowser:
         self.session = None
         self.enabled = False
 
-    def inspect(self, url, player_url=None):
+    def inspect(self, url, player_url=None, discovery=False):
         import webview
         if not self.enabled or not webview.windows:
             raise ValueError('Bu sayfa için masaüstü uygulamasındaki tarayıcı desteği gerekiyor.')
         with self.lock:
             session = self.session
-            if session and (session['url'] != url or session.get('target') != (player_url or url)):
+            if session and (session['url'] != url or session.get('target') != (player_url or url) or session.get('discovery', False) != discovery):
                 raise ValueError('Önce açık olan site incelemesini tamamlayın veya iptal edin.')
             if not session:
-                session = {'url': url, 'target':player_url or url, 'candidates':[], 'token': uuid.uuid4().hex, 'loaded': threading.Event(), 'closed': False}
+                session = {'url': url, 'target':player_url or url, 'discovery':discovery, 'requests':{}, 'candidates':[], 'token': uuid.uuid4().hex, 'loaded': threading.Event(), 'closed': False}
                 self.session = session
                 try:
                     window = webview.create_window('Video Downloader Pro · Kaynak inceleme', html='<html><body></body></html>',
@@ -62,17 +63,27 @@ class SiteBrowser:
                     session['window'] = window
                     window.events.loaded += lambda: session['loaded'].set()
                     window.events.closed += lambda: self._closed(session)
-                    if player_url:
+                    if player_url or discovery:
                         from webview.event import Event
                         # Apply navigation headers synchronously before WebView2 sends them.
                         window.events.request_sent = Event(window, should_lock=True)
                         def on_request(request):
-                            if request.url.split('#')[0] == player_url.split('#')[0]:
+                            if player_url and player_url != url and request.url.split('#')[0] == player_url.split('#')[0]:
                                 request.headers['Referer'] = url
+                            if discovery:
+                                # Credentials stay in memory and only follow their exact media URL.
+                                names={'referer':'Referer','origin':'Origin','user-agent':'User-Agent','cookie':'Cookie'}
+                                captured={names[k.lower()]:str(v) for k,v in request.headers.items() if k.lower() in names}
+                                with self.lock:
+                                    if len(session['requests'])>=128:session['requests'].pop(next(iter(session['requests'])))
+                                    session['requests'][request.url]=captured
                         def on_response(response):
                             content_type=next((str(v).split(';')[0].strip().lower() for k,v in response.headers.items() if k.lower()=='content-type'),'')
-                            if response.status_code in (200,206) and content_type in ('application/vnd.apple.mpegurl','application/x-mpegurl','application/dash+xml'):
-                                if len(session['candidates'])<20:session['candidates'].append(response.url)
+                            manifest=urlsplit(response.url).path.lower().endswith(('.m3u8','.mpd'))
+                            if response.status_code in (200,206) and (manifest or content_type in ('application/vnd.apple.mpegurl','application/x-mpegurl','application/mpegurl','audio/mpegurl','audio/x-mpegurl','application/dash+xml','video/mp4','video/webm')):
+                                with self.lock:
+                                    if len(session['candidates'])<20:
+                                        session['candidates'].append({'url':response.url,'headers':dict(session['requests'].get(response.url) or {})} if discovery else response.url)
                         window.events.request_sent += on_request
                         window.events.response_received += on_response
                     window.load_url(player_url or url)
@@ -94,7 +105,8 @@ class SiteBrowser:
                     session['evaluation'] = pending
                     def evaluate(target=pending):
                         try:
-                            target['result'] = session['window'].evaluate_js(PLAYER_SNAPSHOT if player_url else SNAPSHOT)
+                            from services.media_discovery import DISCOVERY_SNAPSHOT
+                            target['result'] = session['window'].evaluate_js(DISCOVERY_SNAPSHOT if discovery else (PLAYER_SNAPSHOT if player_url else SNAPSHOT))
                         except Exception:
                             pass
                         finally:
@@ -103,9 +115,39 @@ class SiteBrowser:
                 pending['done'].wait(.5)
                 if pending['done'].is_set():
                     result = pending['result']
+                    session['evaluation_result'] = result
                     session['evaluation'] = None
                     if isinstance(result, dict):
-                        if player_url:
+                        if discovery:
+                            from services.media_discovery import choose_media
+                            try:
+                                with self.lock:
+                                    observed=[{'url':source,'headers':dict(headers)} for source,headers in session['requests'].items()]
+                                    # Only successful media responses can resolve a blob URL.
+                                    candidates=list(session['candidates'])
+                                selected=choose_media(result,candidates)
+                            except ValueError:
+                                self.close(session['token'])
+                                raise
+                            if selected:
+                                signature=tuple(selected['sources'])
+                                if session.get('selected_signature') != signature:
+                                    session['selected_signature']=signature
+                                    session['selected_at']=time.monotonic()
+                                if time.monotonic()-session['selected_at']<2:
+                                    time.sleep(.25)
+                                    continue
+                                # Direct DOM URLs can have headers even before a response arrives.
+                                for source in selected['sources']:
+                                    request=next((item for item in observed if item['url']==source),None)
+                                    if request:selected['source_headers'][source].update(request['headers'])
+                                result.update(selected)
+                                self.close(session['token'])
+                                return result
+                            if result.get('embeds') and time.monotonic()-session.setdefault('discovered_at',time.monotonic())>=2:
+                                self.close(session['token'])
+                                return result
+                        elif player_url:
                             if result.get('drm'):
                                 self.close(session['token'])
                                 raise ValueError('Bu oynatıcının kaynağı DRM korumalı.')
@@ -118,10 +160,16 @@ class SiteBrowser:
                             self.close(session['token'])
                             return result
             time.sleep(.75)
+        if discovery and isinstance(session.get('evaluation_result'), dict) and not session['evaluation_result'].get('interaction'):
+            self.close(session['token'])
+            raise ValueError('Bu çerçevede kullanılabilir video oynatıcısı bulunamadı.')
         raise BrowserRequired(session['token'])
 
     def inspect_player(self, player_url, page_url):
         return self.inspect(page_url, player_url=player_url)
+
+    def discover(self, page_url, parent_url=None):
+        return self.inspect(parent_url or page_url, player_url=page_url, discovery=True)
 
     def _closed(self, session):
         with self.lock:

@@ -1,4 +1,4 @@
-"""Initial FullHDFilmizlesene/Rapidvid adapter. No remote JavaScript evaluation."""
+"""Native extraction, player adapters, and bounded generic discovery fallback."""
 import base64
 import binascii
 import ipaddress
@@ -80,6 +80,7 @@ def rapidvid_source(html):
 
 
 class SiteResolver:
+    extractor_key = 'FullHDFilmizlesene'
     def __init__(self, browser=site_browser, clock=time.monotonic):
         self.browser=browser
         self.clock=clock
@@ -163,8 +164,12 @@ class SiteResolver:
         data=self.details(url,fresh=fresh)
         ydl.params['http_headers']=dict(ydl.params.get('http_headers') or {}, **data['headers'])
         streams=data.get('streams') or [data['stream']]
+        def extract_source(stream):
+            from services.generic_resolver import apply_source_context
+            apply_source_context(ydl, stream, data.get('source_headers', {}).get(stream, data['headers']))
+            return ydl.extract_info(stream,download=False)
         if len(streams)==1:
-            info=ydl.extract_info(streams[0],download=False)
+            info=extract_source(streams[0])
         else:
             previous=ydl.params.get('format')
             previous_selector=ydl.format_selector
@@ -174,7 +179,7 @@ class SiteResolver:
                 ydl.format_selector=ydl.build_format_selector('bestvideo+bestaudio/best')
                 for stream in streams:
                     try:
-                        part=ydl.extract_info(stream,download=False)
+                        part=extract_source(stream)
                         if part and not part.get('has_drm'):parts.append(part)
                     except Exception:
                         continue
@@ -196,7 +201,7 @@ class SiteResolver:
         if not info or info.get('has_drm'):
             raise ValueError('Video kaynağı kullanılamıyor veya korumalı.')
         info.update(title=data['title'],webpage_url=url,original_url=url,
-                    id=urlsplit(url).path.strip('/').split('/')[-1],extractor_key='FullHDFilmizlesene')
+                    id=urlsplit(url).path.strip('/').split('/')[-1] or 'embedded-video',extractor_key=self.extractor_key)
         if len(streams)>1:
             info=ydl.process_ie_result(info,download=False)
         if data['thumbnail']:info['thumbnail']=data['thumbnail']
@@ -208,5 +213,21 @@ site_resolver=SiteResolver()
 
 
 def extract_media_info(ydl,url,fresh=False):
-    if supported_page(url):return site_resolver.extract(ydl,url,fresh=fresh)
-    return ydl.extract_info(url,download=False)
+    from services.generic_resolver import generic_resolver, can_discover_after
+    from services.site_browser import BrowserRequired
+    from yt_dlp.utils import DownloadError, UnsupportedError
+    if supported_page(url):
+        try:
+            return site_resolver.extract(ydl,url,fresh=fresh)
+        except BrowserRequired:
+            raise
+        except (ValueError,requests.RequestException) as exc:
+            if 'drm' in str(exc).lower():raise
+            return generic_resolver.extract(ydl,url,fresh=fresh)
+    if generic_resolver.pending(url):
+        return generic_resolver.extract(ydl,url,fresh=fresh)
+    try:
+        return ydl.extract_info(url,download=False)
+    except (DownloadError, UnsupportedError) as exc:
+        if not can_discover_after(url,exc):raise
+        return generic_resolver.extract(ydl,url,fresh=fresh)
