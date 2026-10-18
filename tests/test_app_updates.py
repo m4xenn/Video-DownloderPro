@@ -101,11 +101,13 @@ class DownloadTests(unittest.TestCase):
         self.download()
         self.assertEqual(self.updater.snapshot()['status'], 'ready')
         self.assertEqual(self.updater._installer.read_bytes(), PAYLOAD)
+        self.assertEqual(self.updater._installer.name, updates.INSTALLER_NAME)
+        self.assertEqual(self.updater._installer.parent.name, self.info['sha256'])
 
     def test_corrupt_download_removed(self):
         self.download(b'MZ' + b'bad bytes')
         self.assertEqual(self.updater.snapshot()['status'], 'error')
-        self.assertFalse(list(Path(self.temp.name).iterdir()))
+        self.assertFalse([path for path in Path(self.temp.name).rglob('*') if path.is_file()])
 
     def test_oversized_download_rejected(self):
         self.download(PAYLOAD * 2)
@@ -144,7 +146,7 @@ class DownloadTests(unittest.TestCase):
             self.assertEqual(self.updater.snapshot()['status'], 'installing')
             with self.assertRaises(ValueError):
                 self.updater.launch()
-            process.assert_called_once()
+            process.assert_called_once_with(str(self.updater._installer), 'open', '/SP- /NORESTART', str(self.updater._installer.parent))
 
 
 class UpdateRouteTests(unittest.TestCase):

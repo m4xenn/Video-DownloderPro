@@ -102,8 +102,10 @@ class AppUpdater:
             if not release['update_available']:
                 self._set(status='error', message=release.get('message', 'Yeni bir sürüm bulunmuyor.'))
                 return
-            self.cache_dir.mkdir(parents=True, exist_ok=True)
-            destination = self.cache_dir / f'{release["sha256"]}-{INSTALLER_NAME}'
+            # Isolate releases by digest while keeping the UAC-visible filename readable.
+            release_dir = self.cache_dir / release["sha256"]
+            release_dir.mkdir(parents=True, exist_ok=True)
+            destination = release_dir / INSTALLER_NAME
             part = destination.with_suffix('.part')
             self._set(status='downloading', percent=0)
             digest = hashlib.sha256()
@@ -148,5 +150,5 @@ class AppUpdater:
                 raise ValueError(self._state['message'])
             # ShellExecute handles the installer's UAC elevation prompt. CreateProcess
             # (subprocess.Popen) would fail with WinError 740 for an admin installer.
-            os.startfile(str(self._installer), 'open', '/SP- /NORESTART', str(self.cache_dir))
+            os.startfile(str(self._installer), 'open', '/SP- /NORESTART', str(self._installer.parent))
             self._set(status='installing')

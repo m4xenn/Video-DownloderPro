@@ -68,7 +68,7 @@ Found a problem? [Open an issue](https://github.com/m4xenn/Video-DownloderPro/is
 
 ## 🧑‍💻 Source Code
 
-The `main` branch contains the source synchronized with the 1.2.6 desktop release. See [DEVELOPMENT.md](DEVELOPMENT.md) for Windows setup, tests, and packaging instructions. For normal installation, use [Releases](https://github.com/m4xenn/Video-DownloderPro/releases/latest).
+The `main` branch contains the source synchronized with the 1.2.8 desktop release. See [DEVELOPMENT.md](DEVELOPMENT.md) for Windows setup, tests, and packaging instructions. For normal installation, use [Releases](https://github.com/m4xenn/Video-DownloderPro/releases/latest).
 
 ## 📄 License
 
