@@ -6,6 +6,8 @@ import os
 def start_window():
     import webview
     from app import app, download_manager, ensure_download_state
+    from services.site_browser import site_browser
+    site_browser.enabled = True
     ensure_download_state()
     # Uygulama başlığını ve başlangıç sayfası özelliklerini ayarlıyoruz
     window = webview.create_window(
@@ -17,10 +19,13 @@ def start_window():
         min_size=(600, 500)
     )
     
+    window.events.closed += lambda: site_browser.close()
+
     # Masaüstü penceresi başlatılıyor
     try:
         webview.start()
     finally:
+        site_browser.close()
         download_manager.close()
 
 if __name__ == '__main__':

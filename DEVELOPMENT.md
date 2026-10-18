@@ -56,3 +56,9 @@ The existing v1.2.5 release tag predates this source synchronization; its automa
 - `build_assets/`, `YoutubePro.spec`, `scripts/build_release.py`: packaging.
 
 Local state, downloaded media, credentials and generated installers are intentionally excluded from the repository.
+
+## Site adapter tests (1.2.9 preview)
+
+Run `python -m unittest discover -s tests -p test_site_resolver.py` and `node tests/test_site_inspection_ui.cjs` for isolated adapter/UI checks. `test_site_local_download.py` uses synthetic local HLS and requires FFmpeg/FFprobe. `python tests/preview_site_native.py` starts an isolated Windows WebView2 manual test on localhost:5056; open that URL to test the real hidden browser flow. It never loads your existing download history or settings. Stop the fixture with Ctrl+C.
+
+See [SITE_DESTEGI_1.2.9.md](SITE_DESTEGI_1.2.9.md) for scope and validation limits.

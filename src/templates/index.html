@@ -322,6 +322,10 @@
             <button class="add-btn" id="addBtn" onclick="addToQueue()" title="Sıraya Ekle" aria-label="Sıraya ekle"><i class="fa-solid fa-plus" aria-hidden="true"></i></button>
         </div>
         <div id="linkPreview" class="link-preview" role="status" aria-live="polite" hidden><strong id="linkPreviewTitle"></strong><span id="linkPreviewMeta"></span></div>
+        <div id="siteInspection" class="site-inspection" role="status" hidden>
+            <p id="siteInspectionMessage"></p>
+            <div><button type="button" id="siteInspectionShow">Tarayıcıda devam et</button><button type="button" id="siteInspectionRetry">Tekrar kontrol et</button><button type="button" id="siteInspectionCancel">İptal</button></div>
+        </div>
         <p id="bulkStatus" class="feature-muted input-feedback" role="status" aria-live="polite"></p>
         <div class="field-label" id="destinationLabel">Kayıt konumu</div>
         <div class="path-button" role="button" tabindex="0" onclick="selectFolder()" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();selectFolder()}" id="pathBtn" aria-labelledby="destinationLabel pathDisplay">
@@ -1667,6 +1671,7 @@
             await sendDownload(payload);
         }
     </script>
+    <script src="{{ url_for('static', filename='site-inspection.js') }}"></script>
     <script src="{{ url_for('static', filename='bulk-quality.js') }}"></script>
     <script src="{{ url_for('static', filename='studio.js') }}"></script>
 </body>

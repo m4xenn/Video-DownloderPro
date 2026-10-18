@@ -22,6 +22,7 @@ function showLinkPreview(data, message) {
 }
 function scheduleLinkInspection() {
     resizeLinkInput(); clearTimeout(inspectionTimer);
+    if(typeof cancelSiteInspection === "function") cancelSiteInspection();
     ++qualityRequest; qualityLoadingURL=null;
     inspectedQualityURL=null; inspectedQualities=[];
     updateQualityMenu(document.getElementById("formatValue").value);
@@ -71,7 +72,8 @@ async function addLinksToQueue() {
                     const cached=pastedMetadata.get(url);
                     const response=cached && Date.now()-cached.at<600000 ? null : await fetch('/get-info',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({url})});
                     const data=response ? await response.json() : cached.data;
-                    if((response && !response.ok) || data.status!=='success') throw new Error();
+                    if(data.status==='interaction_required' && typeof showSiteInspection==='function') showSiteInspection(data,url);
+                    if((response && !response.ok) || data.status!=='success') throw new Error(data.message);
                     if(downloadQueue.includes(data.url)||activeQueueURLs.has(data.url)) skipped++;
                     else {
                         downloadQueue.push(data.url); draftItems.set(data.url,data);
@@ -134,8 +136,13 @@ async function refreshSourceQuality(force=false) {
     try {
         const response=await fetch('/get-info',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({url})});
         const data=await response.json();
-        if(!response.ok || data.status!=='success') throw new Error('Kalite bilgisi alınamadı. Yenile düğmesiyle tekrar deneyebilirsin.');
-        if(request!==qualityRequest || url!==singleQualityURL()) return;
+        if(request!==qualityRequest || url!==singleQualityURL()) {
+            if(data.inspection_id && typeof dismissSiteInspection==='function') dismissSiteInspection(data.inspection_id);
+            return;
+        }
+        if(data.status==='interaction_required' && typeof showSiteInspection==='function') showSiteInspection(data,url);
+        if(!response.ok || data.status!=='success') throw new Error(data.message || 'Kalite bilgisi alınamadı. Yenile düğmesiyle tekrar deneyebilirsin.');
+        if(typeof clearSiteInspection==='function') clearSiteInspection();
         pastedMetadata.set(url,{data,at:Date.now()});
         if(pastedMetadata.size>20) pastedMetadata.delete(pastedMetadata.keys().next().value);
         if(downloadQueue.includes(url)) draftItems.set(url,{...cached,...data});

@@ -45,6 +45,8 @@ from services.app_update_service import AppUpdater
 from services.download_store import DownloadStore
 from services.media_catalog import MediaCatalog
 from services.language_service import SUPPORTED_LANGUAGES, system_language
+from services.site_resolver import extract_media_info
+from services.site_browser import site_browser, BrowserRequired
 # --- FAZ 1: Utils modülleri ---
 from utils.i18n import py_i18n, get_i18n
 from utils.file_helpers import (
@@ -229,7 +231,7 @@ def get_info():
             'extractor_retries': 2
         }
         with YoutubeDL(ydl_opts) as ydl:
-            info = ydl.extract_info(url, download=False)
+            info = extract_media_info(ydl, url)
             media_catalog.remember(url, info)
             title = info.get('title', 'Bilinmeyen Video')
             thumbnail = info.get('thumbnail', '')
@@ -243,9 +245,28 @@ def get_info():
                 "is_playlist": media_catalog.lookup(url).get('is_playlist', False),
                 "video_qualities": media_catalog.lookup(url).get('video_qualities', [])
             })
+    except BrowserRequired as exc:
+        return jsonify(status='interaction_required', inspection_id=exc.token, message=str(exc))
     except Exception as e:
         print(f"/get-info error: {e}")
-        return jsonify({"status": "error"})
+        return jsonify(status='error', message='Video bilgisi alınamadı. ' + str(e)[:300])
+
+
+@app.route('/site-inspection/<action>', methods=['POST'])
+def site_inspection_action(action):
+    origin = request.headers.get('Origin')
+    if origin and origin.rstrip('/') != request.host_url.rstrip('/'):
+        return jsonify(status='error', message='Geçersiz istek kaynağı.'), 403
+    data = request.get_json(silent=True)
+    token = data.get('inspection_id') if isinstance(data, dict) else None
+    if not isinstance(token, str) or len(token) != 32 or action not in ('show','cancel'):
+        return jsonify(status='error', message='Geçersiz inceleme.'), 400
+    try:
+        if action == 'show': site_browser.show(token)
+        else: site_browser.close(token)
+        return jsonify(status='success')
+    except ValueError as exc:
+        return jsonify(status='error', message=str(exc)), 400
 
 
 @app.route('/previews/<name>')

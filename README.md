@@ -6,6 +6,8 @@ A Windows video and audio downloader with a refined glass-inspired interface, so
 
 ## ✨ Features
 
+- 🧪 **Site-specific preview (1.2.9 source/test build)** — initial FullHDFilmizlesene / Rapidvid page inspection, with an on-demand background browser and existing quality/queue controls. Not included in the 1.2.8 installer. Other sites and player providers are not covered by this adapter.
+
 - 🌍 **Automatic language selection** — starts in your system UI language when supported, falls back to English, and remembers your manual language choice.
 
 - 🪟 **A refined desktop interface** — a clean graphite design, subtle reflections, light/dark themes, and 10 interface languages.
@@ -68,7 +70,7 @@ Found a problem? [Open an issue](https://github.com/m4xenn/Video-DownloderPro/is
 
 ## 🧑‍💻 Source Code
 
-The `main` branch contains the source synchronized with the 1.2.8 desktop release. See [DEVELOPMENT.md](DEVELOPMENT.md) for Windows setup, tests, and packaging instructions. For normal installation, use [Releases](https://github.com/m4xenn/Video-DownloderPro/releases/latest).
+The `main` branch contains the source for the 1.2.9 test build. See [DEVELOPMENT.md](DEVELOPMENT.md) for Windows setup, tests, and packaging instructions. For normal installation, use [Releases](https://github.com/m4xenn/Video-DownloderPro/releases/latest).
 
 ## 📄 License
 

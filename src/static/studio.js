@@ -40,6 +40,7 @@ function updateStudioTexts() {
     document.getElementById('platformFootnote').textContent = 'Video Downloader Pro · MP4 / MP3 / WAV / M4A / Opus';
     document.querySelector('#studioFootnote span').textContent = copy[12];
     document.documentElement.lang = currentLang;
+    if(typeof updateSiteInspectionTexts === 'function') updateSiteInspectionTexts();
     document.getElementById('addBtn').setAttribute('aria-label', currentLang === 'tr' ? 'Sıraya ekle' : 'Add to queue');
     document.querySelectorAll('.custom-select__trigger').forEach(trigger => {
         const id = trigger.parentElement.id;

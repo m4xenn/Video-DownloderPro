@@ -54,7 +54,8 @@ def _download_single(url, ydl_opts, save_path, req_opts, folder_id=None):
                 attach_budget(ydl, budget, lambda: bool(state['cancel_flags'].get(url)),
                               req_opts.get('_record', lambda _: None))
             # We need to extract info first to get the filename and title!
-            info = ydl.extract_info(url, download=False)
+            from services.site_resolver import extract_media_info
+            info = extract_media_info(ydl, url, fresh=True)
             if not info:
                 raise Exception("Video bilgisi alınamadı (Gizli veya kullanılamıyor olabilir).")
             if req_opts.get('_metadata'):

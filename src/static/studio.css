@@ -285,3 +285,9 @@ input:checked + .slider:before { transform:translateX(13px); }
 #appUpdateNotes li { padding-left:2px; margin:6px 0; }
 #appUpdateNotes strong { font-weight:600; }
 #appUpdateNotes code { font-size:.94em; padding:1px 4px; border-radius:4px; background:rgba(128,128,128,.15); }
+
+.site-inspection { margin:0 0 16px; padding:12px; border:1px solid var(--glass-border); border-radius:14px; background:rgba(128,128,128,.06); }
+.site-inspection p { font-size:12px; line-height:1.6; margin:0 0 10px; }
+.site-inspection > div { display:flex; gap:8px; flex-wrap:wrap; }
+.site-inspection button { font:inherit; font-size:11px; padding:8px 11px; color:inherit; background:rgba(128,128,128,.12); border:1px solid var(--glass-border); border-radius:999px; cursor:pointer; }
+.site-inspection button:hover { background:rgba(128,128,128,.22); }
