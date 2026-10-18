@@ -276,3 +276,12 @@ input:checked + .slider:before { transform:translateX(13px); }
 .link-preview { margin:0 0 14px; padding:10px 2px; min-width:0; }
 .link-preview strong { display:block; font-size:12px; line-height:1.5; overflow-wrap:anywhere; }
 .link-preview span { display:block; margin-top:4px; font-size:11px; color:var(--text-secondary,#999); line-height:1.6; }
+
+#appUpdateNotes { overflow-wrap:anywhere; }
+#appUpdateNotes h2,#appUpdateNotes h3,#appUpdateNotes h4,#appUpdateNotes h5,#appUpdateNotes h6 { font-size:14px; line-height:1.5; font-weight:600; margin:18px 0 8px; color:var(--text-primary,inherit); }
+#appUpdateNotes > :first-child { margin-top:0; }
+#appUpdateNotes p { margin:8px 0; }
+#appUpdateNotes ul,#appUpdateNotes ol { margin:8px 0; padding-left:21px; }
+#appUpdateNotes li { padding-left:2px; margin:6px 0; }
+#appUpdateNotes strong { font-weight:600; }
+#appUpdateNotes code { font-size:.94em; padding:1px 4px; border-radius:4px; background:rgba(128,128,128,.15); }

@@ -428,7 +428,7 @@
             <h3 style="margin-top: 0; margin-bottom: 20px; font-weight: 600; text-align: center;"><i class="fa-solid fa-gift" style="color: var(--primary); margin-right: 8px;"></i>Yeni Güncelleme Mevcut!</h3>
             <p style="text-align: center; color: var(--text-sub); font-size: 14px; margin-bottom: 20px;">Uygulamanın <strong><span id="appUpdateVersion"></span></strong> sürümü yayınlandı.</p>
             <div style="background: var(--input-bg); border: 1px solid var(--glass-border); border-radius: 12px; padding: 15px; font-size: 13px; max-height: 150px; overflow-y: auto; color: var(--text-sub); margin-bottom: 20px;">
-                <div id="appUpdateNotes" style="font-family: inherit; margin: 0; white-space: pre-wrap; line-height: 1.5;"></div>
+                <div id="appUpdateNotes" style="font-family: inherit; margin: 0; white-space: normal; line-height: 1.6;"></div>
             </div>
             <p id="appUpdateStatus" class="app-update-status" role="status" aria-live="polite"></p>
             <progress id="appUpdateProgress" class="app-update-progress" max="100" value="0" style="display: none;"></progress>
@@ -500,6 +500,7 @@
         </div>
     </div>
 
+    <script src="{{ url_for('static', filename='release-notes.js') }}"></script>
     <script>
         // --- i18n LOGIC ---
         const translations = {
@@ -794,7 +795,7 @@
                 if (data.update_available) {
                     label.textContent = 'Yeni sürüm: ' + data.latest_version;
                     document.getElementById('appUpdateVersion').textContent = data.latest_version;
-                    document.getElementById('appUpdateNotes').textContent = data.release_notes || 'Sürüm notu eklenmemiş.';
+                    renderReleaseNotes(document.getElementById('appUpdateNotes'), data.release_notes);
                     const modal = document.getElementById('appUpdateModal');
                     modal.style.display = 'flex';
                     setTimeout(() => { modal.style.opacity = '1'; modal.firstElementChild.style.transform = 'translateY(0)'; }, 10);

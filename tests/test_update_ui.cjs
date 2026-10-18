@@ -23,6 +23,7 @@ function environment(responses) {
         setTimeout: () => 1,
         clearTimeout: () => {},
     });
+    vm.runInContext(fs.readFileSync(path.join(__dirname, '../src/static/release-notes.js'),'utf8'),context);
     vm.runInContext(code, context);
     return {context, nodes, calls};
 }
@@ -36,8 +37,7 @@ function environment(responses) {
 
     e = environment([{status: 'available', update_available: true, latest_version: 'v1.2.0', release_notes: '<script>bad()</script>'}, {status: 'idle'}]);
     await vm.runInContext('checkAppUpdate(true)', e.context);
-    assert.equal(e.nodes.get('appUpdateNotes').textContent, '<script>bad()</script>');
-    assert.equal(e.nodes.get('appUpdateNotes').innerHTML, undefined);
+    assert.equal(e.nodes.get('appUpdateNotes').innerHTML, '<p>&lt;script&gt;bad()&lt;/script&gt;</p>');
     assert.equal(e.nodes.get('appUpdateModal').style.display, 'flex');
 
     e = environment([{status: 'error', message: 'offline'}]);

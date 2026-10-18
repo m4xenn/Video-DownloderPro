@@ -175,7 +175,7 @@ class UpdateRouteTests(unittest.TestCase):
     def test_metadata_in_ui(self):
         page = self.client.get('/').get_data(as_text=True)
         self.assertIn(app.CURRENT_VERSION, page)
-        self.assertIn("getElementById('appUpdateNotes').textContent", page)
+        self.assertIn("renderReleaseNotes(document.getElementById('appUpdateNotes')", page)
 
 
 if __name__ == '__main__':

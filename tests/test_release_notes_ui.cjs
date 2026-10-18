@@ -1,0 +1,13 @@
+const assert=require('node:assert/strict'),fs=require('node:fs'),vm=require('node:vm');
+const context=vm.createContext({});vm.runInContext(fs.readFileSync('src/static/release-notes.js','utf8'),context);
+const render=value=>{context.value=value;return vm.runInContext('releaseNotesHTML(value)',context);};
+assert.equal(render('## 🌍 Language'),'<h3>🌍 Language</h3>');
+assert.equal(render('- **Saved** choice\n- Next'),'<ul><li><strong>Saved</strong> choice</li><li>Next</li></ul>');
+assert.equal(render('1. First\n2. Second'),'<ol><li>First</li><li>Second</li></ol>');
+assert.equal(render('Use `code`'),'<p>Use <code>code</code></p>');
+assert.equal(render('<img src=x onerror=alert(1)>'),'<p>&lt;img src=x onerror=alert(1)&gt;</p>');
+assert.ok(!render('**<script>alert(1)</script>**').includes('<script>'));
+assert.ok(!render('[click](javascript:alert(1))').includes('<a'));
+assert.equal(render('A & B'),'<p>A &amp; B</p>');
+assert.equal(render('Text\r\n\r\n## Title'),'<p>Text</p><h3>Title</h3>');
+console.log('9 release note formatting and HTML safety checks passed');
