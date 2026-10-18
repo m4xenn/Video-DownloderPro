@@ -1,0 +1,87 @@
+{
+  "created_at": "2026-10-18T18:37:50.207176+00:00",
+  "scope": "generic source discovery, metadata, bounded HLS sample; full downloads not tested",
+  "cases": [
+    {
+      "id": "aniwatch-nested",
+      "host": "aniwatch.co.at",
+      "scenario": "nested-player",
+      "outcome": "automatic",
+      "seconds": 14.9,
+      "error_code": null,
+      "source_count": 1,
+      "format_count": 1,
+      "discovery_method": "dom",
+      "heights": [
+        1080
+      ],
+      "duration": 1477,
+      "sample_bytes": 16384,
+      "sample_http_status": 200,
+      "full_download": "not_tested"
+    },
+    {
+      "id": "fullhd-film",
+      "host": "www.fullhdfilmizlesene.now",
+      "scenario": "embedded-player",
+      "outcome": "automatic",
+      "seconds": 26.2,
+      "error_code": null,
+      "source_count": 1,
+      "format_count": 7,
+      "discovery_method": "adapter",
+      "heights": [
+        360,
+        480,
+        720,
+        1080,
+        2160
+      ],
+      "duration": 9133,
+      "sample_bytes": 16384,
+      "sample_http_status": 206,
+      "full_download": "not_tested"
+    },
+    {
+      "id": "hdfilm-film",
+      "host": "www.hdfilmcehennemi.nl",
+      "scenario": "embedded-player",
+      "outcome": "automatic",
+      "seconds": 12.4,
+      "error_code": null,
+      "source_count": 1,
+      "format_count": 3,
+      "discovery_method": "network",
+      "heights": [
+        1080
+      ],
+      "duration": 9873,
+      "sample_bytes": 16384,
+      "sample_http_status": 206,
+      "full_download": "not_tested"
+    },
+    {
+      "id": "hdfilm-esaret",
+      "host": "www.hdfilmcehennemi.nl",
+      "scenario": "lazy-iframe-player",
+      "outcome": "automatic",
+      "seconds": 12.4,
+      "error_code": null,
+      "source_count": 1,
+      "format_count": 3,
+      "discovery_method": "network",
+      "heights": [
+        1080
+      ],
+      "duration": 8553,
+      "sample_bytes": 16384,
+      "sample_http_status": 206,
+      "full_download": "not_tested"
+    }
+  ],
+  "totals": {
+    "automatic": 4,
+    "interaction_required": 0,
+    "failed": 0
+  }
+}

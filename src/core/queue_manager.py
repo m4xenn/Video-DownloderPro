@@ -18,7 +18,7 @@ from state.app_state import state, state_actions
 from utils.formatters import clean_ansi
 from services.download_store import media_key, completion_record
 from services.media_catalog import estimate_size
-from core.retry_policy import transient_error, retry_delay
+from core.retry_policy import transient_error, retry_delay, fragment_retry_wait
 
 
 @dataclass
@@ -35,6 +35,10 @@ class Job:
     percent: float = 0
     speed: str = 'Sırada...'
     error: str = ''
+    error_code: str = ''
+    error_phase: str = ''
+    source_signature: dict = field(default_factory=dict)
+    phase: str = 'finding_player'
     future: object = None
     native: bool = True
     media_key: str = ''
@@ -124,11 +128,17 @@ class DownloadManager:
     def _finished(self, job):
         job.status, job.percent, job.speed = 'finished', 100, 'Tamamlandı'
         job.error, job.eta, job.restored = '', 0, False
+        job.error_code=job.error_phase=''
         if self.store and job.output_path and Path(job.output_path).is_file():
             self.pending_history.append(completion_record(job))
 
     def _failed(self, job, message, now):
         job.error = message or 'İndirme tamamlanamadı.'
+        from services.diagnostics import diagnostics
+        from services.diagnostics import error_code
+        job.error_code=error_code(job.error)
+        job.error_phase=job.phase
+        diagnostics.record('download', job.url, error=job.error)
         job.eta = None
         if transient_error(job.error) and job.retry_count < 2 and not self.closed.is_set():
             job.retry_count += 1
@@ -284,7 +294,7 @@ class DownloadManager:
             'storage_error': self.storage_error,
             'total_items': len(visible), 'items': [
                 {'id': j.id, 'url': j.url, 'title': j.title, 'thumbnail': j.thumbnail,
-                 'percent': j.percent, 'speed': j.speed, 'status': j.status, 'error': j.error,
+                 'percent': j.percent, 'speed': j.speed, 'status': j.status, 'error': j.error,'error_code':j.error_code,'error_phase':j.error_phase,'phase':j.phase,
                  'total_bytes': j.total_bytes, 'downloaded_bytes': j.downloaded_bytes, 'eta': j.eta,
                  'format': j.options.get('format'), 'quality': j.options.get('quality'),
                  'size_estimated': j.size_estimated, 'retry_count': j.retry_count,
@@ -400,6 +410,10 @@ class DownloadManager:
         Path(job.path).mkdir(parents=True, exist_ok=True)
         conversion_held = [False]
         conversion_depth = [0]
+        def stage(code):
+            from services.source_operation import PHASES
+            if code in PHASES:
+                with self.lock:job.phase=code
         def hook(data):
             if state['cancel_flags'].get(job.url):
                 raise DownloadPaused('DOWNLOAD_PAUSED')
@@ -407,6 +421,7 @@ class DownloadManager:
             with self.lock:
                 if job.status != 'pausing':
                     job.status = 'converting' if data['status'] == 'finished' else 'downloading'
+                    job.phase = 'postprocess' if data['status']=='finished' else 'downloading'
                 total = data.get('total_bytes') or data.get('total_bytes_estimate')
                 if total:
                     job.percent = min(100, round(data.get('downloaded_bytes', 0) * 100 / total, 1))
@@ -441,14 +456,19 @@ class DownloadManager:
         opts.update(outtmpl=job.output_template or str(Path(job.path) / '%(title)s [%(id)s].%(ext)s'),
                     ignoreerrors=False, hls_prefer_native=True, external_downloader=None,
                     concurrent_fragment_downloads=3, postprocessor_hooks=[postprocess],
-                    socket_timeout=15, retries=3, fragment_retries=3)
+                    socket_timeout=15, retries=3, fragment_retries=5,
+                    skip_unavailable_fragments=False,
+                    retry_sleep_functions={'fragment': fragment_retry_wait(
+                        lambda: bool(state['cancel_flags'].get(job.url)),progress=stage)})
         def protocol_support(native):
             with self.lock:
                 job.native = native
                 if not native and self.budget.rate:
                     raise ValueError('Bu yayın türü toplam hız sınırını desteklemiyor. Sınırı kaldırarak tekrar deneyin.')
         def metadata(info):
+            from services.source_recovery import source_checkpoint
             with self.lock:
+                job.source_signature=source_checkpoint(info)
                 job.title = info.get('title') or job.title
                 job.thumbnail = info.get('thumbnail') or job.thumbnail
                 job.media_key = media_key(job.url, info)
@@ -462,12 +482,12 @@ class DownloadManager:
         def thumbnail(path):
             with self.lock:
                 job.thumbnail=path
-        request = dict(job.options, _budget=self.budget, _record=self.record,
+        request = dict(job.options, _budget=self.budget, _record=self.record,_stage=stage,
                        _error=lambda message: setattr(job, 'error', message),
                        _protocol_support=protocol_support, _metadata=metadata, _completed=completed,
                        _thumbnail=thumbnail, _preview_id=job.id,
                        _preview_dir=str(self.store.path.parent/'previews') if self.store else None,
-                       _resume_target=bool(job.output_template),
+                       _resume_target=bool(job.output_template),_source_signature=copy.deepcopy(job.source_signature),
                        _target=lambda template: setattr(job, 'output_template', template))
         try:
             return (self.worker or _download_single)(job.url, opts, job.path, request, None)

@@ -40,13 +40,20 @@ def main():
             'frames':[dict(f,url=clean_url(f.get('url'))) for f in snapshot.get('raw_frames',[])],
             'embeds':len(snapshot.get('embeds',[])),'players':len(snapshot.get('media',[])),
             'network_media':len(network),'interaction':snapshot.get('interaction')})
+        report['snapshots'][-1]['verification']=bool(snapshot.get('verification'))
+        report['snapshots'][-1]['outline']=snapshot.get('outline',{})
         report['snapshots'][-1]['groups']=[{'kind':item.get('group'),'duration':item.get('duration'),'blob':item.get('blob')} for item in snapshot.get('media',[])]
         probe=(site_browser.session or {}).get('frame_probe')
         if probe:
             report['snapshots'][-1]['native_request_count']=len(probe.requests)
             report['snapshots'][-1]['media_header_names']=sorted({name for item in snapshot.get('media',[]) for source in item.get('sources',[]) for name in probe.requests.get(source,{})})
-        return original_choose(snapshot,network)
+        selected=original_choose(snapshot,network)
+        if selected:report['discovery_method']=selected.get('discovery_method','dom')
+        return selected
     snapshot=media_discovery.DISCOVERY_SNAPSHOT.replace('return {title:', '''return {ready:document.readyState,visibility:document.visibilityState,
+      outline:{title:document.title,scripts:[...document.scripts].map(e=>e.src).filter(Boolean).map(v=>{const u=new URL(v);return u.origin+u.pathname}).slice(0,20),
+      player_structure:[...document.querySelectorAll('.player-container,.player-container *')].slice(0,40).map(e=>({tag:e.tagName,classes:String(e.className).slice(0,120),attributes:e.getAttributeNames(),width:e.getBoundingClientRect().width,height:e.getBoundingClientRect().height})),
+      controls:[...document.querySelectorAll('button,[role="button"],[class*="player"],[id*="player"]')].slice(0,40).map(e=>({tag:e.tagName,id:e.id,classes:String(e.className).slice(0,120),label:(e.getAttribute('aria-label')||e.textContent||'').trim().slice(0,80)}))},
       raw_frames:[...document.querySelectorAll('iframe')].map(f=>({url:f.src,width:f.getBoundingClientRect().width,height:f.getBoundingClientRect().height})),title:''')
     main_window=webview.create_window('Isolated public-page source diagnostic',html='<html>Video source diagnostic. This window closes when the check finishes.</html>',hidden=not args.continue_in_browser,width=620,height=240)
     site_browser.enabled=True
@@ -70,6 +77,7 @@ def main():
                             site_browser.show(interaction.token)
                         report['continue_checks']=attempt+1
                 report.update(status='resolved',title=data['title'],source_count=len(data['streams']))
+                report.setdefault('discovery_method',data.get('discovery_method','unknown'))
                 report['contexts']=[{'host':urlsplit(source).hostname,'headers':sorted(headers),'referer_host':urlsplit(headers.get('Referer','')).hostname}
                     for source,headers in data.get('source_headers',{}).items()]
                 if args.metadata:
@@ -98,6 +106,8 @@ def main():
                             if not media_discovery.public_url(target,resolve=True):raise ValueError('Non-public segment URL')
                             with ydl.urlopen(Request(target,headers=dict(headers,Range='bytes=0-16383'))) as response:
                                 sample=response.read(16384)
+                                from services.source_validation import validate_media_sample
+                                validate_media_sample(sample,response.headers.get('Content-Type',''))
                                 report.update(sample_bytes=len(sample),sample_http_status=response.status)
                             if not sample:raise ValueError('Empty segment sample')
                     report.update(duration=info.get('duration'),heights=sorted({f['height'] for f in info.get('formats',[]) if f.get('height')}),format_count=len(info.get('formats',[])))

@@ -1,5 +1,6 @@
 """Real yt-dlp/FFmpeg smoke test using generated media on localhost only."""
 import functools
+import hashlib
 import http.server
 import json
 import os
@@ -22,6 +23,49 @@ from yt_dlp import YoutubeDL
 
 
 class LocalDownloadTests(unittest.TestCase):
+    def test_video_then_audio_preserves_each_completed_output(self):
+        from services.diagnostics import Diagnostics
+        binary = Path(os.environ['APPDATA']) / 'YoutubePro/bin'
+        if not all((binary / name).is_file() for name in ('ffmpeg.exe', 'ffprobe.exe')):
+            self.skipTest('FFmpeg/FFprobe required')
+        with tempfile.TemporaryDirectory(dir=ROOT) as temporary:
+            base = Path(temporary)
+            source = base / 'source'
+            source.mkdir()
+            subprocess.run([str(binary / 'ffmpeg.exe'), '-hide_banner', '-loglevel', 'error',
+                            '-f', 'lavfi', '-i', 'color=c=blue:s=320x240:r=10',
+                            '-f', 'lavfi', '-i', 'sine=frequency=440', '-t', '2',
+                            '-c:v', 'libx264', '-c:a', 'aac', str(source / 'sample.mp4')],
+                           check=True, timeout=30)
+            server = http.server.ThreadingHTTPServer(('127.0.0.1', 0),
+                functools.partial(http.server.SimpleHTTPRequestHandler, directory=str(source)))
+            thread = threading.Thread(target=server.serve_forever, daemon=True)
+            thread.start()
+            store = DownloadStore(base / 'downloads.sqlite3')
+            try:
+                with patch.object(queue_manager, 'show_notification'), patch('services.diagnostics.diagnostics', Diagnostics(base / 'diagnostics.sqlite3')):
+                    manager = queue_manager.DownloadManager(store=store)
+                    completed = {}
+                    try:
+                        for kind, quality in [('video', 'max'), ('audio', 'mp3'), ('audio', 'm4a'), ('audio', 'wav'), ('audio', 'opus')]:
+                            manager.submit([f'http://127.0.0.1:{server.server_port}/sample.mp4'],
+                                {'format': kind, 'quality': quality, 'embed_subs': False}, str(base / 'outputs'), str(binary))
+                            self.assertEqual(manager.wait(40)['status'], 'finished_all')
+                            entry = next(row for row in store.history()['items'] if row['format'] == kind and row['quality'] == quality)
+                            output = Path(entry['path'])
+                            self.assertTrue(output.is_file())
+                            completed[output] = hashlib.sha256(output.read_bytes()).hexdigest()
+                            for previous, digest in completed.items():
+                                self.assertTrue(previous.is_file(), f'{quality} conversion removed {previous.name}')
+                                self.assertEqual(hashlib.sha256(previous.read_bytes()).hexdigest(), digest)
+                        self.assertEqual(len(completed), 5)
+                    finally:
+                        manager.close()
+            finally:
+                server.shutdown()
+                server.server_close()
+                thread.join(timeout=5)
+
     def test_real_mp4_and_mp3_download(self):
         bin_dir = Path(os.environ['APPDATA']) / 'YoutubePro' / 'bin'
         if not all((bin_dir / name).exists() for name in ('ffmpeg.exe', 'ffprobe.exe')):

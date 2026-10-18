@@ -19,13 +19,13 @@ def start_window():
         min_size=(600, 500)
     )
     
-    window.events.closed += lambda: site_browser.close()
+    window.events.closed += lambda: site_browser.close_all()
 
     # Masaüstü penceresi başlatılıyor
     try:
         webview.start()
     finally:
-        site_browser.close()
+        site_browser.close_all()
         download_manager.close()
 
 if __name__ == '__main__':

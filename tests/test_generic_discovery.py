@@ -46,6 +46,13 @@ class DiscoveryPolicyTests(unittest.TestCase):
         with patch.object(generic_resolver,'pending',return_value=False),patch.object(generic_resolver,'extract') as fallback:
             self.assertEqual(extract_media_info(ydl,PAGE),{'id':'native'})
         fallback.assert_not_called()
+    def test_public_page_403_uses_browser_but_not_private_or_direct_media(self):
+        self.assertTrue(can_discover_after(PAGE,DownloadError('HTTP Error 403: Forbidden')))
+        self.assertFalse(can_discover_after(STREAM,DownloadError('HTTP Error 403: Forbidden')))
+        self.assertFalse(can_discover_after(PAGE,DownloadError('Login required HTTP Error 403')))
+        ydl=Mock();ydl.extract_info.side_effect=DownloadError('HTTP Error 403: Forbidden')
+        with patch.object(generic_resolver,'pending',return_value=False),patch.object(generic_resolver,'extract',return_value={'id':'browser'}) as fallback:
+            self.assertEqual(extract_media_info(ydl,PAGE)['id'],'browser');fallback.assert_called_once()
 
     def test_unsupported_native_uses_discovery(self):
         ydl=Mock();ydl.extract_info.side_effect=DownloadError('Unsupported URL: '+PAGE)
@@ -107,6 +114,12 @@ class DiscoveryPolicyTests(unittest.TestCase):
         self.assertEqual(same.get_header('Cookie'),'session=secret')
         self.assertIsNone(other.get_header('Cookie'));self.assertIsNone(outside.get_header('Cookie'))
         self.assertIsNone(subdomain.get_header('Cookie'))
+    def test_existing_http_transport_does_not_keep_pre_browser_headers(self):
+        ydl=Mock();ydl.params={'http_headers':{'User-Agent':'Old-UA'}};ydl.cookiejar=CookieJar()
+        director=Mock();ydl.__dict__['_request_director']=director
+        apply_source_context(ydl,STREAM,{'Referer':FRAME,'User-Agent':'Browser-UA'})
+        director.close.assert_called_once();self.assertNotIn('_request_director',vars(ydl))
+        self.assertEqual(ydl.params['http_headers']['User-Agent'],'Browser-UA')
 
 
 class GenericTraversalTests(unittest.TestCase):

@@ -115,6 +115,8 @@ class SiteResolver:
         if not supported_page(url):raise ValueError('Bu site henüz desteklenmiyor.')
         with self.lock:
             entry=self.cache.get(url)
+            if entry and self.clock()-entry[0]<45 and entry[1].get('_handoff_token') and self.browser.adopt_handoff(entry[1]['_handoff_token']):
+                return dict(entry[1])
             if not fresh and entry and self.clock()-entry[0]<120:
                 return dict(entry[1])
             saved=self.pages.get(url)
@@ -138,12 +140,15 @@ class SiteResolver:
             last_error=None
             for embed in embeds:
                 headers={'Referer':urljoin(embed,'/'),'User-Agent':requests.utils.default_user_agent()}
+                source_headers={};handoff_token=None
                 try:
                     streams=[]
                     try:
                         stream=rapidvid_source(self._html(embed,url))
                     except (ValueError,requests.RequestException):
                         observed=self.browser.inspect_player(embed,url)
+                        source_headers=observed.get('source_headers') or {}
+                        handoff_token=observed.get('_handoff_token')
                         streams=list(dict.fromkeys(source for source in observed.get('sources',[]) if valid_stream(source)))[:8]
                         stream=streams[0] if streams else None
                         if not stream:raise ValueError('Oynatıcıdan erişilebilir video kaynağı alınamadı.')
@@ -157,6 +162,7 @@ class SiteResolver:
             else:
                 raise ValueError('Sayfadaki oynatıcılar çözümlenemedi. '+str(last_error or ''))
             result={'stream':stream,'streams':streams or [stream],'embed':embed,'headers':headers,
+                    'source_headers':source_headers,'_handoff_token':handoff_token,
                     'title':str(data.get('title') or 'Video')[:500], 'thumbnail':str(data.get('thumbnail') or '')[:8192]}
             self.cache={key:value for key,value in self.cache.items() if self.clock()-value[0]<120}
             if len(self.cache)>=20:self.cache.pop(next(iter(self.cache)))
@@ -164,7 +170,10 @@ class SiteResolver:
             return dict(result)
 
     def extract(self, ydl, url, fresh=False):
+        from services.source_operation import report_stage
+        report_stage('finding_player')
         data=self.details(url,fresh=fresh)
+        report_stage('validating_source')
         ydl.params['http_headers']=dict(ydl.params.get('http_headers') or {}, **data['headers'])
         streams=data.get('streams') or [data['stream']]
         def extract_source(stream):
@@ -209,6 +218,8 @@ class SiteResolver:
             info=ydl.process_ie_result(info,download=False)
         if data['thumbnail']:info['thumbnail']=data['thumbnail']
         info['http_headers']=dict(info.get('http_headers') or {}, **data['headers'])
+        from services.source_validation import validate_embedded_info
+        validate_embedded_info(info)
         return info
 
 

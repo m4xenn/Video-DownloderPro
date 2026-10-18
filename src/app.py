@@ -47,6 +47,8 @@ from services.media_catalog import MediaCatalog
 from services.language_service import SUPPORTED_LANGUAGES, system_language
 from services.site_resolver import extract_media_info
 from services.site_browser import site_browser, BrowserRequired
+from services.diagnostics import diagnostics, DiagnosticLogger
+from services.source_operation import source_operation,source_progress
 # --- FAZ 1: Utils modülleri ---
 from utils.i18n import py_i18n, get_i18n
 from utils.file_helpers import (
@@ -221,7 +223,9 @@ def get_info():
         import os
         BIN_DIR = os.path.join(os.environ.get('APPDATA', ''), 'YoutubePro', 'bin')
         ffmpeg_dir = BIN_DIR # Just in case it's needed
+        diagnostics.record('metadata', url, 'started')
         ydl_opts = {
+            'logger': DiagnosticLogger('metadata', url,lambda code:source_progress.set(url,code)),
             'quiet': True,
             'no_warnings': True,
             'extract_flat': 'in_playlist',
@@ -231,10 +235,14 @@ def get_info():
             'extractor_retries': 2
         }
         with YoutubeDL(ydl_opts) as ydl:
-            info = extract_media_info(ydl, url)
+            source_progress.set(url,'finding_player')
+            with source_operation(lambda code:source_progress.set(url,code),retain='preview'):
+                info = extract_media_info(ydl, url)
+            source_progress.set(url,'ready')
             media_catalog.remember(url, info)
             title = info.get('title', 'Bilinmeyen Video')
             thumbnail = info.get('thumbnail', '')
+            diagnostics.record('metadata', url, 'resolved')
             return jsonify({
                 "status": "success",
                 "url": url,
@@ -246,10 +254,36 @@ def get_info():
                 "video_qualities": media_catalog.lookup(url).get('video_qualities', [])
             })
     except BrowserRequired as exc:
+        source_progress.set(url,'waiting_server')
+        diagnostics.record('browser', url, 'interaction_required')
         return jsonify(status='interaction_required', inspection_id=exc.token, message=str(exc))
     except Exception as e:
-        print(f"/get-info error: {e}")
-        return jsonify(status='error', message='Video bilgisi alınamadı. ' + str(e)[:300])
+        source_progress.set(url,'error')
+        diagnostics.record('metadata', url, error=e)
+        from services.diagnostics import error_code
+        message='Video bilgisi alınamadı. Hata raporunu Ayarlar → Sorun giderme kayıtları bölümünden kopyalayabilirsin.' if state.get('current_lang')=='tr' else 'Could not read media information. Copy the report from Settings → Troubleshooting records.'
+        return jsonify(status='error', message=message,error_code=error_code(e))
+
+
+@app.route('/diagnostics', methods=['POST'])
+def diagnostics_report():
+    origin = request.headers.get('Origin')
+    if origin and origin.rstrip('/') != request.host_url.rstrip('/'):
+        return jsonify(status='error', message='Geçersiz istek kaynağı.'), 403
+    data=request.get_json(silent=True) or {}
+    url=data.get('url') if isinstance(data,dict) else None
+    if url is not None and (not isinstance(url,str) or len(url)>8192):return jsonify(status='error'),400
+    return jsonify(status='success', **diagnostics.report(url))
+
+
+@app.route('/source-progress',methods=['POST'])
+def source_progress_route():
+    origin=request.headers.get('Origin')
+    if origin and origin.rstrip('/')!=request.host_url.rstrip('/'):return jsonify(status='error'),403
+    data=request.get_json(silent=True) or {}
+    url=data.get('url') if isinstance(data,dict) else None
+    if not isinstance(url,str) or len(url)>8192:return jsonify(status='error'),400
+    return jsonify(status='success',phase=source_progress.get(url))
 
 
 @app.route('/site-inspection/<action>', methods=['POST'])

@@ -1,4 +1,20 @@
 """Retry only errors likely to recover; never loop private/deleted/format errors."""
+import time
+
+
+def fragment_retry_wait(cancelled, sleep=time.sleep, clock=time.monotonic, progress=None):
+    """yt-dlp sleep callback: bounded backoff that remains interruptible."""
+    def wait(n):
+        from core.bandwidth import DownloadPaused
+        if progress:progress('waiting_server')
+        deadline = clock() + min(60, 5 * 2 ** min(max(0, n), 4))
+        while clock() < deadline:
+            if cancelled():
+                raise DownloadPaused('DOWNLOAD_PAUSED')
+            sleep(min(.1, max(0, deadline - clock())))
+        return 0  # Waiting was handled here, not by yt-dlp's blocking sleep.
+    return wait
+
 def transient_error(message):
     text = (message or '').lower()
     permanent = ('private video', 'deleted', 'not available', 'unavailable', 'unsupported url',

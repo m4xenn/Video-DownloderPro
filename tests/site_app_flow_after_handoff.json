@@ -1,0 +1,50 @@
+{
+  "created_at": "2026-10-18T18:57:20.362818+00:00",
+  "scope": "real application /get-info metadata and preview browser handoff; no video download",
+  "cases": [
+    {
+      "id": "aniwatch-nested",
+      "status": "success",
+      "duration": 1477,
+      "qualities": [
+        "source:1080:23.974"
+      ],
+      "handoffs": 1,
+      "error_code": null
+    },
+    {
+      "id": "fullhd-film",
+      "status": "success",
+      "duration": 9133,
+      "qualities": [
+        "source:2160:25",
+        "source:1080:25",
+        "source:720:25",
+        "source:480:25",
+        "source:360:25"
+      ],
+      "handoffs": 0,
+      "error_code": null
+    },
+    {
+      "id": "hdfilm-film",
+      "status": "success",
+      "duration": 9873,
+      "qualities": [
+        "source:1080:0"
+      ],
+      "handoffs": 1,
+      "error_code": null
+    },
+    {
+      "id": "hdfilm-esaret",
+      "status": "success",
+      "duration": 8553,
+      "qualities": [
+        "source:1080:0"
+      ],
+      "handoffs": 1,
+      "error_code": null
+    }
+  ]
+}

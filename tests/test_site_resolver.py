@@ -63,10 +63,18 @@ class ResolverTests(unittest.TestCase):
         resolver=SiteResolver(browser=browser)
         with patch.object(resolver,'_html',return_value='<html>challenge</html>'),self.assertRaises(BrowserRequired):resolver.details(PAGE)
     def test_extract_keeps_original_identity(self):
-        resolver=SiteResolver();ydl=Mock();ydl.params={'http_headers':None};ydl.extract_info.return_value={'formats':[],'id':'opaque','title':'opaque'}
+        resolver=SiteResolver();ydl=Mock();ydl.params={'http_headers':None};ydl.extract_info.return_value={'formats':[{'url':STREAM,'ext':'mp4'}],'id':'opaque','title':'opaque'}
         with patch.object(resolver,'details',return_value={'stream':STREAM,'headers':{'Referer':'https://rapidvid.net/'},'title':'Film','thumbnail':''}):
             info=resolver.extract(ydl,PAGE,True)
         self.assertEqual(info['webpage_url'],PAGE);self.assertEqual(info['title'],'Film');self.assertEqual(info['extractor_key'],'FullHDFilmizlesene')
+    def test_browser_fallback_preserves_scoped_headers_and_handoff(self):
+        browser=Mock();browser.inspect_player.return_value={'sources':[STREAM],'source_headers':{STREAM:{'Cookie':'private','Referer':EMBED}},'_handoff_token':'d'*32}
+        resolver=SiteResolver(browser=browser)
+        with patch.object(resolver,'_html',side_effect=[f'<h1>Film</h1><iframe src="{EMBED}"></iframe>',ValueError('decode failed')]):
+            data=resolver.details(PAGE)
+        self.assertEqual(data['source_headers'][STREAM]['Cookie'],'private')
+        self.assertNotIn('Cookie',data['headers'])
+        self.assertEqual(data['_handoff_token'],'d'*32)
     def test_other_sites_unchanged(self):
         ydl=Mock();extract_media_info(ydl,'https://example.com/video');ydl.extract_info.assert_called_once_with('https://example.com/video',download=False)
     def test_route_handoff(self):

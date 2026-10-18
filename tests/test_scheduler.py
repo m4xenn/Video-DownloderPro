@@ -180,6 +180,20 @@ class SchedulerTests(unittest.TestCase):
         manager.submit(['https://x/a'], OPTIONS, self.temp.name)
         self.assertEqual(manager.wait(5)['status'], 'error')
 
+    def test_fragment_policy_never_skips_and_wait_can_be_cancelled(self):
+        captured = []
+        def worker(url, opts, *_):
+            captured.append(opts)
+            state['cancel_flags'][url] = True
+            with self.assertRaises(DownloadPaused):
+                opts['retry_sleep_functions']['fragment'](0)
+            return False
+        manager = self.manager(worker)
+        manager.submit(['https://x/a'], OPTIONS, self.temp.name)
+        manager.wait(5)
+        self.assertFalse(captured[0]['skip_unavailable_fragments'])
+        self.assertEqual(captured[0]['fragment_retries'], 5)
+
     def test_exception_is_not_ignored(self):
         def worker(*_):
             raise RuntimeError('requested format missing')

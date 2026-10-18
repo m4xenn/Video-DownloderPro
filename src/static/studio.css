@@ -291,3 +291,9 @@ input:checked + .slider:before { transform:translateX(13px); }
 .site-inspection > div { display:flex; gap:8px; flex-wrap:wrap; }
 .site-inspection button { font:inherit; font-size:11px; padding:8px 11px; color:inherit; background:rgba(128,128,128,.12); border:1px solid var(--glass-border); border-radius:999px; cursor:pointer; }
 .site-inspection button:hover { background:rgba(128,128,128,.22); }
+#diagnosticsPanel summary { cursor:pointer; font-size:12px; font-weight:600; }
+#diagnosticsText { box-sizing:border-box; width:100%; min-height:150px; max-height:280px; margin-top:12px; resize:vertical; border:1px solid var(--glass-border); border-radius:12px; padding:12px; background:var(--q-bg); color:var(--text-main); font:11px/1.6 Consolas,monospace; }
+.q-error { margin:7px 0 0; color:var(--danger); font-size:11px; line-height:1.6; overflow-wrap:anywhere; }
+.queue-copy-error[hidden],.q-error[hidden] { display:none; }
+.queue-copy-error { border:0; background:transparent; color:var(--text-sub); cursor:pointer; padding:5px; font-size:14px; }
+.queue-copy-error:hover { color:var(--primary); }

@@ -45,6 +45,63 @@ class SiteBrowser:
         self.lock = threading.RLock()
         self.session = None
         self.enabled = False
+        self.handoffs={}
+
+    def finish_source(self,session):
+        from services.source_operation import current_operation,report_stage
+        report_stage('validating_source')
+        operation=current_operation()
+        if not operation or not operation.retain:
+            self.close(session['token']);return
+        # Keep the session, not a second competing video download in the browser.
+        from services.player_activation import PAUSE_PLAYBACK
+        try:
+            session['window'].evaluate_js(PAUSE_PLAYBACK)
+            if session.get('frame_probe'):session['frame_probe'].read(PAUSE_PLAYBACK)
+        except Exception:pass
+        with self.lock:
+            if self.session is session:self.session=None
+            self.handoffs[session['token']]=session
+            session['operation']=operation
+            operation.transferred=operation.retain=='preview'
+            if session.get('timer'):session['timer'].cancel()
+            timer=threading.Timer(45,operation.release)
+            timer.daemon=True;session['timer']=timer
+        with operation.lock:operation.releases.append(lambda:self.release_handoff(session['token']))
+        timer.start()
+        return session['token']
+
+    def adopt_handoff(self,token):
+        from services.source_operation import current_operation
+        operation=current_operation()
+        if not operation or not operation.retain or not token:return
+        with self.lock:
+            session=self.handoffs.get(token)
+            if not session or session['closed']:return
+            previous=session.get('operation')
+            if previous is operation:return True
+            session['operation']=operation
+            if session.get('timer'):session['timer'].cancel()
+            timer=threading.Timer(45,operation.release);timer.daemon=True;session['timer']=timer
+        with operation.lock:operation.releases.append(previous.release)
+        operation.transferred=operation.retain=='preview'
+        timer.start()
+        return True
+
+    def release_handoff(self,token):
+        with self.lock:session=self.handoffs.pop(token,None)
+        if not session:return
+        if session.get('operation'):session['operation'].release()
+        session['closed']=True
+        if session.get('timer'):session['timer'].cancel()
+        if session.get('frame_probe'):session['frame_probe'].close()
+        try:session['window'].destroy()
+        except Exception:pass
+
+    def close_all(self):
+        self.close()
+        with self.lock:tokens=list(self.handoffs)
+        for token in tokens:self.release_handoff(token)
 
     def _create_window(self,session,visible=False):
         import webview
@@ -56,13 +113,11 @@ class SiteBrowser:
         session['window'] = window
         window.events.loaded += lambda: session['loaded'].set() if session.get('window') is window else None
         window.events.closed += lambda: self._closed(session) if session.get('window') is window else None
-        if discovery:
-            # Initialise the blank document first so FrameCreated is
-            # attached before the actual page creates its iframes.
-            from services.webview_frames import NativeFrames
-            if window.events.loaded.wait(8):
-                probe=NativeFrames(window)
-                if probe.attach():session['frame_probe']=probe
+        # Attach capture/popup policy before navigating any remote helper page.
+        from services.webview_frames import NativeFrames
+        if window.events.loaded.wait(8):
+            probe=NativeFrames(window)
+            if probe.attach():session['frame_probe']=probe
         if player_url or discovery:
             from webview.event import Event
             # Apply navigation headers synchronously before WebView2 sends them.
@@ -81,16 +136,25 @@ class SiteBrowser:
             def on_response(response):
                 if session.get('window') is not window or session['closed']:return
                 content_type=next((str(v).split(';')[0].strip().lower() for k,v in response.headers.items() if k.lower()=='content-type'),'')
-                manifest=urlsplit(response.url).path.lower().endswith(('.m3u8','.mpd'))
-                if response.status_code in (200,206) and (manifest or content_type in ('application/vnd.apple.mpegurl','application/x-mpegurl','application/mpegurl','audio/mpegurl','audio/x-mpegurl','application/dash+xml','video/mp4','video/webm')):
+                from services.network_media import media_kind
+                if media_kind(response.url,content_type,response.status_code):
                     with self.lock:
-                        if len(session['candidates'])<20:
-                            session['candidates'].append({'url':response.url,'headers':dict(session['requests'].get(response.url) or {})} if discovery else response.url)
+                        if len(session['candidates'])>=40:session['candidates'].pop(0)
+                        session['candidates'].append({'url':response.url,'mime':content_type,'status':response.status_code,'headers':dict(session['requests'].get(response.url) or {})} if discovery else response.url)
             window.events.request_sent += on_request
             window.events.response_received += on_response
         window.load_url(player_url or url)
 
     def inspect(self, url, player_url=None, discovery=False):
+        from services.source_operation import report_stage,current_operation
+        report_stage('finding_player')
+        operation=current_operation()
+        if operation and operation.retain=='preview':
+            with self.lock:
+                stale=[token for token,session in self.handoffs.items() if session.get('operation') and session['operation'].retain=='preview']
+            for token in stale:self.release_handoff(token)
+        if operation and operation.retain:
+            operation.acquire_browser();report_stage('finding_player')
         import webview
         if not self.enabled or not webview.windows:
             raise ValueError('Bu sayfa için masaüstü uygulamasındaki tarayıcı desteği gerekiyor.')
@@ -103,6 +167,8 @@ class SiteBrowser:
                 self.session = session
                 try:
                     self._create_window(session)
+                    from services.diagnostics import diagnostics
+                    diagnostics.record('browser', url, 'started')
                     timer = threading.Timer(180, lambda: self.close(session['token']))
                     timer.daemon = True
                     session['timer'] = timer
@@ -122,10 +188,25 @@ class SiteBrowser:
                     def evaluate(target=pending):
                         try:
                             from services.media_discovery import DISCOVERY_SNAPSHOT
-                            target['result'] = session['window'].evaluate_js(DISCOVERY_SNAPSHOT if discovery else (PLAYER_SNAPSHOT if player_url else SNAPSHOT))
+                            script=DISCOVERY_SNAPSHOT
+                            if discovery:
+                                from services.player_activation import activation_document,inspection_script
+                                document=activation_document(session.get('evaluation_result'))
+                                attempts=session.setdefault('activation_attempts',{})
+                                now=time.monotonic()
+                                if document and sum(v[0] for v in attempts.values())<4:
+                                    count,last=attempts.get(document,(0,0))
+                                    if count<2 and now-last>=5:
+                                        if operation:operation.stage('starting_player')
+                                        from services.diagnostics import diagnostics
+                                        diagnostics.record('playback', session['url'], 'started')
+                                        script=inspection_script(document)
+                                        attempts[document]=(count+1,now)
+                            target['result'] = session['window'].evaluate_js(script if discovery else (PLAYER_SNAPSHOT if player_url else SNAPSHOT))
                             if discovery and session.get('frame_probe'):
                                 from services.webview_frames import merge_frames
-                                target['result']=merge_frames(target['result'],session['frame_probe'].read(DISCOVERY_SNAPSHOT))
+                                frame_script=DISCOVERY_SNAPSHOT if isinstance(target['result'],dict) and target['result'].get('verification') else script
+                                target['result']=merge_frames(target['result'],session['frame_probe'].read(frame_script))
                         except Exception:
                             pass
                         finally:
@@ -144,7 +225,11 @@ class SiteBrowser:
                                     observed=[{'url':source,'headers':dict(headers)} for source,headers in session['requests'].items()]
                                     # Only successful media responses can resolve a blob URL.
                                     candidates=list(session['candidates'])
+                                if session.get('frame_probe'):
+                                    candidates.extend(session['frame_probe'].network_candidates())
                                 selected=choose_media(result,candidates)
+                                if not selected and candidates and (result.get('players') or result.get('media')):
+                                    result['interaction']=True
                             except ValueError:
                                 self.close(session['token'])
                                 raise
@@ -172,7 +257,9 @@ class SiteBrowser:
                                     for source,headers in native_headers.items():
                                         selected['source_headers'][source].update(headers)
                                 result.update(selected)
-                                self.close(session['token'])
+                                from services.diagnostics import diagnostics
+                                diagnostics.record('browser', url, 'network_resolved' if selected.get('discovery_method')=='network' else 'resolved')
+                                result['_handoff_token']=self.finish_source(session)
                                 return result
                             if result.get('embeds') and not session.get('frame_probe') and time.monotonic()-session.setdefault('discovered_at',time.monotonic())>=2:
                                 self.close(session['token'])
@@ -184,7 +271,8 @@ class SiteBrowser:
                             sources=result.get('sources') or session['candidates']
                             if sources:
                                 result['sources']=sources
-                                self.close(session['token'])
+                                if session.get('frame_probe'):result['source_headers']=session['frame_probe'].headers(sources)
+                                result['_handoff_token']=self.finish_source(session)
                                 return result
                         elif result.get('embeds'):
                             self.close(session['token'])
@@ -192,13 +280,19 @@ class SiteBrowser:
             time.sleep(.75)
         if discovery and isinstance(session.get('evaluation_result'),dict) and session['evaluation_result'].get('embeds'):
             result=session['evaluation_result']
-            if session.get('frame_probe') and (result.get('interaction') or session.get('awaiting_frame_request')):
+            if session.get('frame_probe') and (result.get('interaction') or result.get('verification') or session.get('awaiting_frame_request')):
                 raise BrowserRequired(session['token'])
             self.close(session['token'])
             return result
-        if discovery and isinstance(session.get('evaluation_result'), dict) and not session['evaluation_result'].get('interaction'):
+        if discovery and isinstance(session.get('evaluation_result'), dict) and not session['evaluation_result'].get('interaction') and not session['evaluation_result'].get('verification'):
+            from services.diagnostics import diagnostics
+            diagnostics.record('browser', url, 'no_player')
             self.close(session['token'])
             raise ValueError('Bu çerçevede kullanılabilir video oynatıcısı bulunamadı.')
+        from services.diagnostics import diagnostics
+        last_result=session.get('evaluation_result')
+        verification=isinstance(last_result,dict) and last_result.get('verification')
+        diagnostics.record('browser', url, 'verification_required' if verification else 'interaction_required')
         raise BrowserRequired(session['token'])
 
     def inspect_player(self, player_url, page_url):
@@ -213,9 +307,11 @@ class SiteBrowser:
             session['loaded'].set()
             if self.session is session:
                 self.session = None
+            self.handoffs.pop(session['token'],None)
             if session.get('timer'):
                 session['timer'].cancel()
             if session.get('frame_probe'):session['frame_probe'].close()
+        if session.get('operation'):session['operation'].release()
 
     def show(self, token):
         with self.lock:

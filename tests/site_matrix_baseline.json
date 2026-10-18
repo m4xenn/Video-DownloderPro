@@ -1,0 +1,58 @@
+{
+  "created_at": "2026-10-18T17:15:37.499571+00:00",
+  "scope": "generic source discovery and metadata; full downloads not tested",
+  "cases": [
+    {
+      "id": "aniwatch-nested",
+      "host": "aniwatch.co.at",
+      "scenario": "nested-player",
+      "outcome": "automatic",
+      "seconds": 12.8,
+      "error_code": null,
+      "source_count": 1,
+      "format_count": 1,
+      "heights": [
+        1080
+      ],
+      "duration": 1477,
+      "full_download": "not_tested"
+    },
+    {
+      "id": "fullhd-film",
+      "host": "www.fullhdfilmizlesene.now",
+      "scenario": "embedded-player",
+      "outcome": "automatic",
+      "seconds": 25.0,
+      "error_code": null,
+      "source_count": 1,
+      "format_count": 7,
+      "heights": [
+        360,
+        480,
+        720,
+        1080,
+        2160
+      ],
+      "duration": 9133,
+      "full_download": "not_tested"
+    },
+    {
+      "id": "hdfilm-film",
+      "host": "www.hdfilmcehennemi.nl",
+      "scenario": "embedded-player",
+      "outcome": "failed",
+      "seconds": 22.0,
+      "error_code": "unsupported",
+      "source_count": 0,
+      "format_count": 0,
+      "heights": [],
+      "duration": null,
+      "full_download": "not_tested"
+    }
+  ],
+  "totals": {
+    "automatic": 2,
+    "interaction_required": 0,
+    "failed": 1
+  }
+}

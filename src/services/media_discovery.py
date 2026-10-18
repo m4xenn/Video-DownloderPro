@@ -2,6 +2,7 @@
 import ipaddress
 import socket
 from urllib.parse import urlsplit
+from services.player_controls import LAZY_PLAYER_GATES
 
 
 def public_url(url, resolve=False):
@@ -30,13 +31,24 @@ def public_url(url, resolve=False):
 # Read normal player APIs and the DOM, including accessible same-origin frames.
 # Cross-origin frames are returned as a bounded traversal frontier, never bypassed.
 DISCOVERY_SNAPSHOT = r"""(() => {
- const media=[], embeds=[]; let drm=false; const visited=new Set();
+ const media=[], embeds=[], players=[]; let drm=false,verification=false; const visited=new Set();
+ const lazyGates=__LAZY_PLAYER_GATES__;
  const absolute=(value,base)=>{try{return new URL(value,base).href}catch(_){return ''}};
  function scan(win,depth=0) {
    if(depth>3 || visited.has(win)) return;
    visited.add(win);
    try {
      const doc=win.document, base=doc.baseURI;
+     const visible=e=>{const r=e.getBoundingClientRect();const s=win.getComputedStyle(e);return r.width>=100 && r.height>=60 && s.display!=='none' && s.visibility!=='hidden'};
+     verification ||= /just a moment|checking your browser|verify you are human|security verification/i.test(doc.title) ||
+       [...doc.querySelectorAll('iframe[src*="captcha"],iframe[src*="challenges.cloudflare"],.g-recaptcha,.h-captcha,.cf-turnstile,input[type="password"]')].some(e=>{const r=e.getBoundingClientRect(),s=win.getComputedStyle(e);return r.width>0 && r.height>0 && s.display!=='none' && s.visibility!=='hidden'});
+     for(const e of [...doc.querySelectorAll('video,.jwplayer,.video-js')].slice(0,12)) {
+       if(visible(e)) {const r=e.getBoundingClientRect();players.push({document:win.location.href,area:r.width*r.height});}
+     }
+     for(const e of lazyGates(win)) {const r=e.getBoundingClientRect();players.push({document:win.location.href,area:r.width*r.height,kind:'lazy-frame'});}
+     for(const e of [...doc.querySelectorAll('canvas')].slice(0,8)) {
+       if(visible(e)) {const r=e.getBoundingClientRect();players.push({document:win.location.href,area:r.width*r.height,kind:'canvas'});}
+     }
      const add=(sources,group,area,duration,protectedMedia=false)=>{
        if(protectedMedia) drm=true;
        const urls=[...new Set(sources.map(v=>absolute(v,base)).filter(v=>/^https?:\/\//i.test(v)))];
@@ -73,11 +85,11 @@ DISCOVERY_SNAPSHOT = r"""(() => {
  scan(window);
  return {title:document.querySelector('h1')?.textContent || document.title,
    thumbnail:document.querySelector('meta[property="og:image"]')?.content || '',
-   url:location.href,media,embeds,drm,user_agent:navigator.userAgent,
+   url:location.href,media,embeds,players,verification,drm,user_agent:navigator.userAgent,
    interaction:media.length>0 || Boolean(document.querySelector('[class*="jwplayer"],iframe[src*="captcha"],input[type="password"]')) ||
      [...document.querySelectorAll('button,[role="button"]')].slice(0,80).some(e=>/play|oynat|verify|doğrula/i.test(e.textContent+' '+e.getAttribute('aria-label'))) ||
      /just a moment|checking your browser|verify you are human/i.test(document.title)};
-})()"""
+})()""".replace('__LAZY_PLAYER_GATES__', LAZY_PLAYER_GATES)
 
 
 def choose_media(snapshot, network=()):
@@ -88,6 +100,9 @@ def choose_media(snapshot, network=()):
     """
     if snapshot.get('drm'):
         raise ValueError('Bu oynatıcının kaynağı DRM korumalı.')
+    from services.network_media import select_network_media
+    selected=select_network_media(snapshot,list(network))
+    if selected:return selected
     groups = []
     for record in (snapshot.get('media') or [])[:24]:
         if not isinstance(record, dict) or record.get('drm'):

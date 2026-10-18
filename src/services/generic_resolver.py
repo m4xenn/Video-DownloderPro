@@ -4,6 +4,7 @@ import hashlib
 from http.cookiejar import Cookie, DefaultCookiePolicy
 from http.cookies import SimpleCookie
 import threading
+import re
 from urllib.parse import urljoin, urlsplit
 from requests import RequestException
 
@@ -18,6 +19,8 @@ def can_discover_after(url, error):
     text=str(error).lower()
     if any(word in text for word in ('drm', 'copyright', 'private video', 'login required', 'sign in', 'geo-restricted')):
         return False
+    if re.search(r'http error 403|status code[: ]+403',text) and not urlsplit(url).path.lower().endswith(('.mp4','.webm','.m3u8','.mpd','.mkv','.m4a','.mp3')):
+        return True  # A browser can load a public page rejected by a plain HTTP client.
     return any(word in text for word in ('unsupported url', 'unsupported embed', 'no video formats', 'no video could be found', 'unable to extract video url'))
 
 
@@ -25,8 +28,15 @@ def apply_source_context(ydl, source, headers):
     """Never put a captured Cookie header in global headers (CDNs can redirect)."""
     allowed={'Referer','Origin','User-Agent'}
     clean={key:str(value) for key,value in headers.items() if key in allowed and value}
-    ydl.params['http_headers']={key:value for key,value in (ydl.params.get('http_headers') or {}).items() if key.lower() not in ('cookie','referer','origin')}
+    previous=dict(ydl.params.get('http_headers') or {})
+    ydl.params['http_headers']={key:value for key,value in previous.items() if key.lower() not in ('cookie','referer','origin','authorization','proxy-authorization')}
     ydl.params['http_headers'].update(clean)
+    # yt-dlp snapshots default headers when its first HTTP handler is built.
+    # A native-page attempt may already have created it before browser fallback.
+    # Rebuild only that idle transport, preserving the same scoped cookie jar.
+    if previous!=ydl.params['http_headers']:
+        director=vars(ydl).pop('_request_director',None)
+        if director is not None:director.close()
     raw=headers.get('Cookie')
     if raw:
         # Python's default Netscape policy also sends host-only cookies to
@@ -79,6 +89,7 @@ class GenericResolver(SiteResolver):
             # follows a user-assisted preview; reopening the player could lose
             # that interaction. Older queue entries are resolved again.
             if cached and self.clock()-cached[0]<(60 if fresh else 120):
+                self.browser.adopt_handoff(cached[1].get('_handoff_token'))
                 return dict(cached[1])
             if url not in self.jobs:
                 if len(self.jobs)>=20:self.jobs.pop(next(iter(self.jobs)))
@@ -97,7 +108,7 @@ class GenericResolver(SiteResolver):
                     if valid_embed(target):
                         try:
                             stream=rapidvid_source(self._html(target,parent))
-                            observed={'sources':[stream],'source_headers':{stream:{'Referer':urljoin(target,'/')}}}
+                            observed={'sources':[stream],'source_headers':{stream:{'Referer':urljoin(target,'/')}},'discovery_method':'adapter'}
                         except (ValueError,RequestException):
                             pass
                     if observed is None:
@@ -115,6 +126,8 @@ class GenericResolver(SiteResolver):
                         for stream in streams:
                             contexts.setdefault(stream,{'Referer':final_url,'User-Agent':observed.get('user_agent') or ''})
                         result={'stream':streams[0],'streams':streams,'embed':target,'headers':{},'source_headers':contexts,
+                                'discovery_method':observed.get('discovery_method','dom'),
+                                '_handoff_token':observed.get('_handoff_token'),
                                 'title':job['title'],'thumbnail':job['thumbnail']}
                         if len(self.cache)>=20:self.cache.pop(next(iter(self.cache)))
                         self.cache[url]=(self.clock(),result)

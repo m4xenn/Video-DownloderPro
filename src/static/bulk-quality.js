@@ -132,6 +132,7 @@ async function refreshSourceQuality(force=false) {
     showLinkPreview(null,'Video bilgileri okunuyor…');
     updateQualityHint('Kaynağın kalite seçenekleri inceleniyor...');
     qualityLoadingURL=url;
+    const stopProgress=typeof watchSourceProgress==='function'?watchSourceProgress(url):()=>{};
     document.getElementById('refreshQuality').disabled=true;
     try {
         const response=await fetch('/get-info',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({url})});
@@ -151,7 +152,7 @@ async function refreshSourceQuality(force=false) {
         updateQualityMenu(document.getElementById('formatValue').value); updateQualityHint();
     } catch(error) {
         if(request===qualityRequest) { showLinkPreview(null,error.message); inspectedQualities=[]; updateQualityMenu(document.getElementById('formatValue').value); updateQualityHint(error.message); }
-    } finally { if(request===qualityRequest) { qualityLoadingURL=null; document.getElementById('refreshQuality').disabled=false; } }
+    } finally { stopProgress(); if(request===qualityRequest) { qualityLoadingURL=null; document.getElementById('refreshQuality').disabled=false; } }
 }
 document.addEventListener('DOMContentLoaded',()=>{
     document.getElementById('urlInput').addEventListener('input',scheduleLinkInspection);

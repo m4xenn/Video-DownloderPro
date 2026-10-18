@@ -478,6 +478,16 @@
                 <button id="checkAppUpdateBtn" class="settings-action" onclick="checkAppUpdate(true)">Uygulama güncellemelerini kontrol et</button>
                 <p id="appUpdateCheckStatus" class="app-update-status" role="status" aria-live="polite"></p>
             </div>
+            <details class="app-update-card" id="diagnosticsPanel">
+                <summary id="diagnosticsTitle">Sorun giderme kayıtları</summary>
+                <p id="diagnosticsDescription" class="app-update-status">Hata kayıtları uygulama kapatılsa da korunur. Bağlantılar ve oturum bilgileri paylaşılmaz.</p>
+                <div class="feature-actions">
+                    <button id="diagnosticsLoad" class="settings-action" type="button">Kayıtları göster</button>
+                    <button id="diagnosticsCopy" class="settings-action" type="button" disabled>Raporu kopyala</button>
+                </div>
+                <textarea id="diagnosticsText" readonly hidden aria-label="Diagnostic report" spellcheck="false"></textarea>
+                <p id="diagnosticsStatus" class="app-update-status" role="status" aria-live="polite"></p>
+            </details>
             <button class="settings-action settings-action-primary settings-save" onclick="saveSettings()">Kaydet</button>
         </div>
     </div>
@@ -1090,8 +1100,10 @@
                             <div class="progress-fill q-fill" style="width: 0%; height: 100%; background: var(--primary); transition: width 0.3s;"></div>
                         </div>
                     </div>
+                    <p class="q-error" hidden role="status"></p>
                 </div>
                 <div style="display: flex; gap: 8px;">
+                    <button class="queue-copy-error" hidden title="Hata ayrıntılarını kopyala" aria-label="Hata ayrıntılarını kopyala"><i class="fa-regular fa-copy"></i></button>
                     <button class="queue-pause" style="display: none; color: var(--text-sub); cursor: pointer; padding: 5px; transition: 0.3s; border: none; background: transparent; font-size: 14px;" title="Duraklat" aria-label="Duraklat">
                         <i class="fa-solid fa-pause"></i>
                     </button>
@@ -1111,6 +1123,7 @@
             updateQueueThumbnail(image,thumbnail);
             div.querySelector('.q-estimate').textContent = metadata.total_bytes ? '≈ ' + formatBytes(metadata.total_bytes) : '';
             div.querySelector('.queue-pause').onclick = () => pauseItem(url);
+            div.querySelector('.queue-copy-error').onclick = () => copyDiagnosticReport(url);
             div.querySelector('.queue-resume').onclick = () => resumeItem(url);
             div.querySelector('.queue-remove').onclick = () => removeFromQueue(url, div.id);
             container.prepend(div);
@@ -1315,8 +1328,16 @@
                     row.querySelector('.q-fill').style.width = item.percent + '%';
                     row.querySelector('.q-percent').textContent = '%' + item.percent;
                     const labels = {retry_wait:`${item.retry_in || 0} sn sonra yeniden denenecek (${item.retry_count}/2)`, queued:'Sırada...', starting:'Hazırlanıyor...', paused:'Duraklatıldı', pausing:'Duraklatılıyor...', converting:'İşleniyor...', finished:'Tamamlandı', error:'Hata — tekrar deneyebilirsiniz'};
-                    row.querySelector('.q-speed').textContent = labels[item.status] || item.speed || '';
-                    row.querySelector('.q-speed').title = item.error || '';
+                    const phaseLabel=['starting','downloading'].includes(item.status) && typeof sourcePhaseLabel==='function' ? sourcePhaseLabel(item.phase) : '';
+                    row.querySelector('.q-speed').textContent = phaseLabel || labels[item.status] || item.speed || '';
+                    row.querySelector('.q-speed').title = typeof queueErrorLabel==='function' ? queueErrorLabel(item.error_code) : '';
+                    const errorText=typeof queueErrorLabel==='function' ? queueErrorLabel(item.error_code || (item.status==='error'?'unexpected':'')) : '';
+                    const errorStage=typeof sourceErrorStage==='function'?sourceErrorStage(item.error_phase):'';
+                    row.querySelector('.q-error').textContent=errorText+(errorText && errorStage?' · '+errorStage:'');
+                    row.querySelector('.q-error').hidden=!errorText;
+                    row.querySelector('.queue-copy-error').hidden=!errorText;
+                    row.querySelector('.queue-copy-error').title=currentLang==='tr'?'Hata ayrıntılarını kopyala':'Copy error details';
+                    row.querySelector('.queue-copy-error').setAttribute('aria-label',row.querySelector('.queue-copy-error').title);
                     row.querySelector('.queue-title').textContent = item.title || 'Video';
                     row.querySelector('.queue-title').title = item.title || 'Video';
                     row.dataset.status = item.status;
@@ -1340,7 +1361,7 @@
                 summary.textContent = `${mode} · ${data.active_count || 0}/${data.concurrency_limit || 2} aktif · ${speed} MB/s${cap}`;
                 if (['finished_all','error','paused','idle'].includes(data.status)) {
                     clearInterval(progressInterval);
-                    if (data.status === 'error') showToast(data.error || 'İndirme tamamlanamadı.', true);
+                    if (data.status === 'error') showToast(currentLang==='tr'?'İndirme tamamlanamadı. Ayrıntılar kuyruk satırında korunuyor.':'Download failed. Details are kept in the queue.', true);
                     resetUI();
                 }
             } catch (error) { console.error(error); }
@@ -1672,6 +1693,8 @@
         }
     </script>
     <script src="{{ url_for('static', filename='site-inspection.js') }}"></script>
+    <script src="{{ url_for('static', filename='source-progress.js') }}"></script>
+    <script src="{{ url_for('static', filename='diagnostics.js') }}"></script>
     <script src="{{ url_for('static', filename='bulk-quality.js') }}"></script>
     <script src="{{ url_for('static', filename='studio.js') }}"></script>
 </body>

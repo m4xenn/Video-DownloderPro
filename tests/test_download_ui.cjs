@@ -58,8 +58,9 @@ function environment(responses) {
     assert.match(e.nodes.get('downloadSummary').textContent,/Otomatik/);
     assert.match(e.nodes.get('downloadSummary').textContent,/10.0 Mbps/);
 
-    e=environment([{status:'error',items:[],total_items:1,error:'network failed'}]);
+    e=environment([{status:'error',items:[],total_items:1,error:'network failed https://cdn.example/private?sig=SECRET'}]);
     await vm.runInContext('pollDownloadProgress()',e.context);
-    assert.ok(e.errors.includes('network failed'));
+    assert.ok(e.errors.some(text=>text.includes('kuyruk satırında korunuyor')));
+    assert.ok(e.errors.every(text=>!text.includes('SECRET')));
     console.log('6 download/settings UI flow checks passed');
 })().catch(error=>{console.error(error);process.exitCode=1;});

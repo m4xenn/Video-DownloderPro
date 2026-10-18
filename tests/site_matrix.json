@@ -1,0 +1,9 @@
+{
+  "scope": "Generic discovery and metadata only; no full video download",
+  "cases": [
+    {"id": "aniwatch-nested", "url": "https://aniwatch.co.at/one-piece-episode-1-english-subbed/", "scenario": "nested-player"},
+    {"id": "fullhd-film", "url": "https://www.fullhdfilmizlesene.now/film/batman-2-kara-sovalye/", "scenario": "embedded-player"},
+    {"id": "hdfilm-film", "url": "https://www.hdfilmcehennemi.nl/batman-kara-sovalye-yukseliyor-hd-film-izle-hdf-hdf-5/", "scenario": "embedded-player"},
+    {"id": "hdfilm-esaret", "url": "https://www.hdfilmcehennemi.nl/1-esaretin-bedeli-film-izle-hdf-hdf-6/", "scenario": "lazy-iframe-player"}
+  ]
+}

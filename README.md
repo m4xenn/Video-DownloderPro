@@ -6,7 +6,7 @@ A Windows video and audio downloader with a refined glass-inspired interface, so
 
 ## ✨ Features
 
-- 🧪 **Embedded video discovery (1.2.12 source/test build)** — when native extraction cannot find a video, an on-demand background browser inspects HTML5, JW Player, Video.js, and nested players for HLS, DASH, or direct media sources. Nested players retain their parent page and actual request context. Use **Continue in browser**, then **Check again** if interaction is needed. DRM and universal site support are outside its scope. Not included in the published 1.2.8 installer.
+- 🧪 **Embedded video discovery** — when native extraction cannot find a video, an on-demand background browser inspects HTML5, JW Player, Video.js, and nested players for HLS, DASH, or direct media sources. Nested players retain their parent page and actual request context. Use **Continue in browser**, then **Check again** if interaction is needed. DRM and universal site support are outside its scope.
 
 - 🌍 **Automatic language selection** — starts in your system UI language when supported, falls back to English, and remembers your manual language choice.
 
@@ -14,6 +14,7 @@ A Windows video and audio downloader with a refined glass-inspired interface, so
 - 🔎 **Inspect before downloading** — paste a single video link to see its title, duration, and available resolution/FPS choices before adding it to the queue. Estimated size is shown when supplied by the source.
 - 🎬 **Source-based video quality** — select a resolution the video actually offers, or use **Auto · Highest quality**. Batch downloads choose the highest available quality for each video, without a fixed 1080p cap.
 - 🎵 **Video and audio output** — MP4 video and MP3, M4A, WAV, or Opus audio, with metadata and supported cover-art embedding.
+- 🛡️ **Preserve existing outputs** — audio conversions use a free filename stem so their temporary video files cannot reuse an existing completed video. Concurrent downloads reserve distinct stems.
 - 📋 **Single, batch, and playlist downloads** — paste several links at once, or choose individual entries from a playlist before downloading.
 - 💾 **Persistent queue** — pending work is saved between sessions, with pause/resume controls and automatic retries for temporary failures.
 - ⚡ **Automatic scheduling** — the app manages concurrent downloads, with an optional download speed limit in settings.
@@ -70,7 +71,7 @@ Found a problem? [Open an issue](https://github.com/m4xenn/Video-DownloderPro/is
 
 ## 🧑‍💻 Source Code
 
-The `main` branch contains the source for the 1.2.12 test build. See [DEVELOPMENT.md](DEVELOPMENT.md) for Windows setup, tests, and packaging instructions. For normal installation, use [Releases](https://github.com/m4xenn/Video-DownloderPro/releases/latest).
+The `v1.2.14` tag contains the matching release source. See [DEVELOPMENT.md](DEVELOPMENT.md) for Windows setup and tests, [RELEASE_PUBLISHING.md](RELEASE_PUBLISHING.md) for publishing, and [RELEASE_ACCEPTANCE_1.2.14.md](RELEASE_ACCEPTANCE_1.2.14.md) for validation results. For normal installation, use [Releases](https://github.com/m4xenn/Video-DownloderPro/releases/latest).
 
 ## 📄 License
 

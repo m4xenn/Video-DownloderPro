@@ -19,6 +19,9 @@ class NativeFrames:
         self.request_ids={}
         self.extra_headers={}
         self.receivers=[]
+        self.request_documents={}
+        self.media_responses={}
+        self.worker_sessions=set()
 
     def attach(self):
         try:
@@ -27,6 +30,9 @@ class NativeFrames:
             self.scheduler=self.window.native.browser.syncContextTaskScheduler
             def install():
                 core=self.control.CoreWebView2
+                def prevent_popup(sender,args):args.Handled=True
+                self.popup_handler=prevent_popup
+                core.NewWindowRequested += prevent_popup
                 core.FrameCreated += self._created
                 try:
                     from Microsoft.Web.WebView2.Core import CoreWebView2WebResourceContext,CoreWebView2WebResourceRequestSourceKinds
@@ -48,6 +54,8 @@ class NativeFrames:
                         if self.closed:return
                         data=json.loads(args.ParameterObjectAsJson)
                         session=data.get('sessionId','')
+                        if data.get('targetInfo',{}).get('type')=='worker' and len(self.worker_sessions)<64:
+                            self.worker_sessions.add(session)
                         protocol('Network.enable',{},session)
                         protocol('Target.setAutoAttach',{'autoAttach':True,'waitForDebuggerOnStart':False,'flatten':True},session)
                     def requested(sender,args):
@@ -61,6 +69,8 @@ class NativeFrames:
                             key=(str(getattr(args,'SessionId','')),data.get('requestId'))
                             if len(self.request_ids)>=256:self.request_ids.pop(next(iter(self.request_ids)))
                             self.request_ids[key]=url
+                            if len(self.request_documents)>=256:self.request_documents.pop(next(iter(self.request_documents)))
+                            self.request_documents[key]=data.get('documentURL','')
                             self.requests[url].update(self.extra_headers.pop(key,{}))
                     def extra(sender,args):
                         if self.closed:return
@@ -76,6 +86,10 @@ class NativeFrames:
                     listen('Target.attachedToTarget',attached)
                     listen('Network.requestWillBeSent',requested)
                     listen('Network.requestWillBeSentExtraInfo',extra)
+                    def response(sender,args):
+                        if not self.closed:
+                            self.observe_response(json.loads(args.ParameterObjectAsJson),str(getattr(args,'SessionId','')))
+                    listen('Network.responseReceived',response)
                     protocol('Network.enable',{})
                     protocol('Target.setAutoAttach',{'autoAttach':True,'waitForDebuggerOnStart':False,'flatten':True})
                 except Exception:
@@ -85,6 +99,24 @@ class NativeFrames:
         except Exception:
             self.active=False
         return self.active
+
+    def observe_response(self,data,session=''):
+        from services.network_media import media_kind
+        response=data.get('response') or {}
+        url=response.get('url','');mime=response.get('mimeType','');status=response.get('status')
+        if not media_kind(url,mime,status):return
+        with self.lock:
+            if self.closed:return
+            if len(self.media_responses)>=40:self.media_responses.pop(next(iter(self.media_responses)))
+            self.media_responses[url]={'url':url,'mime':mime,'status':status,
+                'worker':session in self.worker_sessions,
+                'document':self.request_documents.get((session,data.get('requestId')),''),'resource_type':data.get('type','')}
+
+    def network_candidates(self):
+        with self.lock:
+            items=[dict(item) for item in self.media_responses.values()]
+            for item in items:item['headers']=self.headers([item['url']])[item['url']]
+            return items
 
     def _created(self,sender,args,parent=None,depth=1):
         if self.closed or depth>3:return
@@ -149,6 +181,8 @@ class NativeFrames:
         self.active=False
         with self.lock:
             self.frames.clear();self.requests.clear();self.request_ids.clear();self.extra_headers.clear();self.receivers.clear()
+            self.media_responses.clear();self.request_documents.clear()
+            self.worker_sessions.clear()
 
     def headers(self,sources):
         names={'referer':'Referer','origin':'Origin','user-agent':'User-Agent','cookie':'Cookie'}
@@ -160,7 +194,7 @@ def merge_frames(root,frames):
     """Only visible player-frame branches from the DOM can supply candidates."""
     if not isinstance(root,dict):return root
     from services.media_discovery import public_url
-    result=dict(root,media=list(root.get('media') or []))
+    result=dict(root,media=list(root.get('media') or []),players=list(root.get('players') or []))
     allowed={};remaining=list(frames)
     for _ in range(3):
         for entry in list(remaining):
@@ -181,6 +215,10 @@ def merge_frames(root,frames):
             remaining.remove(entry)
             if data.get('drm'):result['drm']=True
             if data.get('interaction'):result['interaction']=True
+            if data.get('verification'):result['verification']=True
+            for item in (data.get('players') or [])[:12]:
+                record=dict(item,area=min(float(item.get('area') or 0),area))
+                if record not in result['players']:result['players'].append(record)
             for item in (data.get('media') or [])[:8]:
                 record=dict(item)
                 record['area']=min(float(item.get('area') or area),area)
