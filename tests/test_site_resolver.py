@@ -33,7 +33,8 @@ class ResolverTests(unittest.TestCase):
             self.assertFalse(valid_embed(url))
     def test_stream_allowlist(self):
         self.assertTrue(valid_stream(STREAM))
-        for url in ['https://localhost/a','file:///a','https://cdnimages1234.shop.evil.com/a','https://user@s2.cdnimages1234.shop/a']:
+        self.assertTrue(valid_stream("https://media.another-cdn.example/master"))
+        for url in ['https://localhost/a','file:///a','https://192.168.1.2/video','https://127.0.0.1/video','https://cdn.local/video','https://user@s2.cdnimages1234.shop/a']:
             self.assertFalse(valid_stream(url))
     def test_decoder(self):
         self.assertEqual(rapidvid_source(player()),STREAM)
@@ -105,3 +106,48 @@ class BrowserLifecycleTests(unittest.TestCase):
         session={'token':'a'*32,'closed':False,'window':window,'loaded':Mock(),'timer':timer}
         browser.session=session;browser._closed(session)
         self.assertIsNone(browser.session);timer.cancel.assert_called_once()
+
+class GeneralPlayerTests(unittest.TestCase):
+    def test_player_family_not_film_id(self):
+        for host in ['rapidvid.net','www.rapidvid.net','rapidvid.org','www.rapidvid.org']:
+            for route in ['vod','vx','embed']:
+                self.assertTrue(valid_embed(f'https://{host}/{route}/any-video-123'))
+    def test_runtime_fallback_uses_other_public_cdn(self):
+        browser=Mock();browser.inspect_player.return_value={'sources':['blob:bad','https://video.public-cdn.example/manifest'],'user_agent':'Browser-UA'}
+        resolver=SiteResolver(browser=browser)
+        with patch.object(resolver,'_html',side_effect=[HTML,'<script>runtime player config</script>']):
+            data=resolver.details(PAGE)
+        self.assertEqual(data['stream'],'https://video.public-cdn.example/manifest')
+        self.assertEqual(data['headers']['User-Agent'],'Browser-UA')
+        browser.inspect_player.assert_called_once_with(EMBED,PAGE)
+    def test_second_player_tried_after_failure(self):
+        browser=Mock();browser.inspect_player.side_effect=[ValueError('Unavailable'),{'sources':[STREAM]}]
+        resolver=SiteResolver(browser=browser)
+        html=HTML+'<iframe src="https://rapidvid.org/vx/second123"></iframe>'
+        with patch.object(resolver,'_html',side_effect=[html,'unknown','unknown']):
+            self.assertEqual(resolver.details(PAGE)['embed'],'https://rapidvid.org/vx/second123')
+        self.assertEqual(browser.inspect_player.call_count,2)
+    def test_runtime_user_handoff_retains_page_discovery(self):
+        browser=Mock();browser.inspect_player.side_effect=[BrowserRequired('a'*32),{'sources':[STREAM]}]
+        resolver=SiteResolver(browser=browser)
+        with patch.object(resolver,'_html',side_effect=[HTML,'unknown','unknown']) as fetch:
+            with self.assertRaises(BrowserRequired):resolver.details(PAGE)
+            self.assertEqual(resolver.details(PAGE)['stream'],STREAM)
+        self.assertEqual(fetch.call_count,3)
+    def test_native_player_read_is_hidden_and_sets_parent_referer(self):
+        browser=SiteBrowser();browser.enabled=True
+        window=Mock();window.events=SimpleNamespace(**{name:Event(window) for name in ['loaded','closed','request_sent','response_received']})
+        window.events.loaded.set()
+        window.evaluate_js.return_value={'sources':[STREAM],'user_agent':'Browser-UA'}
+        with patch('webview.windows',[object()]),patch('webview.create_window',return_value=window) as create,patch('services.site_browser.threading.Timer'):
+            result=browser.inspect_player(EMBED,PAGE)
+        self.assertEqual(result['sources'],[STREAM]);self.assertTrue(create.call_args.kwargs['hidden'])
+        window.load_url.assert_called_once_with(EMBED)
+        request=SimpleNamespace(url=EMBED,headers={})
+        window.events.request_sent.set(request)
+        self.assertEqual(request.headers['Referer'],PAGE)
+        window.destroy.assert_called_once()
+
+    def test_invalid_runtime_source_types_rejected(self):
+        for value in [None,123,{},[], 'https://localhost/video', 'https://10.0.0.1/video']:
+            self.assertFalse(valid_stream(value))

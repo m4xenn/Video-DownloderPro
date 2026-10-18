@@ -1,6 +1,7 @@
 """Initial FullHDFilmizlesene/Rapidvid adapter. No remote JavaScript evaluation."""
 import base64
 import binascii
+import ipaddress
 import re
 import threading
 import time
@@ -11,11 +12,12 @@ from bs4 import BeautifulSoup
 from services.site_browser import site_browser
 
 PAGE_HOSTS = {'fullhdfilmizlesene.now', 'www.fullhdfilmizlesene.now'}
-EMBED_HOSTS = {'rapidvid.net', 'www.rapidvid.net'}
+EMBED_HOSTS = {'rapidvid.net', 'www.rapidvid.net', 'rapidvid.org', 'www.rapidvid.org'}
 MAX_HTML = 4 * 1024 * 1024
 
 
 def supported_page(url):
+    if not isinstance(url,str) or len(url)>8192:return False
     try:
         p = urlsplit(url)
         return p.scheme == 'https' and p.hostname in PAGE_HOSTS and not p.username and not p.password and p.port in (None,443) and bool(re.fullmatch(r'/film/[a-zA-Z0-9_-]+/?',p.path))
@@ -24,17 +26,23 @@ def supported_page(url):
 
 
 def valid_embed(url):
+    if not isinstance(url,str) or len(url)>8192:return False
     try:
         p = urlsplit(url)
-        return p.scheme == 'https' and p.hostname in EMBED_HOSTS and not p.username and not p.password and p.port in (None,443) and bool(re.fullmatch(r'/vod/[a-zA-Z0-9_-]+/?',p.path))
+        return p.scheme == 'https' and p.hostname in EMBED_HOSTS and not p.username and not p.password and p.port in (None,443) and bool(re.fullmatch(r'/(?:vod|vx|embed)/[a-zA-Z0-9_-]+/?',p.path))
     except (ValueError, TypeError):
         return False
 
 
 def valid_stream(url):
+    if not isinstance(url,str) or len(url)>8192:return False
     try:
         p = urlsplit(url)
-        return p.scheme == 'https' and not p.username and not p.password and p.port in (None,443) and bool(re.fullmatch(r'(?:s[0-9]+\.)?cdnimages[0-9]+\.(?:shop|store|com|net|org)',p.hostname or ''))
+        host=p.hostname or ''
+        if p.scheme != 'https' or p.username or p.password or p.port not in (None,443):return False
+        if not host or host.lower() in ('localhost','localhost.localdomain') or host.lower().endswith(('.local','.localhost','.internal')):return False
+        try:return ipaddress.ip_address(host).is_global
+        except ValueError:return '.' in host and not any(c.isspace() for c in url)
     except (ValueError, TypeError):
         return False
 
@@ -77,6 +85,7 @@ class SiteResolver:
         self.clock=clock
         self.lock=threading.RLock()
         self.cache={}
+        self.pages={}
 
     def _html(self, url, referer=None):
         # Never follow redirects to arbitrary hosts or read an unbounded response.
@@ -104,24 +113,46 @@ class SiteResolver:
             entry=self.cache.get(url)
             if not fresh and entry and self.clock()-entry[0]<120:
                 return dict(entry[1])
-            if entry and fresh and entry[1].get('embed'):
+            saved=self.pages.get(url)
+            if saved and self.clock()-saved[0]<180:
+                data=saved[1]
+            elif entry and fresh and entry[1].get('embed'):
                 data=dict(entry[1],embeds=[entry[1]['embed']])
             else:
                 try:
                     data=page_details(self._html(url),url)
                 except requests.RequestException:
                     data={}
-            embeds=[item for item in data.get('embeds',[]) if valid_embed(item)]
+            embeds=list(dict.fromkeys(item for item in data.get('embeds',[]) if valid_embed(item)))[:4]
             if not embeds:
                 data=self.browser.inspect(url)
-                embeds=[item for item in data.get('embeds',[]) if valid_embed(item)]
+                embeds=list(dict.fromkeys(item for item in data.get('embeds',[]) if valid_embed(item)))[:4]
             if not embeds:raise ValueError('Desteklenen Rapidvid oynatıcısı bulunamadı.')
-            embed=embeds[0]
-            try:
-                stream=rapidvid_source(self._html(embed,url))
-            except requests.HTTPError as exc:
-                raise ValueError('Oynatıcıya erişilemedi; video kaldırılmış veya erişim engellenmiş olabilir.') from exc
-            result={'stream':stream,'embed':embed,'headers':{'Referer':'https://rapidvid.net/','User-Agent':requests.utils.default_user_agent()},
+            self.pages={key:value for key,value in self.pages.items() if self.clock()-value[0]<180}
+            if len(self.pages)>=20:self.pages.pop(next(iter(self.pages)))
+            self.pages[url]=(self.clock(),data)
+            last_error=None
+            for embed in embeds:
+                headers={'Referer':urljoin(embed,'/'),'User-Agent':requests.utils.default_user_agent()}
+                try:
+                    streams=[]
+                    try:
+                        stream=rapidvid_source(self._html(embed,url))
+                    except (ValueError,requests.RequestException):
+                        observed=self.browser.inspect_player(embed,url)
+                        streams=list(dict.fromkeys(source for source in observed.get('sources',[]) if valid_stream(source)))[:8]
+                        stream=streams[0] if streams else None
+                        if not stream:raise ValueError('Oynatıcıdan erişilebilir video kaynağı alınamadı.')
+                        if observed.get('user_agent'):headers['User-Agent']=observed['user_agent']
+                    break
+                except ValueError as exc:
+                    from services.site_browser import BrowserRequired
+                    if isinstance(exc,BrowserRequired):raise
+                    self.browser.close()
+                    last_error=exc
+            else:
+                raise ValueError('Sayfadaki oynatıcılar çözümlenemedi. '+str(last_error or ''))
+            result={'stream':stream,'streams':streams or [stream],'embed':embed,'headers':headers,
                     'title':str(data.get('title') or 'Video')[:500], 'thumbnail':str(data.get('thumbnail') or '')[:8192]}
             self.cache={key:value for key,value in self.cache.items() if self.clock()-value[0]<120}
             if len(self.cache)>=20:self.cache.pop(next(iter(self.cache)))
@@ -131,11 +162,43 @@ class SiteResolver:
     def extract(self, ydl, url, fresh=False):
         data=self.details(url,fresh=fresh)
         ydl.params['http_headers']=dict(ydl.params.get('http_headers') or {}, **data['headers'])
-        info=ydl.extract_info(data['stream'],download=False)
+        streams=data.get('streams') or [data['stream']]
+        if len(streams)==1:
+            info=ydl.extract_info(streams[0],download=False)
+        else:
+            previous=ydl.params.get('format')
+            previous_selector=ydl.format_selector
+            parts=[]
+            try:
+                ydl.params['format']='bestvideo+bestaudio/best'
+                ydl.format_selector=ydl.build_format_selector('bestvideo+bestaudio/best')
+                for stream in streams:
+                    try:
+                        part=ydl.extract_info(stream,download=False)
+                        if part and not part.get('has_drm'):parts.append(part)
+                    except Exception:
+                        continue
+            finally:
+                ydl.format_selector=previous_selector
+                if previous is None:ydl.params.pop('format',None)
+                else:ydl.params['format']=previous
+            if not parts:raise ValueError('Oynatıcının video kaynakları okunamadı.')
+            info=dict(parts[0]);formats=[]
+            for index,part in enumerate(parts):
+                for item in part.get('formats') or [part]:
+                    candidate=dict(item)
+                    candidate['format_id']=str(index)+'-'+str(candidate.get('format_id') or 'source')
+                    formats.append(candidate)
+            info['formats']=formats
+            # Select again from the combined source set with the user's requested quality.
+            for key in ('requested_formats','requested_downloads','format_id','url','protocol','format','format_note','width','height','fps','vcodec','acodec'):
+                info.pop(key,None)
         if not info or info.get('has_drm'):
             raise ValueError('Video kaynağı kullanılamıyor veya korumalı.')
         info.update(title=data['title'],webpage_url=url,original_url=url,
                     id=urlsplit(url).path.strip('/').split('/')[-1],extractor_key='FullHDFilmizlesene')
+        if len(streams)>1:
+            info=ydl.process_ie_result(info,download=False)
         if data['thumbnail']:info['thumbnail']=data['thumbnail']
         info['http_headers']=dict(info.get('http_headers') or {}, **data['headers'])
         return info
