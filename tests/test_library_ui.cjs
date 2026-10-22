@@ -6,16 +6,17 @@ const code = html.slice(html.indexOf('        const draftItems'),html.indexOf(' 
 function node() { return {style:{},dataset:{},value:'',children:[],disabled:false,
     append(...items){this.children.push(...items);},replaceChildren(){this.children=[];},remove(){this.removed=true;}}; }
 function environment(responses=[]) {
-    const nodes=new Map(),calls=[],messages=[];
+    const nodes=new Map(),calls=[],messages=[],views=[];
     const get=id=>{if(!nodes.has(id))nodes.set(id,node());return nodes.get(id);};
     const context=vm.createContext({document:{getElementById:get,createElement:node},console,
         fetch:async(url,options)=>{calls.push({url,options});const response=responses.shift();assert.ok(response,`Unexpected ${url}`);return {ok:response.ok!==false,json:async()=>response};},
         downloadQueue:[],managedQueueURLs:new Set(),setTimeout:()=>1,clearTimeout(){},
+        setWorkspaceView:view=>views.push(view),
         showToast:message=>messages.push(message),resetUI(){},startProgressPolling(){},
         loadDownloadSettings:async()=>{},pollDownloadProgress:async()=>{},renderQueueItem(){},
         btoa:value=>Buffer.from(value).toString('base64')});
     vm.runInContext(code,context);
-    return {context,nodes,calls,get,messages,run:source=>vm.runInContext(source,context)};
+    return {context,nodes,calls,get,messages,views,run:source=>vm.runInContext(source,context)};
 }
 (async()=>{
     let e=environment([{token:'preview'},{status:'ready',entries:[
@@ -49,6 +50,7 @@ function environment(responses=[]) {
     e=environment([{total:1,items:[{id:'one',title:'Taşınmış video',format:'video',quality:'720p',size:1024,
         completed_at:'2026-10-17T00:00:00Z',file_exists:false}]}]);
     await e.run('openHistory()');
+    assert.equal(e.views.at(-1),'history');
     const buttons=e.get('historyEntries').children[0].children[2].children;
     assert.deepEqual(buttons.map(button=>button.disabled),[true,true,false]);
     assert.match(e.get('historyEntries').children[0].children[1].textContent,/taşınmış veya silinmiş/);
@@ -60,5 +62,20 @@ function environment(responses=[]) {
     assert.equal(e.run('formatETA(null)'),'bilinmiyor');
     assert.equal(e.run('formatBytes(null)'),'Bilinmiyor');
     assert.equal(e.run('formatETA(125)'),'2 dk 5 sn');
-    console.log('10 library UI behavior checks passed');
+    e=environment();
+    const pending=[];
+    e.context.fetch=()=>new Promise(resolve=>pending.push(data=>resolve({ok:true,json:async()=>data})));
+    const oldSearch=e.run('loadHistory()');
+    assert.equal(e.get('historyMore').disabled,true);
+    await e.run('loadHistory(true)');
+    assert.equal(pending.length,1,'Do not paginate while a replacement search is pending');
+    e.get('historySearch').value='new';
+    const newSearch=e.run('loadHistory()');
+    pending[1]({total:1,items:[{id:'new',title:'Newest',format:'video',quality:'max',size:1024,completed_at:'2026-10-17T00:00:00Z',file_exists:false}]});
+    await newSearch;
+    pending[0]({total:0,items:[]});await oldSearch;
+    assert.equal(e.get('historyEntries').children.length,1,'Old responses must not erase the newest search');
+    assert.equal(e.get('historyEntries').children[0].children[0].textContent,'Newest');
+    assert.equal(e.get('historyMore').disabled,false);
+    console.log('12 library UI behavior checks passed');
 })().catch(error=>{console.error(error);process.exitCode=1;});

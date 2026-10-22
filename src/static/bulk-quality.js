@@ -62,7 +62,7 @@ async function addLinksToQueue() {
         return true;
     });
     addingLinks=true; input.disabled=true; button.disabled=true; button.classList.add('loading');
-    button.innerHTML='<i class="fa-solid fa-circle-notch" aria-hidden="true"></i>';
+    document.getElementById('addIcon').className='fa-solid fa-circle-notch';
     try {
         report.textContent=`Bağlantılar inceleniyor: 0 / ${candidates.length}`;
         async function inspect() {
@@ -90,7 +90,7 @@ async function addLinksToQueue() {
         await refreshSourceQuality();
     } finally {
         addingLinks=false; input.disabled=false; button.disabled=false; button.classList.remove('loading');
-        button.innerHTML='<i class="fa-solid fa-plus" aria-hidden="true"></i>'; resizeLinkInput(); input.focus();
+        document.getElementById('addIcon').className='fa-solid fa-plus'; resizeLinkInput(); input.focus();
     }
 }
 function singleQualityURL() {
@@ -103,7 +103,7 @@ function singleQualityURL() {
     return draftItems.get(url)?.is_playlist ? null : url;
 }
 function getVideoQualityOptions() {
-    const label=currentLang==='tr' ? 'Otomatik · En yüksek kalite' : 'Auto · Highest quality';
+    const label=typeof interfaceText==='function'?interfaceText('qualityAuto'):currentLang==='tr' ? 'Otomatik · En yüksek kalite' : 'Auto · Highest quality';
     return [{value:'max',label},...(singleQualityURL()===inspectedQualityURL ? inspectedQualities.map(choice=>({...choice,label:choice.label+(choice.total_bytes ? ' · ≈ '+formatBytes(choice.total_bytes) : '')})) : [])];
 }
 function updateQualityHint(message) {
@@ -111,6 +111,10 @@ function updateQualityHint(message) {
     if(!hint) return;
     const single=singleQualityURL();
     document.getElementById('refreshQuality').style.display=single && document.getElementById('formatValue').value==='video' ? 'inline-flex' : 'none';
+    if(!message && typeof interfaceText==='function') {
+        hint.textContent=interfaceText(document.getElementById('formatValue').value==='audio'?'qualityAudio':!single?'qualityVideo':inspectedQualities.length?'qualitySource':'qualityFallback');
+        return;
+    }
     hint.textContent=message || (document.getElementById('formatValue').value==='audio'
         ? 'Ses, seçtiğin çıktı formatına dönüştürülür.'
         : !single ? 'Her video kendi kaynağındaki en yüksek kalitede indirilir.'

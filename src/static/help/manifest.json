@@ -1,0 +1,515 @@
+{
+  "languages": [
+    "tr",
+    "en",
+    "de",
+    "es",
+    "fr",
+    "pt",
+    "ru",
+    "zh",
+    "ja",
+    "hi"
+  ],
+  "topics": [
+    "start",
+    "formats",
+    "playlist",
+    "queue",
+    "history",
+    "settings",
+    "troubleshooting"
+  ],
+  "screenshots": [
+    {
+      "language": "tr",
+      "topic": "start",
+      "path": "tr/start.png",
+      "width": 469,
+      "height": 892
+    },
+    {
+      "language": "tr",
+      "topic": "formats",
+      "path": "tr/formats.png",
+      "width": 469,
+      "height": 892
+    },
+    {
+      "language": "tr",
+      "topic": "playlist",
+      "path": "tr/playlist.png",
+      "width": 520,
+      "height": 568
+    },
+    {
+      "language": "tr",
+      "topic": "history",
+      "path": "tr/history.png",
+      "width": 924,
+      "height": 322
+    },
+    {
+      "language": "tr",
+      "topic": "settings",
+      "path": "tr/settings.png",
+      "width": 760,
+      "height": 731
+    },
+    {
+      "language": "tr",
+      "topic": "troubleshooting",
+      "path": "tr/troubleshooting.png",
+      "width": 760,
+      "height": 126
+    },
+    {
+      "language": "tr",
+      "topic": "queue",
+      "path": "tr/queue.png",
+      "width": 924,
+      "height": 901
+    },
+    {
+      "language": "en",
+      "topic": "start",
+      "path": "en/start.png",
+      "width": 469,
+      "height": 892
+    },
+    {
+      "language": "en",
+      "topic": "formats",
+      "path": "en/formats.png",
+      "width": 469,
+      "height": 892
+    },
+    {
+      "language": "en",
+      "topic": "playlist",
+      "path": "en/playlist.png",
+      "width": 520,
+      "height": 568
+    },
+    {
+      "language": "en",
+      "topic": "history",
+      "path": "en/history.png",
+      "width": 924,
+      "height": 322
+    },
+    {
+      "language": "en",
+      "topic": "settings",
+      "path": "en/settings.png",
+      "width": 760,
+      "height": 731
+    },
+    {
+      "language": "en",
+      "topic": "troubleshooting",
+      "path": "en/troubleshooting.png",
+      "width": 760,
+      "height": 126
+    },
+    {
+      "language": "en",
+      "topic": "queue",
+      "path": "en/queue.png",
+      "width": 924,
+      "height": 901
+    },
+    {
+      "language": "de",
+      "topic": "start",
+      "path": "de/start.png",
+      "width": 469,
+      "height": 892
+    },
+    {
+      "language": "de",
+      "topic": "formats",
+      "path": "de/formats.png",
+      "width": 469,
+      "height": 892
+    },
+    {
+      "language": "de",
+      "topic": "playlist",
+      "path": "de/playlist.png",
+      "width": 520,
+      "height": 588
+    },
+    {
+      "language": "de",
+      "topic": "history",
+      "path": "de/history.png",
+      "width": 924,
+      "height": 322
+    },
+    {
+      "language": "de",
+      "topic": "settings",
+      "path": "de/settings.png",
+      "width": 760,
+      "height": 731
+    },
+    {
+      "language": "de",
+      "topic": "troubleshooting",
+      "path": "de/troubleshooting.png",
+      "width": 760,
+      "height": 126
+    },
+    {
+      "language": "de",
+      "topic": "queue",
+      "path": "de/queue.png",
+      "width": 924,
+      "height": 901
+    },
+    {
+      "language": "es",
+      "topic": "start",
+      "path": "es/start.png",
+      "width": 469,
+      "height": 892
+    },
+    {
+      "language": "es",
+      "topic": "formats",
+      "path": "es/formats.png",
+      "width": 469,
+      "height": 892
+    },
+    {
+      "language": "es",
+      "topic": "playlist",
+      "path": "es/playlist.png",
+      "width": 520,
+      "height": 588
+    },
+    {
+      "language": "es",
+      "topic": "history",
+      "path": "es/history.png",
+      "width": 924,
+      "height": 322
+    },
+    {
+      "language": "es",
+      "topic": "settings",
+      "path": "es/settings.png",
+      "width": 760,
+      "height": 731
+    },
+    {
+      "language": "es",
+      "topic": "troubleshooting",
+      "path": "es/troubleshooting.png",
+      "width": 760,
+      "height": 126
+    },
+    {
+      "language": "es",
+      "topic": "queue",
+      "path": "es/queue.png",
+      "width": 924,
+      "height": 901
+    },
+    {
+      "language": "fr",
+      "topic": "start",
+      "path": "fr/start.png",
+      "width": 469,
+      "height": 892
+    },
+    {
+      "language": "fr",
+      "topic": "formats",
+      "path": "fr/formats.png",
+      "width": 469,
+      "height": 892
+    },
+    {
+      "language": "fr",
+      "topic": "playlist",
+      "path": "fr/playlist.png",
+      "width": 520,
+      "height": 588
+    },
+    {
+      "language": "fr",
+      "topic": "history",
+      "path": "fr/history.png",
+      "width": 924,
+      "height": 322
+    },
+    {
+      "language": "fr",
+      "topic": "settings",
+      "path": "fr/settings.png",
+      "width": 760,
+      "height": 731
+    },
+    {
+      "language": "fr",
+      "topic": "troubleshooting",
+      "path": "fr/troubleshooting.png",
+      "width": 760,
+      "height": 126
+    },
+    {
+      "language": "fr",
+      "topic": "queue",
+      "path": "fr/queue.png",
+      "width": 924,
+      "height": 921
+    },
+    {
+      "language": "pt",
+      "topic": "start",
+      "path": "pt/start.png",
+      "width": 469,
+      "height": 892
+    },
+    {
+      "language": "pt",
+      "topic": "formats",
+      "path": "pt/formats.png",
+      "width": 469,
+      "height": 892
+    },
+    {
+      "language": "pt",
+      "topic": "playlist",
+      "path": "pt/playlist.png",
+      "width": 520,
+      "height": 568
+    },
+    {
+      "language": "pt",
+      "topic": "history",
+      "path": "pt/history.png",
+      "width": 924,
+      "height": 322
+    },
+    {
+      "language": "pt",
+      "topic": "settings",
+      "path": "pt/settings.png",
+      "width": 760,
+      "height": 731
+    },
+    {
+      "language": "pt",
+      "topic": "troubleshooting",
+      "path": "pt/troubleshooting.png",
+      "width": 760,
+      "height": 126
+    },
+    {
+      "language": "pt",
+      "topic": "queue",
+      "path": "pt/queue.png",
+      "width": 924,
+      "height": 901
+    },
+    {
+      "language": "ru",
+      "topic": "start",
+      "path": "ru/start.png",
+      "width": 469,
+      "height": 892
+    },
+    {
+      "language": "ru",
+      "topic": "formats",
+      "path": "ru/formats.png",
+      "width": 469,
+      "height": 892
+    },
+    {
+      "language": "ru",
+      "topic": "playlist",
+      "path": "ru/playlist.png",
+      "width": 520,
+      "height": 568
+    },
+    {
+      "language": "ru",
+      "topic": "history",
+      "path": "ru/history.png",
+      "width": 924,
+      "height": 322
+    },
+    {
+      "language": "ru",
+      "topic": "settings",
+      "path": "ru/settings.png",
+      "width": 760,
+      "height": 731
+    },
+    {
+      "language": "ru",
+      "topic": "troubleshooting",
+      "path": "ru/troubleshooting.png",
+      "width": 760,
+      "height": 126
+    },
+    {
+      "language": "ru",
+      "topic": "queue",
+      "path": "ru/queue.png",
+      "width": 924,
+      "height": 901
+    },
+    {
+      "language": "zh",
+      "topic": "start",
+      "path": "zh/start.png",
+      "width": 469,
+      "height": 892
+    },
+    {
+      "language": "zh",
+      "topic": "formats",
+      "path": "zh/formats.png",
+      "width": 469,
+      "height": 892
+    },
+    {
+      "language": "zh",
+      "topic": "playlist",
+      "path": "zh/playlist.png",
+      "width": 520,
+      "height": 568
+    },
+    {
+      "language": "zh",
+      "topic": "history",
+      "path": "zh/history.png",
+      "width": 924,
+      "height": 322
+    },
+    {
+      "language": "zh",
+      "topic": "settings",
+      "path": "zh/settings.png",
+      "width": 760,
+      "height": 731
+    },
+    {
+      "language": "zh",
+      "topic": "troubleshooting",
+      "path": "zh/troubleshooting.png",
+      "width": 760,
+      "height": 126
+    },
+    {
+      "language": "zh",
+      "topic": "queue",
+      "path": "zh/queue.png",
+      "width": 924,
+      "height": 901
+    },
+    {
+      "language": "ja",
+      "topic": "start",
+      "path": "ja/start.png",
+      "width": 469,
+      "height": 892
+    },
+    {
+      "language": "ja",
+      "topic": "formats",
+      "path": "ja/formats.png",
+      "width": 469,
+      "height": 892
+    },
+    {
+      "language": "ja",
+      "topic": "playlist",
+      "path": "ja/playlist.png",
+      "width": 520,
+      "height": 568
+    },
+    {
+      "language": "ja",
+      "topic": "history",
+      "path": "ja/history.png",
+      "width": 924,
+      "height": 333
+    },
+    {
+      "language": "ja",
+      "topic": "settings",
+      "path": "ja/settings.png",
+      "width": 760,
+      "height": 754
+    },
+    {
+      "language": "ja",
+      "topic": "troubleshooting",
+      "path": "ja/troubleshooting.png",
+      "width": 760,
+      "height": 130
+    },
+    {
+      "language": "ja",
+      "topic": "queue",
+      "path": "ja/queue.png",
+      "width": 924,
+      "height": 913
+    },
+    {
+      "language": "hi",
+      "topic": "start",
+      "path": "hi/start.png",
+      "width": 469,
+      "height": 892
+    },
+    {
+      "language": "hi",
+      "topic": "formats",
+      "path": "hi/formats.png",
+      "width": 469,
+      "height": 892
+    },
+    {
+      "language": "hi",
+      "topic": "playlist",
+      "path": "hi/playlist.png",
+      "width": 520,
+      "height": 568
+    },
+    {
+      "language": "hi",
+      "topic": "history",
+      "path": "hi/history.png",
+      "width": 924,
+      "height": 322
+    },
+    {
+      "language": "hi",
+      "topic": "settings",
+      "path": "hi/settings.png",
+      "width": 760,
+      "height": 731
+    },
+    {
+      "language": "hi",
+      "topic": "troubleshooting",
+      "path": "hi/troubleshooting.png",
+      "width": 760,
+      "height": 126
+    },
+    {
+      "language": "hi",
+      "topic": "queue",
+      "path": "hi/queue.png",
+      "width": 924,
+      "height": 901
+    }
+  ]
+}

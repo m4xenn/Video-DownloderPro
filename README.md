@@ -1,6 +1,6 @@
 # Video Downloader Pro 🎬
 
-A Windows video and audio downloader with a refined glass-inspired interface, source-based quality selection, and a persistent download queue.
+A Windows video and audio downloader with a redesigned blue-and-navy workspace, source-based quality selection, and a persistent download queue.
 
 [⬇️ Download the latest release](https://github.com/m4xenn/Video-DownloderPro/releases/latest) · [📋 Release notes](https://github.com/m4xenn/Video-DownloderPro/releases) · [🐛 Report an issue](https://github.com/m4xenn/Video-DownloderPro/issues)
 
@@ -10,7 +10,8 @@ A Windows video and audio downloader with a refined glass-inspired interface, so
 
 - 🌍 **Automatic language selection** — starts in your system UI language when supported, falls back to English, and remembers your manual language choice.
 
-- 🪟 **A refined desktop interface** — a clean graphite design, subtle reflections, light/dark themes, and 10 interface languages.
+- 🪟 **A refined desktop interface** — a stable-size workspace with New, Queue, History, Guide, and Settings pages, light/dark themes, and 10 interface languages. The window opens maximized with a new application icon.
+- 📖 **Welcome tour and offline guide** — a swipeable first-run introduction and an illustrated feature guide, with screenshots localized for all 10 interface languages.
 - 🔎 **Inspect before downloading** — paste a single video link to see its title, duration, and available resolution/FPS choices before adding it to the queue. Estimated size is shown when supplied by the source.
 - 🎬 **Source-based video quality** — select a resolution the video actually offers, or use **Auto · Highest quality**. Batch downloads choose the highest available quality for each video, without a fixed 1080p cap.
 - 🎵 **Video and audio output** — MP4 video and MP3, M4A, WAV, or Opus audio, with metadata and supported cover-art embedding.
@@ -18,8 +19,9 @@ A Windows video and audio downloader with a refined glass-inspired interface, so
 - 📋 **Single, batch, and playlist downloads** — paste several links at once, or choose individual entries from a playlist before downloading.
 - 💾 **Persistent queue** — pending work is saved between sessions, with pause/resume controls and automatic retries for temporary failures.
 - ⚡ **Automatic scheduling** — the app manages concurrent downloads, with an optional download speed limit in settings.
-- 🕘 **Download history** — revisit completed downloads and receive a warning before downloading the same video again. Completed items stay in history after restarting.
+- 🕘 **Download history** — revisit completed downloads and receive a warning before downloading the same video again. Completed items stay in history after restarting. Preview saved videos or audio inside the History page, or open them in your system player. Browser playback depends on the media codec.
 - 🖼️ **Better previews** — platform cover images are preferred, with frames from inside the downloaded video as a fallback.
+- 🔔 **Windows completion notifications** — receive a notification when the download queue finishes, including while the app is open.
 - 💬 **Optional subtitles** — embed available subtitles as soft subtitles in supported video output.
 - 🔄 **Separate update controls** — application updates and yt-dlp/FFmpeg component updates are managed independently.
 

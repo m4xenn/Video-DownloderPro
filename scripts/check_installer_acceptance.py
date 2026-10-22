@@ -6,8 +6,9 @@ import hashlib,json,os,subprocess,sys,time,urllib.request,winreg
 from pathlib import Path
 import psutil
 ROOT=Path(__file__).resolve().parents[1]
-BASE=ROOT/'build/installer-acceptance-1.2.13'
-IDENTITY='VideoDownloaderProAcceptance-20261018'
+VERSION=json.loads((ROOT/'version.json').read_text(encoding='utf-8'))['version']
+BASE=ROOT/('build/installer-acceptance-'+VERSION)
+IDENTITY='VideoDownloaderProAcceptance-'+VERSION.replace('.','-')
 KEY=r'Software\Microsoft\Windows\CurrentVersion\Uninstall' + chr(92) + IDENTITY + '_is1'
 ISCC=Path(os.environ['ProgramFiles(x86)'])/'Inno Setup 6/ISCC.exe'
 OLD=Path(os.environ['ProgramFiles(x86)'])/'Studio Downloader'
@@ -51,7 +52,15 @@ def build_fixture(version,source):
     text=text[:begin]+text[end:]
     script=BASE/('fixture-'+version+'.iss');script.write_text(text,encoding='utf-8')
     with (BASE/('compile-'+version+'.log')).open('w',encoding='utf-8') as log:
-        subprocess.run([str(ISCC),'/DMyAppVersion='+version,'/DProjectRoot='+str(ROOT),str(script)],stdout=log,stderr=subprocess.STDOUT,check=True,timeout=180)
+        command=[str(ISCC),'/DMyAppVersion='+version,'/DProjectRoot='+str(ROOT),str(script)]
+        for attempt in range(3):
+            result=subprocess.run(command,stdout=log,stderr=subprocess.STDOUT,timeout=180)
+            log.flush()
+            if result.returncode==0:break
+            error=(BASE/('compile-'+version+'.log')).read_text(encoding='utf-8',errors='replace')
+            if attempt==2 or 'EndUpdateResource failed' not in error:
+                result.check_returncode()
+            time.sleep(.5)
     return BASE/'packages'/version/'VideoDownloaderPro_Setup.exe'
 def seed():
     sys.path.insert(0,str(ROOT/'src'))
@@ -109,35 +118,35 @@ def verify_payload(source):
 def main():
     BASE.mkdir(parents=True,exist_ok=True)
     assert registered() is None,'A previous test fixture is still installed; inspect before retrying'
-    oldversion=json.loads((OLD/'_internal/version.json').read_text())['version'];assert oldversion=='1.2.8',oldversion
-    old=build_fixture(oldversion,OLD);new=build_fixture('1.2.13',NEW)
-    record('Compiled isolated fixtures from actual installed 1.2.8 and packaged 1.2.13 payloads')
+    oldversion=json.loads((OLD/'_internal/version.json').read_text())['version'];assert tuple(map(int,oldversion.split('.')))<tuple(map(int,VERSION.split('.'))),oldversion
+    old=build_fixture(oldversion,OLD);new=build_fixture(VERSION,NEW)
+    record('Compiled isolated fixtures from installed and current packaged payloads')
     profile,settings=seed()
     run_setup(old,'old-clean-install');assert registered()==oldversion
-    record('Old 1.2.8 clean install succeeded in isolated current-user fixture')
+    record('Previous-version clean install succeeded in isolated current-user fixture')
     proc,url,html=launch()
     try:
-        assert '1.2.8' in html
+        assert oldversion in html
         assert get(url,'/get-settings')['speed_limit_mbps']=='5'
         assert get(url,'/history')['total']==1
         assert len(get(url,'/queue/drafts')['items'])==1
     finally:stop(proc)
-    record('Installed 1.2.8 launched and read synthetic settings/history/draft queue')
-    run_setup(new,'upgrade');assert registered()=='1.2.13'
-    count=verify_payload(NEW);record('1.2.8 -> 1.2.13 upgrade succeeded; '+str(count)+' installed payload files match distributable SHA-256')
+    record('Previous-version app launched and read synthetic settings/history/draft queue')
+    run_setup(new,'upgrade');assert registered()==VERSION
+    count=verify_payload(NEW);record('Installed -> current upgrade succeeded; '+str(count)+' installed payload files match distributable SHA-256')
     proc,url,html=launch()
     try:
-        assert '1.2.13' in html
+        assert VERSION in html
         actual=get(url,'/get-settings');assert all(actual[k]==v for k,v in settings.items()),actual
         assert get(url,'/history')['total']==1
         assert len(get(url,'/queue/drafts')['items'])==1
         assert get(url,'/progress')['items'][0]['status']=='paused'
     finally:stop(proc)
     record('Upgraded app launched with settings, language, history, draft and paused job preserved')
-    run_setup(new,'same-version-blocked',expected=1);assert registered()=='1.2.13';verify_payload(NEW)
+    run_setup(new,'same-version-blocked',expected=1);assert registered()==VERSION;verify_payload(NEW)
     record('Same-version reinstall rejected without changing application files')
-    run_setup(old,'downgrade-blocked',expected=1);assert registered()=='1.2.13';verify_payload(NEW)
-    record('Downgrade to 1.2.8 rejected without changing application files')
+    run_setup(old,'downgrade-blocked',expected=1);assert registered()==VERSION;verify_payload(NEW)
+    record('Downgrade to previous version rejected without changing application files')
     uninstaller=fixture_uninstaller()
     proc=subprocess.run([str(uninstaller),'/VERYSILENT','/SUPPRESSMSGBOXES','/NORESTART','/LOG='+str(BASE/'uninstall.log')],timeout=60)
     assert proc.returncode==0
@@ -146,9 +155,9 @@ def main():
     assert not (INSTALL/'YoutubePro.exe').exists() and registered() is None
     assert (profile/'settings.json').exists() and (profile/'downloads.sqlite3').exists()
     record('Uninstall removed isolated application/registry while preserving profile data')
-    run_setup(new,'new-clean-install');assert registered()=='1.2.13';verify_payload(NEW)
-    record('New 1.2.13 clean application install succeeded in isolated fixture')
-    REPORT['status']='passed';record('Fixture left installed for visual UI acceptance; production 1.2.8 untouched')
+    run_setup(new,'new-clean-install');assert registered()==VERSION;verify_payload(NEW)
+    record('Current-version clean application install succeeded in isolated fixture')
+    REPORT['status']='passed';record('Fixture left installed for visual UI acceptance; production installation untouched')
     print(json.dumps(REPORT,indent=2),flush=True)
 if __name__=='__main__':
     try:main()

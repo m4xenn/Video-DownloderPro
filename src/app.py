@@ -102,6 +102,19 @@ else:
 def get_settings_route():
     return jsonify(load_settings())
 
+@app.route('/onboarding/complete', methods=['POST'])
+def complete_onboarding():
+    if not update_request_allowed():
+        return jsonify(status='error', message='Invalid onboarding request.'), 403
+    try:
+        with operation_lock:
+            settings = load_settings()
+            settings['welcome_seen'] = True
+            save_settings_to_file(settings)
+        return jsonify(status='success')
+    except OSError:
+        return jsonify(status='error', message='Could not save welcome preference.'), 500
+
 @app.route('/save-settings', methods=['POST'])
 def save_settings_route():
     data = request.get_json(silent=True)
@@ -192,7 +205,7 @@ def toggle_fullscreen():
 @app.route('/')
 def home():
     ensure_download_state()
-    return render_template('index.html', default_path=state.get('current_download_path') or "Lütfen Klasör Seçiniz...", current_version=CURRENT_VERSION, system_language=system_language(), saved_language=load_settings().get('language'))
+    return render_template('index.html', default_path=state.get('current_download_path') or "Lütfen Klasör Seçiniz...", current_version=CURRENT_VERSION, system_language=system_language(), saved_language=load_settings().get('language'), welcome_seen=load_settings().get('welcome_seen') is True)
 
 @app.route('/select-folder', methods=['POST'])
 def select_folder():
@@ -489,6 +502,21 @@ def history():
         return jsonify(download_store.history(request.args.get('q','')[:200], offset))
     except Exception as exc:
         return jsonify(status='error', message='Geçmiş okunamadı: ' + str(exc)), 500
+
+
+@app.route('/history/<identity>/media')
+def history_media(identity):
+    from flask import abort, send_file
+    record = download_store.get_history(identity)
+    if not record or not record['file_exists']:
+        abort(404)
+    path = record['path']
+    if os.path.splitext(path)[1].lower() not in ('.mp4', '.mp3', '.m4a', '.wav', '.opus', '.webm', '.mkv'):
+        abort(415)
+    response = send_file(path, conditional=True)
+    response.headers['Cache-Control'] = 'private, no-store'
+    response.headers['X-Content-Type-Options'] = 'nosniff'
+    return response
 
 
 @app.route('/history/action', methods=['POST'])

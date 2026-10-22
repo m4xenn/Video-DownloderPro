@@ -105,3 +105,111 @@ Run `python -m unittest discover -s tests -p test_source_handoff.py`, `python te
 Run `python -m unittest discover -s tests -p test_output_paths.py` and `python -m unittest discover -s tests -p test_local_download.py`. The real local regression downloads MP4 followed by MP3, M4A, WAV and Opus into one folder and checks that every completed file retains its hash after every conversion. In-process output reservations also prevent simultaneous workers from claiming the same stem, including intermediate files and partial downloads. A resumed job keeps its own checkpoint stem.
 
 For source tests that call real download workers, set `VIDEO_DOWNLOADER_DATA_DIR` to a disposable directory under `build/` before running them; diagnostics otherwise use the normal application profile. This variable isolates queue/diagnostic storage, while existing tests individually isolate settings and update writes. `scripts/check_installed_runtime.py` isolates both APPDATA and LOCALAPPDATA and exercises the frozen EXE with synthetic media. It never opens personal queue/history files. Its component executables use same-volume hard links to avoid duplicating large binaries; it does not run component updates.
+
+## Workspace UI acceptance
+
+The workspace uses navy surfaces, a soft blue composer header, a lime navigation
+mark, and separate input and queue areas. Queue navigation opens a dedicated
+view with live status filters and title/URL search; New returns to the composer
+without discarding drafts or preferences. The current destination is marked with
+`aria-current`. Accepted submissions open the queue with filters cleared. Empty
+queues offer an Add a link action, and unmatched searches offer Clear filters.
+History opens within the workspace shell; settings keeps its dialog. Queue summaries derive from row
+statuses, including errors; they do not represent lifetime download statistics.
+The published version and installer are unchanged; download execution is preserved.
+
+Run the optional isolated browser acceptance suite with Playwright and Microsoft
+Edge installed:
+
+```powershell
+python tests/check_workspace_browser.py --output tmp/ui-redesign
+```
+
+It serves the application through Flask's test client, isolates settings and
+storage in a temporary directory, and mocks metadata, submissions, queue commands,
+progress and release checks. It checks the visible change between destinations,
+draft preservation, accepted-submission navigation, pause/resume, live status
+filter updates, title/URL search, empty-result recovery, adding/removing a link,
+keyboard format selection, dialog focus recovery, both themes, all ten navigation
+languages, horizontal overflow at
+1120/900/600/390 px, and visibility of the primary action in the native 900 × 750
+window. Screenshots and a JSON result are written to the chosen output directory.
+The screenshots contain synthetic queue examples. This is source UI validation;
+it does not replace a frozen installer acceptance run before the next release.
+
+### Welcome tour and illustrated guide
+
+The first-run tour has seven horizontally scrollable feature pages, numbered
+navigation tabs, Previous/Next, Skip, keyboard arrows and reduced-motion support.
+Its dismissal/completion is stored as `welcome_seen` in application settings via
+`POST /onboarding/complete`; it does not depend on WebView browser storage or a
+particular localhost origin. Existing users see the new tour once as well.
+The Guide navigation opens the same topics with steps, tips and enlargable
+screenshots. The tour can be replayed from the guide. Text is Turkish or English
+(English fallback for other interface languages); screenshots match each of the ten interface languages with synthetic data. No screenshots are loaded from the internet.
+
+Regression coverage:
+
+```powershell
+python -m unittest discover -s tests -p test_onboarding.py
+python -m unittest discover -s tests -p test_studio.py
+python tests/check_workspace_browser.py
+```
+
+To regenerate all 70 bundled screenshots from actual rendered application
+controls and synthetic metadata/queue/history fixtures:
+
+```powershell
+python tests/capture_localized_help.py
+```
+
+Images are saved under `src/static/help/<language>/`; `manifest.json` records the
+complete language/topic matrix and PNG dimensions. Review them after changing the UI.
+The normal browser suite never overwrites these reference assets; it also checks
+first-run completion across a reload after clearing browser storage, native
+horizontal scrolling, replay, Skip/Escape, guide navigation and image zoom.
+
+
+### Localized screenshot validation
+
+`interface-locales.js` and `interface-localization.js` translate the live settings,
+playlist/history controls, source-quality hints and queue summaries used in the
+captures. Generated pictures are not edited to replace text. Each language also
+uses localized demonstration video titles and locale-aware dates and numbers.
+Regeneration checks for blank format labels and leftover Turkish UI text in
+non-Turkish captures. Speed limits remain present in translated queue summaries.
+
+```powershell
+python -m unittest discover -s tests -p test_localized_help.py
+node tests/test_interface_localization_ui.cjs
+python tests/check_workspace_browser.py
+```
+
+The asset test checks all 70 unique PNG files and their dimensions. The browser
+suite switches through all ten languages and all seven guide topics, verifies
+the selected image path and waits for each image to load. The guide and tour use
+the same image resolver. The old `--capture-help` option on the acceptance suite
+is deprecated; use the dedicated capture script to keep the whole matrix valid.
+
+
+### Stable themes and workspace transitions
+
+Theme changes suspend transitions for two animation frames so foregrounds and
+surfaces update together. Blanket inherited text-color/opacity transitions are
+removed; switching themes keeps existing text nodes and the theme icon in place.
+Workspace entrances use a cancellable 180 ms animation. Reduced-motion settings
+skip it, repeated selection does not restart it, and a theme change cancels any
+unfinished entrance. The shell stays anchored to the top instead of re-centering
+when a destination changes height.
+
+History is `#historyView` inside the workspace, with no backdrop, blur, dialog role
+or focus trap. Search, pagination and file actions are preserved. Refreshes retain
+existing rows until the latest response is ready. Pagination is disabled while a
+replacement query is pending; stale responses/errors cannot replace a newer
+search. Empty history and unmatched searches offer relevant recovery actions.
+
+The browser suite samples text color, opacity, text-node identity and geometry
+across four theme changes; checks a fixed header across all destinations; tests
+rapid navigation and reduced motion; and verifies inline history, search recovery
+and responsive layouts. Regenerate localized help screenshots after changing the
+history layout with `python tests/capture_localized_help.py`.

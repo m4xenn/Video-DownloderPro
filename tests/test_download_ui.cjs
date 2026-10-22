@@ -44,7 +44,7 @@ function environment(responses) {
     assert.equal(payload.concurrency_mode,'manual');
     assert.equal(payload.speed_limit_mbps,'8');
     assert.equal(payload.speed_limit,undefined);
-    assert.equal(e.closed,1);
+    assert.equal(e.closed,0); // Saving keeps the inline Settings page open.
 
     e=environment([{ok:false,message:'Geçersiz sınır'}]);
     for(const id of ['settingMode','settingConcurrent','settingSpeed','settingCompressMode']) vm.runInContext(`document.getElementById('${id}')`,e.context);

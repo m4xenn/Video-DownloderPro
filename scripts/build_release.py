@@ -8,6 +8,7 @@ import re
 import shutil
 import subprocess
 import sys
+import time
 
 ROOT = Path(__file__).resolve().parents[1]
 
@@ -38,7 +39,17 @@ def main():
         parser.error(f'{output} already exists. Use a new version; release files are not overwritten.')
     (ROOT / 'version.json').write_text(json.dumps({'version': version}, indent=2) + '\n', encoding='utf-8')
     subprocess.run([sys.executable, '-m', 'PyInstaller', '--noconfirm', '--clean', 'YoutubePro.spec'], cwd=ROOT, check=True)
-    subprocess.run([iscc, f'/DMyAppVersion={version}', f'/DProjectRoot={ROOT}', str(ROOT / 'build_assets/YoutubePro_Setup.iss')], cwd=ROOT, check=True)
+    command = [iscc, f'/DMyAppVersion={version}', f'/DProjectRoot={ROOT}', str(ROOT / 'build_assets/YoutubePro_Setup.iss')]
+    for attempt in range(3):
+        result = subprocess.run(command, cwd=ROOT, capture_output=True)
+        sys.stdout.buffer.write(result.stdout)
+        sys.stderr.buffer.write(result.stderr)
+        if result.returncode == 0:
+            break
+        # Windows may temporarily lock a newly created PE during resource updates.
+        if attempt == 2 or b'EndUpdateResource failed' not in result.stdout + result.stderr:
+            result.check_returncode()
+        time.sleep(.5)
     installer = output / 'VideoDownloaderPro_Setup.exe'
     digest = hashlib.sha256(installer.read_bytes()).hexdigest()
     (output / 'SHA256SUMS.txt').write_text(f'{digest}  {installer.name}\n', encoding='utf-8')

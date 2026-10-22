@@ -47,3 +47,7 @@ See [RELEASE_ACCEPTANCE_1.2.14.md](../releases/RELEASE_ACCEPTANCE_1.2.14.md). Pr
 1.2.8 to 1.2.14 upgrade, personal-data preservation, installed payload hashes,
 shortcuts and frozen-executable download/conversion checks passed. No clean
 Windows VM was used. Local 1.2.13 artifacts are rejected and must not be published.
+
+## 1.3.0 acceptance
+
+See [RELEASE_ACCEPTANCE_1.3.0.md](../releases/RELEASE_ACCEPTANCE_1.3.0.md) for the redesigned workspace, localized guide, preview, packaging and installer validation.

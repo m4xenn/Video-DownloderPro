@@ -49,6 +49,7 @@ function updateStudioTexts() {
             : (currentLang === 'tr' ? 'Kalite' : 'Quality');
         trigger.setAttribute('aria-label',label);
     });
+    if(typeof updateWorkspaceTexts === 'function') updateWorkspaceTexts();
 }
 document.addEventListener('DOMContentLoaded', () => {
     updateStudioTexts();
@@ -83,7 +84,7 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         }
     });
-    const dialogs = [...document.querySelectorAll('.feature-overlay,#settingsModal,#appUpdateModal,#formatInfoModal,#updateOverlay')];
+    const dialogs = [...document.querySelectorAll('.feature-overlay,#appUpdateModal,#formatInfoModal,#updateOverlay')];
     const openers = new WeakMap();
     const visible = node => node.style.display !== 'none' && getComputedStyle(node).display !== 'none';
     const focusable = node => [...node.querySelectorAll('button:not(:disabled),input:not([type=hidden]):not(:disabled),select:not(:disabled),summary,[tabindex="0"]')].filter(item => item.getClientRects().length);
@@ -104,7 +105,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const dialog = dialogs.filter(visible).sort((a,b) => Number(getComputedStyle(b).zIndex)-Number(getComputedStyle(a).zIndex))[0];
         if(!dialog) return;
         if(event.key==='Escape') {
-            const close = {settingsModal:closeSettings,appUpdateModal:closeAppUpdate,formatInfoModal:closeFormatInfo,updateOverlay:closeComponentUpdate,duplicateModal:cancelDuplicate};
+            const close = {welcomeModal:closeWelcome,appUpdateModal:closeAppUpdate,formatInfoModal:closeFormatInfo,updateOverlay:closeComponentUpdate,duplicateModal:cancelDuplicate};
             event.preventDefault(); (close[dialog.id] || (()=>closeFeature(dialog.id)))();
         } else if(event.key==='Tab') {
             const items=focusable(dialog); if(!items.length) return;

@@ -4,6 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Video Downloader Pro</title>
+    <link rel="icon" type="image/svg+xml" href="{{ url_for('static', filename='app-icon.svg') }}">
     <link rel="stylesheet" href="{{ url_for('static', filename='vendor/flags/css/flag-icons.min.css') }}">
     <link rel="stylesheet" href="{{ url_for('static', filename='vendor/fontawesome/css/all.min.css') }}">
     
@@ -16,12 +17,10 @@
     <style>
         :root { --primary: #0A84FF; --bg-color: #000; --bg-grad: #1a1a1a; --glass-bg: rgba(28, 28, 30, 0.95); --glass-border: rgba(255, 255, 255, 0.1); --input-bg: #2c2c2e; --hover-bg: #3a3a3c; --text-main: #ffffff; --text-sub: #86868b; --danger: #FF453A; --q-bg: rgba(255,255,255,0.03); --q-hover: rgba(255,255,255,0.06); --opt-bg: #2c2c2e; --opt-hover: rgba(255,255,255,0.02); --slider-bg: #3a3a3c; --thumb-bg: #000; }
         :root.light-mode { --primary: #007AFF; --bg-color: #f2f2f7; --bg-grad: #ffffff; --glass-bg: rgba(255, 255, 255, 0.85); --glass-border: rgba(0, 0, 0, 0.1); --input-bg: #e5e5ea; --hover-bg: #d1d1d6; --text-main: #1c1c1e; --text-sub: #8e8e93; --danger: #FF3B30; --q-bg: rgba(0,0,0,0.03); --q-hover: rgba(0,0,0,0.06); --opt-bg: #f9f9f9; --opt-hover: rgba(0,0,0,0.03); --slider-bg: #c7c7cc; --thumb-bg: #e5e5ea; }
-        
-        body * { transition: background-color 0.4s ease, border-color 0.4s ease, color 0.4s ease, box-shadow 0.4s ease, opacity 0.4s ease; }
-        /* Prevent body * from completely overwriting other specific transitions where needed, we will explicitly redefine if necessary */
+
 
         body { background-color: var(--bg-color); color: var(--text-main); font-family: 'Inter', sans-serif; min-height: 100vh; display: flex; justify-content: center; align-items: center; margin: 0; padding: 20px; box-sizing: border-box; transition: background-color 0.4s ease, color 0.4s ease; -webkit-font-smoothing: antialiased; -moz-osx-font-smoothing: grayscale; }
-        body * { transition: background-color 0.4s ease, border-color 0.4s ease, color 0.4s ease, box-shadow 0.4s ease; }
+
         body::before { content: ""; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: radial-gradient(circle at 50% 0%, #1a1a1a 0%, #000 100%); z-index: -2; transition: opacity 0.4s ease; }
         body::after { content: ""; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: radial-gradient(circle at 50% 0%, #ffffff 0%, #f2f2f7 100%); z-index: -1; transition: opacity 0.4s ease; opacity: 0; }
         :root.light-mode body::before { opacity: 0; }
@@ -247,8 +246,10 @@
         }
     </style>
     <link rel="stylesheet" href="{{ url_for('static', filename='studio.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='workspace.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='help.css') }}">
 </head>
-<body>
+<body data-welcome-seen="{{ 'true' if welcome_seen else 'false' }}">
 
     <div id="updateOverlay" style="display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.6); z-index: 1004; flex-direction: column; justify-content: center; align-items: center; backdrop-filter: blur(5px); padding: 20px; box-sizing: border-box;">
         <section class="component-dialog" role="dialog" aria-modal="true" aria-labelledby="updateTitle">
@@ -266,6 +267,15 @@
     </div>
 
     <main class="glass-card">
+        <nav class="workspace-nav" aria-label="Çalışma alanı">
+            <span class="nav-emblem" aria-hidden="true"><i class="fa-solid fa-arrow-down"></i></span>
+            <button type="button" class="nav-action" data-workspace="new"><i class="fa-solid fa-plus" aria-hidden="true"></i><span></span></button>
+            <button type="button" class="nav-action" data-workspace="queue"><i class="fa-solid fa-layer-group" aria-hidden="true"></i><span></span></button>
+            <button type="button" class="nav-action" data-workspace="history" onclick="openHistory()"><i class="fa-solid fa-clock-rotate-left" aria-hidden="true"></i><span></span></button>
+            <button type="button" class="nav-action" data-workspace="guide"><i class="fa-solid fa-book-open" aria-hidden="true"></i><span></span></button>
+            <button type="button" class="nav-action nav-settings" data-workspace="settings" onclick="openSettings()"><i class="fa-solid fa-gear" aria-hidden="true"></i><span></span></button>
+        </nav>
+        <div class="workspace-content" data-view="new">
         <div class="app-header">
             <div class="app-brand">
                 <span class="brand-mark" aria-hidden="true"><svg viewBox="0 0 32 32" fill="none"><path d="M16 6v15m-6-6 6 6 6-6M7 23v3h18v-3" stroke="currentColor" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round"/></svg></span>
@@ -319,7 +329,7 @@
                 <textarea id="urlInput" rows="1" placeholder="Bir veya birden fazla bağlantı yapıştırın..." autocomplete="off" spellcheck="false" aria-describedby="bulkStatus"></textarea>
                 <i class="fa-solid fa-link" aria-hidden="true"></i>
             </div>
-            <button class="add-btn" id="addBtn" onclick="addToQueue()" title="Sıraya Ekle" aria-label="Sıraya ekle"><i class="fa-solid fa-plus" aria-hidden="true"></i></button>
+            <button class="add-btn" id="addBtn" onclick="addToQueue()" title="Sıraya Ekle" aria-label="Sıraya ekle"><i class="fa-solid fa-plus" id="addIcon" aria-hidden="true"></i><span id="addLabel">Ekle</span></button>
         </div>
         <div id="linkPreview" class="link-preview" role="status" aria-live="polite" hidden><strong id="linkPreviewTitle"></strong><span id="linkPreviewMeta"></span></div>
         <div id="siteInspection" class="site-inspection" role="status" hidden>
@@ -361,7 +371,7 @@
 
         <div class="quality-feedback"><span id="qualityHint" class="feature-muted"></span><button id="refreshQuality" type="button" onclick="refreshSourceQuality(true)" title="Kaynak kalitelerini yenile" aria-label="Kaynak kalitelerini yenile"><i class="fa-solid fa-rotate-right"></i></button></div>
         <div id="formatInfoLinkContainer" style="display: none; justify-content: flex-end; margin-top: -5px; margin-bottom: 5px;">
-             <span onclick="openFormatInfo()" style="font-size: 12px; color: var(--primary); cursor: pointer; transition: 0.3s;" onmouseover="this.style.opacity='0.8'" onmouseout="this.style.opacity='1'"><i class="fa-solid fa-circle-info" style="margin-right: 4px;"></i>Ses Formatları Özellikleri</span>
+             <button type="button" class="format-info-link" onclick="openFormatInfo()" style="font-size: 12px; color: var(--primary); cursor: pointer; transition: 0.3s;" onmouseover="this.style.opacity='0.8'" onmouseout="this.style.opacity='1'"><i class="fa-solid fa-circle-info" style="margin-right: 4px;"></i>Ses Formatları Özellikleri</button>
         </div>
 
         <div class="options-grid" style="margin-top: 10px; margin-bottom: 5px; z-index: 5;">
@@ -378,73 +388,31 @@
         <button class="download-btn" onclick="startDownload()" id="dlBtn">İndirmeyi Başlat</button>
         <p class="studio-footnote" id="studioFootnote"><i class="fa-solid fa-shield-halved" aria-hidden="true"></i><span>Dosyaların, seçtiğin klasörde.</span></p>
         </section>
-        <aside class="queue-panel" aria-labelledby="queueTitle">
+        <aside class="queue-panel" aria-labelledby="queueTitle" tabindex="-1">
             <div class="queue-heading"><div><span class="eyebrow" id="queueEyebrow">ÇALIŞMA ALANIN</span><h2 id="queueTitle">İndirme kuyruğu</h2></div><span id="queueCount" class="queue-count">0</span></div>
+            <button type="button" class="queue-expand" id="queueExpand"><span></span><i class="fa-solid fa-arrow-up-right-from-square" aria-hidden="true"></i></button>
+            <div class="queue-tools" hidden>
+                <p id="queueViewDescription" class="feature-muted"></p>
+                <div class="queue-controls">
+                    <label class="queue-search"><i class="fa-solid fa-magnifying-glass" aria-hidden="true"></i><input type="search" id="queueSearch" autocomplete="off"></label>
+                    <select id="queueFilter" class="settings-select">
+                        <option value="all"></option><option value="active"></option><option value="waiting"></option><option value="paused"></option><option value="finished"></option><option value="error"></option>
+                    </select>
+                    <button type="button" class="settings-action settings-action-primary" id="queueNewDownload"></button>
+                </div>
+            </div>
+            <div class="queue-overview" aria-live="polite" aria-atomic="true"><span id="workspaceQueueStatus"></span><span class="queue-live-dot" aria-hidden="true"></span></div>
             <div id="restoredQueueNotice" class="restore-notice" style="display:none"><span id="restoredQueueText"></span><button class="settings-action" onclick="resumeRestoredQueue()">Tümüne devam et</button></div>
             <p id="storageWarning" class="storage-warning" role="alert" style="display:none"></p>
             <p id="downloadSummary" class="download-summary" role="status" style="display:none"></p>
             <div id="queueContainer" class="queue-container"></div>
+            <div id="queueNoResults" class="queue-no-results" hidden><p id="queueNoResultsText"></p><button type="button" class="settings-action" id="queueResetFilters"></button></div>
             <div class="queue-empty" id="queueEmpty"><span class="empty-symbol" aria-hidden="true"><svg viewBox="0 0 48 48" fill="none"><rect x="10" y="9" width="28" height="30" rx="7" stroke="currentColor" stroke-width="1.5"/><path d="m21 19 8 5-8 5V19Z" fill="currentColor"/><path d="M17 5h14M17 43h14" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg></span><h3 id="emptyTitle">Sıradaki favorin burada.</h3><p id="emptyDescription">Bir bağlantı eklediğinde indirmelerin<br>bu alanda görünecek.</p><span class="empty-hint">MP4 <span>·</span> MP3 <span>·</span> WAV <span>·</span> M4A</span></div>
+            <button type="button" class="settings-action queue-empty-action" id="queueEmptyAction" hidden></button>
             <button class="queue-history-link" onclick="openHistory()"><i class="fa-solid fa-clock-rotate-left" aria-hidden="true"></i><span id="historyLinkLabel">İndirme geçmişini aç</span><span aria-hidden="true">↗</span></button>
         </aside>
-        </div>
-        <p class="app-footer" id="platformFootnote">
-            <i class="fa-solid fa-cloud-arrow-down" style="margin-right: 4px;"></i> 1000'den fazla platformdan dilediğiniz videoyu indirebilir ve<br>
-            <i class="fa-solid fa-tower-broadcast" style="margin-right: 4px;"></i> aktif canlı yayınları anlık olarak cihazınıza kaydedebilirsiniz!
-        </p>
-    </main>
-
-    <div id="playlistModal" class="feature-overlay" role="dialog" aria-modal="true" aria-labelledby="playlistTitle">
-        <section class="feature-card">
-            <div class="feature-heading"><h3 id="playlistTitle">Listeden video seç</h3><button class="header-icon-btn" onclick="closeFeature('playlistModal')" aria-label="Kapat"><i class="fa-solid fa-xmark"></i></button></div>
-            <p id="playlistStatus" class="feature-muted" role="status" aria-live="polite">Liste taranıyor...</p>
-            <input id="playlistSearch" class="settings-number" placeholder="Listede ara..." aria-label="Listede ara" oninput="renderPlaylistSelection()">
-            <div class="feature-actions"><button class="settings-action" onclick="selectPlaylistResults()">Sonuçları seç</button><button class="settings-action" onclick="clearPlaylistSelection()">Seçimi temizle</button></div>
-            <p id="playlistCount" class="feature-muted"></p>
-            <div id="playlistEntries" class="feature-list"></div>
-            <button id="playlistMore" class="settings-action" onclick="showMorePlaylist()" style="display:none;">Daha fazla göster</button>
-            <button id="playlistDownload" class="settings-action settings-action-primary" onclick="downloadSelectedPlaylist()" disabled>Seçilenleri indir</button>
-        </section>
-    </div>
-    <div id="duplicateModal" class="feature-overlay" style="z-index: 1006;" role="dialog" aria-modal="true" aria-labelledby="duplicateTitle">
-        <section class="feature-card">
-            <div class="feature-heading"><h3 id="duplicateTitle">Bu içerikler daha önce indirilmiş</h3><button class="header-icon-btn" onclick="cancelDuplicate()" aria-label="Kapat"><i class="fa-solid fa-xmark"></i></button></div>
-            <p class="feature-muted">Aynı format, kalite ve altyazı seçimiyle kaydedilmiş dosyalar hâlâ mevcut. Tekrar indirirsen eski dosyalar korunur.</p>
-            <div id="duplicateEntries" class="feature-list"></div>
-            <div class="feature-actions"><button id="duplicateSkip" class="settings-action" onclick="confirmDuplicate('skip')">Mevcutları atla</button><button id="duplicateAgain" class="settings-action settings-action-primary" onclick="confirmDuplicate('again')">Yine de indir</button></div>
-        </section>
-    </div>
-    <div id="historyModal" class="feature-overlay" role="dialog" aria-modal="true" aria-labelledby="historyTitle">
-        <section class="feature-card">
-            <div class="feature-heading"><h3 id="historyTitle">İndirme geçmişi</h3><button class="header-icon-btn" onclick="closeFeature('historyModal')" aria-label="Kapat"><i class="fa-solid fa-xmark"></i></button></div>
-            <input id="historySearch" class="settings-number" placeholder="Başlık veya bağlantıda ara..." aria-label="Geçmişte ara" oninput="searchHistory()">
-            <p id="historyStatus" class="feature-muted" role="status" aria-live="polite"></p>
-            <div id="historyEntries" class="feature-list"></div>
-            <button id="historyMore" class="settings-action" onclick="loadHistory(true)" style="display:none;">Daha fazla göster</button>
-        </section>
-    </div>
-
-    <div id="snackbar">Bildirim</div>
-
-    <div id="appUpdateModal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.6); z-index: 1003; flex-direction: column; justify-content: center; align-items: center; backdrop-filter: blur(5px); opacity: 0; transition: opacity 0.3s ease;">
-        <div style="background: var(--glass-bg); border: 1px solid var(--glass-border); border-radius: 20px; padding: 30px; width: 400px; max-width: 90%; color: var(--text-main); position: relative; box-shadow: 0 20px 40px rgba(0,0,0,0.5); transform: translateY(20px); transition: transform 0.3s ease;">
-            <button onclick="closeAppUpdate()" style="position: absolute; top: 15px; right: 20px; background: transparent; border: none; color: var(--text-sub); font-size: 18px; cursor: pointer; transition: 0.3s;" onmouseover="this.style.color='var(--danger)'" onmouseout="this.style.color='var(--text-sub)'"><i class="fa-solid fa-xmark"></i></button>
-            <h3 style="margin-top: 0; margin-bottom: 20px; font-weight: 600; text-align: center;"><i class="fa-solid fa-gift" style="color: var(--primary); margin-right: 8px;"></i>Yeni Güncelleme Mevcut!</h3>
-            <p style="text-align: center; color: var(--text-sub); font-size: 14px; margin-bottom: 20px;">Uygulamanın <strong><span id="appUpdateVersion"></span></strong> sürümü yayınlandı.</p>
-            <div style="background: var(--input-bg); border: 1px solid var(--glass-border); border-radius: 12px; padding: 15px; font-size: 13px; max-height: 150px; overflow-y: auto; color: var(--text-sub); margin-bottom: 20px;">
-                <div id="appUpdateNotes" style="font-family: inherit; margin: 0; white-space: normal; line-height: 1.6;"></div>
-            </div>
-            <p id="appUpdateStatus" class="app-update-status" role="status" aria-live="polite"></p>
-            <progress id="appUpdateProgress" class="app-update-progress" max="100" value="0" style="display: none;"></progress>
-            <button id="appUpdateAction" class="settings-action settings-action-primary" onclick="downloadAppUpdate()">Güncellemeyi indir</button>
-        </div>
-    </div>
-
-    <!-- SETTINGS MODAL -->
-    <div id="settingsModal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.6); z-index: 1001; flex-direction: column; justify-content: center; align-items: center; backdrop-filter: blur(5px); opacity: 0; transition: opacity 0.3s ease;">
-        <div style="background: var(--glass-bg); border: 1px solid var(--glass-border); border-radius: 20px; padding: 30px; width: 400px; max-width: 90%; color: var(--text-main); position: relative; box-shadow: 0 20px 40px rgba(0,0,0,0.5); transform: translateY(20px); transition: transform 0.3s ease; max-height: 80vh; overflow-y: auto; overflow-x: hidden;">
-            <button onclick="closeSettings()" style="position: absolute; top: 15px; right: 20px; background: transparent; border: none; color: var(--text-sub); font-size: 18px; cursor: pointer; transition: 0.3s;" onmouseover="this.style.color='var(--danger)'" onmouseout="this.style.color='var(--text-sub)'"><i class="fa-solid fa-xmark"></i></button>
-            <h3 style="margin-top: 0; margin-bottom: 20px; font-weight: 600; text-align: center;"><i class="fa-solid fa-gear" style="color: var(--primary); margin-right: 8px;"></i>Ayarlar</h3>
+<section id="settingsView" class="settings-section" tabindex="-1" aria-labelledby="settingsTitle">
+            <h2 id="settingsTitle"><i class="fa-solid fa-gear" style="color: var(--primary); margin-right: 8px;"></i>Ayarlar</h2>
             
             <div style="display: flex; flex-direction: column; gap: 15px;">
                 <div class="app-update-card" style="margin-top: 0;">
@@ -489,11 +457,76 @@
                 <p id="diagnosticsStatus" class="app-update-status" role="status" aria-live="polite"></p>
             </details>
             <button class="settings-action settings-action-primary settings-save" onclick="saveSettings()">Kaydet</button>
+
+</section>
+        <section id="historyView" class="history-section" aria-labelledby="historyTitle" tabindex="-1">
+            <div class="history-heading"><h2 id="historyTitle">İndirme geçmişi</h2></div>
+            <input id="historySearch" class="settings-number" type="search" placeholder="Başlık veya bağlantıda ara..." aria-label="Geçmişte ara" oninput="searchHistory()">
+            <p id="historyStatus" class="feature-muted" role="status" aria-live="polite"></p>
+            <div id="historyEntries" class="feature-list"></div>
+            <div id="historyEmpty" class="history-empty" hidden><i class="fa-solid fa-clock-rotate-left" aria-hidden="true"></i><p id="historyEmptyText"></p><button id="historyNewDownload" type="button" class="settings-action"></button></div>
+            <button id="historyMore" class="settings-action" onclick="loadHistory(true)" style="display:none;">Daha fazla göster</button>
+        </section>
+        <section class="guide-section" aria-labelledby="guideTitle" tabindex="-1">
+            <div class="guide-heading"><div><span class="eyebrow" id="guideEyebrow"></span><h2 id="guideTitle"></h2><p id="guideDescription" class="feature-muted"></p></div><button type="button" id="replayWelcome" class="settings-action"></button></div>
+            <div class="guide-layout"><div id="guideTopics" role="tablist"></div><article id="guideArticle" role="tabpanel" tabindex="0"></article></div>
+        </section>
         </div>
+        <p class="app-footer" id="platformFootnote">
+            <i class="fa-solid fa-cloud-arrow-down" style="margin-right: 4px;"></i> 1000'den fazla platformdan dilediğiniz videoyu indirebilir ve<br>
+            <i class="fa-solid fa-tower-broadcast" style="margin-right: 4px;"></i> aktif canlı yayınları anlık olarak cihazınıza kaydedebilirsiniz!
+        </p>
+        </div>
+    </main>
+
+    <div id="welcomeModal" class="feature-overlay" role="dialog" aria-modal="true" aria-labelledby="welcomeTitle" aria-describedby="welcomeDescription">
+        <section class="welcome-card">
+            <div class="welcome-heading"><div><span class="eyebrow" id="welcomeEyebrow"></span><h3 id="welcomeTitle"></h3><p id="welcomeDescription"></p></div><button type="button" class="header-icon-btn" id="welcomeClose"><i class="fa-solid fa-xmark" aria-hidden="true"></i></button></div>
+            <div id="welcomeTabs" role="tablist"></div>
+            <div id="welcomeTrack" tabindex="0"></div>
+            <div class="welcome-footer"><button type="button" id="welcomeSkip" class="welcome-text-button"></button><span id="welcomePosition" role="status" aria-live="polite" aria-atomic="true"></span><div><button type="button" id="welcomePrevious" class="settings-action"></button><button type="button" id="welcomeNext" class="settings-action settings-action-primary"></button></div></div>
+            <button type="button" id="welcomeGuide" class="welcome-text-button"></button>
+        </section>
+    </div>
+    <div id="guideImageModal" class="feature-overlay" role="dialog" aria-modal="true" aria-labelledby="guideImageTitle">
+        <section class="guide-image-card"><div class="feature-heading"><h3 id="guideImageTitle"></h3><button type="button" class="header-icon-btn" id="guideImageClose"><i class="fa-solid fa-xmark" aria-hidden="true"></i></button></div><img id="guideImageFull" alt=""></section>
     </div>
 
+    <div id="playlistModal" class="feature-overlay" role="dialog" aria-modal="true" aria-labelledby="playlistTitle">
+        <section class="feature-card">
+            <div class="feature-heading"><h3 id="playlistTitle">Listeden video seç</h3><button class="header-icon-btn" onclick="closeFeature('playlistModal')" aria-label="Kapat"><i class="fa-solid fa-xmark"></i></button></div>
+            <p id="playlistStatus" class="feature-muted" role="status" aria-live="polite">Liste taranıyor...</p>
+            <input id="playlistSearch" class="settings-number" placeholder="Listede ara..." aria-label="Listede ara" oninput="renderPlaylistSelection()">
+            <div class="feature-actions"><button class="settings-action" onclick="selectPlaylistResults()">Sonuçları seç</button><button class="settings-action" onclick="clearPlaylistSelection()">Seçimi temizle</button></div>
+            <p id="playlistCount" class="feature-muted"></p>
+            <div id="playlistEntries" class="feature-list"></div>
+            <button id="playlistMore" class="settings-action" onclick="showMorePlaylist()" style="display:none;">Daha fazla göster</button>
+            <button id="playlistDownload" class="settings-action settings-action-primary" onclick="downloadSelectedPlaylist()" disabled>Seçilenleri indir</button>
+        </section>
+    </div>
+    <div id="duplicateModal" class="feature-overlay" style="z-index: 1006;" role="dialog" aria-modal="true" aria-labelledby="duplicateTitle">
+        <section class="feature-card">
+            <div class="feature-heading"><h3 id="duplicateTitle">Bu içerikler daha önce indirilmiş</h3><button class="header-icon-btn" onclick="cancelDuplicate()" aria-label="Kapat"><i class="fa-solid fa-xmark"></i></button></div>
+            <p class="feature-muted">Aynı format, kalite ve altyazı seçimiyle kaydedilmiş dosyalar hâlâ mevcut. Tekrar indirirsen eski dosyalar korunur.</p>
+            <div id="duplicateEntries" class="feature-list"></div>
+            <div class="feature-actions"><button id="duplicateSkip" class="settings-action" onclick="confirmDuplicate('skip')">Mevcutları atla</button><button id="duplicateAgain" class="settings-action settings-action-primary" onclick="confirmDuplicate('again')">Yine de indir</button></div>
+        </section>
+    </div>
+    <div id="snackbar">Bildirim</div>
 
-
+    <div id="appUpdateModal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.6); z-index: 1003; flex-direction: column; justify-content: center; align-items: center; backdrop-filter: blur(5px); opacity: 0; transition: opacity 0.3s ease;">
+        <div style="background: var(--glass-bg); border: 1px solid var(--glass-border); border-radius: 20px; padding: 30px; width: 400px; max-width: 90%; color: var(--text-main); position: relative; box-shadow: 0 20px 40px rgba(0,0,0,0.5); transform: translateY(20px); transition: transform 0.3s ease;">
+            <button onclick="closeAppUpdate()" style="position: absolute; top: 15px; right: 20px; background: transparent; border: none; color: var(--text-sub); font-size: 18px; cursor: pointer; transition: 0.3s;" onmouseover="this.style.color='var(--danger)'" onmouseout="this.style.color='var(--text-sub)'"><i class="fa-solid fa-xmark"></i></button>
+            <h3 style="margin-top: 0; margin-bottom: 20px; font-weight: 600; text-align: center;"><i class="fa-solid fa-gift" style="color: var(--primary); margin-right: 8px;"></i>Yeni Güncelleme Mevcut!</h3>
+            <p style="text-align: center; color: var(--text-sub); font-size: 14px; margin-bottom: 20px;">Uygulamanın <strong><span id="appUpdateVersion"></span></strong> sürümü yayınlandı.</p>
+            <div style="background: var(--input-bg); border: 1px solid var(--glass-border); border-radius: 12px; padding: 15px; font-size: 13px; max-height: 150px; overflow-y: auto; color: var(--text-sub); margin-bottom: 20px;">
+                <div id="appUpdateNotes" style="font-family: inherit; margin: 0; white-space: normal; line-height: 1.6;"></div>
+            </div>
+            <p id="appUpdateStatus" class="app-update-status" role="status" aria-live="polite"></p>
+            <progress id="appUpdateProgress" class="app-update-progress" max="100" value="0" style="display: none;"></progress>
+            <button id="appUpdateAction" class="settings-action settings-action-primary" onclick="downloadAppUpdate()">Güncellemeyi indir</button>
+        </div>
+    </div>
 
     <div id="formatInfoModal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.6); z-index: 1000; flex-direction: column; justify-content: center; align-items: center; backdrop-filter: blur(5px); opacity: 0; transition: opacity 0.3s ease;">
         <div style="background: var(--glass-bg); border: 1px solid var(--glass-border); border-radius: 20px; padding: 30px; width: 400px; max-width: 90%; color: var(--text-main); position: relative; box-shadow: 0 20px 40px rgba(0,0,0,0.5); transform: translateY(20px); transition: transform 0.3s ease;" id="formatInfoModalContent">
@@ -751,7 +784,7 @@
             if (formatSelected === 'video') formatTrigger.innerText = t.video;
             else formatTrigger.innerText = t.audio;
             
-            document.querySelector("#formatInfoLinkContainer span").innerHTML = `<i class="fa-solid fa-circle-info" style="margin-right: 4px;"></i>${t.formatInfo}`;
+            document.querySelector("#formatInfoLinkContainer button").innerHTML = `<i class="fa-solid fa-circle-info" style="margin-right: 4px;"></i>${t.formatInfo}`;
             document.getElementById("playlistLabel").innerHTML = `<i class="fa-solid fa-list-ul"></i>${t.playlist}`;
             
             updateDownloadButtonText();
@@ -816,9 +849,11 @@
                     await refreshAppUpdate();
                 } else {
                     label.textContent = 'Uygulamanız güncel (' + data.current_version + ').';
+                    if (typeof localizeUpdateStatus === 'function') localizeUpdateStatus(data);
                 }
             } catch (error) {
                 label.textContent = error.message || 'Güncelleme kontrol edilemedi.';
+                if(typeof interfaceUpdateState !== 'undefined') interfaceUpdateState=null;
             } finally {
                 checkButton.disabled = false;
             }
@@ -891,15 +926,16 @@
 
         // --- THEME TOGGLE LOGIC ---
         function toggleTheme(forceDark = null) {
+            if(typeof beginThemeSwitch === 'function') beginThemeSwitch();
             const isDark = document.documentElement.classList.contains('light-mode');
             const targetLight = forceDark !== null ? !forceDark : !isDark;
             
             if (targetLight) {
                 document.documentElement.classList.add('light-mode');
-                document.getElementById('themeToggleBtn').innerHTML = '<i class="fa-solid fa-moon" id="themeIcon"></i>';
+                document.getElementById('themeIcon').className = 'fa-solid fa-moon';
             } else {
                 document.documentElement.classList.remove('light-mode');
-                document.getElementById('themeToggleBtn').innerHTML = '<i class="fa-solid fa-sun" id="themeIcon"></i>';
+                document.getElementById('themeIcon').className = 'fa-solid fa-sun';
             }
             if (forceDark === null) localStorage.setItem('ytpro_theme', targetLight ? 'light' : 'dark');
             document.getElementById('themeToggleBtn').setAttribute('aria-pressed', String(targetLight));
@@ -1127,6 +1163,7 @@
             div.querySelector('.queue-resume').onclick = () => resumeItem(url);
             div.querySelector('.queue-remove').onclick = () => removeFromQueue(url, div.id);
             container.prepend(div);
+            if(typeof localizeQueueRow === 'function') localizeQueueRow(div);
             updateDownloadButtonText();
         }
 
@@ -1359,6 +1396,7 @@
                 const speed = ((data.total_speed_bps || 0) / 1000000).toFixed(2);
                 const cap = data.speed_limit_bps ? ` · Sınır: ${(data.speed_limit_bps * 8 / 1000000).toFixed(1)} Mbps` : '';
                 summary.textContent = `${mode} · ${data.active_count || 0}/${data.concurrency_limit || 2} aktif · ${speed} MB/s${cap}`;
+                if(typeof localizeProgress === 'function') localizeProgress(data);
                 if (['finished_all','error','paused','idle'].includes(data.status)) {
                     clearInterval(progressInterval);
                     if (data.status === 'error') showToast(currentLang==='tr'?'İndirme tamamlanamadı. Ayrıntılar kuyruk satırında korunuyor.':'Download failed. Details are kept in the queue.', true);
@@ -1400,24 +1438,17 @@
         }
 
         function openSettings() {
-            const modal = document.getElementById('settingsModal');
-            modal.style.display = 'flex';
-            setTimeout(() => { modal.style.opacity = '1'; modal.firstElementChild.style.transform = 'translateY(0)'; }, 10);
+            setWorkspaceView('settings');
+            if(typeof updateInterfaceTexts==='function')updateInterfaceTexts();
         }
-        
 
         function setCompressModeUI(mode) {
             // Compression was exposed by the old UI but has no download implementation.
             document.getElementById('settingCompressMode').value = 'false';
         }
 
-        function closeSettings() {
-            const modal = document.getElementById('settingsModal');
-            modal.style.opacity = '0';
-            modal.firstElementChild.style.transform = 'translateY(20px)';
-            setTimeout(() => { modal.style.display = 'none'; }, 300);
-        }
-        
+        function closeSettings() { setWorkspaceView('new'); }
+
         async function saveSettings() {
             const payload = {
                 concurrency_mode: document.getElementById('settingMode').value,
@@ -1429,7 +1460,6 @@
                 const response = await fetch('/save-settings', {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(payload)});
                 const data = await response.json();
                 if (!response.ok) throw new Error(data.message || 'Ayarlar kaydedilemedi.');
-                closeSettings();
                 showToast(translations[currentLang].tSuccess);
             } catch (error) { showToast(error.message, true); }
         }
@@ -1446,6 +1476,7 @@
         let historyOffset = 0;
         let historySearchTimer = null;
         let historyRequest = 0;
+        let historyLoading = false;
 
         function formatBytes(value) {
             if (!Number.isFinite(value) || value <= 0) return 'Bilinmiyor';
@@ -1540,12 +1571,15 @@
                 }
             });
             await saveDraftQueue();
-            closeFeature('playlistModal'); closeFeature('duplicateModal'); closeFeature('historyModal');
+            closeFeature('playlistModal'); closeFeature('duplicateModal');
             if (typeof refreshSourceQuality === 'function') await refreshSourceQuality();
             duplicateToken = null;
             pendingSubmissionURLs = [];
             if (data.status === 'skipped') { showToast(data.message); resetUI(); }
-            else startProgressPolling();
+            else {
+                if (typeof setWorkspaceView === 'function') setWorkspaceView('queue',true);
+                startProgressPolling();
+            }
         }
         async function confirmDuplicate(action) {
             if (!duplicateToken) return;
@@ -1597,6 +1631,7 @@
             }
             const first = playlistPreview.status !== 'ready';
             playlistPreview.status = 'ready'; playlistPreview.entries = data.entries || [];
+            playlistPreview.truncated = Boolean(data.truncated);
             if (first) playlistPreview.entries.filter(entry => entry.available).forEach(entry => playlistChosen.add(entry.id));
             document.getElementById('playlistStatus').textContent = data.truncated
                 ? 'İlk 2000 öğe gösteriliyor. İndirmek istediğiniz videoları seçin.' : 'İndirmek istediğiniz videoları seçin. Kullanılamayan öğeler seçilemez.';
@@ -1628,6 +1663,7 @@
             const total = (playlistPreview?.entries || []).filter(entry => entry.available).length;
             document.getElementById('playlistCount').textContent = `${playlistChosen.size} / ${total} kullanılabilir video seçili`;
             document.getElementById('playlistDownload').disabled = !playlistChosen.size || playlistPreview?.status !== 'ready';
+            if(typeof localizePlaylist === 'function') localizePlaylist();
         }
         function showMorePlaylist() { playlistVisibleCount += 100; renderPlaylistSelection(); }
         function selectPlaylistResults() { matchingPlaylistEntries().filter(entry => entry.available).forEach(entry => playlistChosen.add(entry.id)); renderPlaylistSelection(); }
@@ -1638,19 +1674,24 @@
             await sendDownload({...pendingPlaylistPayload,playlist_selection:{token:playlistPreview.token,ids:[...playlistChosen]}});
             updatePlaylistCount();
         }
-        async function openHistory() { openFeature('historyModal'); await loadHistory(); }
+        async function openHistory() { setWorkspaceView('history'); await loadHistory(); }
         function searchHistory() { clearTimeout(historySearchTimer); historySearchTimer = setTimeout(() => loadHistory(),250); }
         async function loadHistory(more = false) {
+            if (more && historyLoading) return;
+            historyLoading = true;
+            const moreButton = document.getElementById('historyMore');
+            moreButton.disabled = true;
             const requestId = ++historyRequest;
             const container = document.getElementById('historyEntries');
-            if (!more) { historyOffset = 0; container.replaceChildren(); }
-            document.getElementById('historyStatus').textContent = 'Geçmiş yükleniyor...';
+            if (!more) historyOffset = 0;
+            document.getElementById('historyStatus').textContent = typeof interfaceText==='function'?interfaceText('historyLoading'):'Geçmiş yükleniyor...';
             try {
                 const query = document.getElementById('historySearch').value;
                 const response = await fetch('/history?q=' + encodeURIComponent(query) + '&offset=' + historyOffset);
                 const data = await response.json();
                 if (!response.ok) throw new Error(data.message || 'Geçmiş okunamadı.');
                 if (requestId !== historyRequest) return;
+                if (!more) { if(typeof stopHistoryPreview==='function') stopHistoryPreview(); container.replaceChildren(); }
                 for (const entry of data.items || []) {
                     const row = document.createElement('div'); row.className = 'feature-row';
                     const title = document.createElement('strong'); title.className = 'feature-row-title'; title.textContent = entry.title;
@@ -1662,12 +1703,17 @@
                         button.disabled = action !== 'repeat' && !entry.file_exists;
                         button.onclick = () => historyAction(entry.id,action); actions.append(button);
                     }
-                    row.append(title,details,actions); container.append(row);
+                    row.append(title,details,actions); if(typeof decorateHistoryPreview==='function') decorateHistoryPreview(row,entry); container.append(row);
                 }
                 historyOffset += (data.items || []).length;
                 document.getElementById('historyStatus').textContent = data.total ? `${data.total} kayıt · ${historyOffset} gösteriliyor` : 'Henüz indirme kaydı yok.';
                 document.getElementById('historyMore').style.display = historyOffset < data.total ? 'flex' : 'none';
-            } catch(error) { document.getElementById('historyStatus').textContent = error.message; }
+                if(typeof localizeHistory === 'function') localizeHistory({...data,items:more && typeof interfaceHistoryState!=='undefined'?[...(interfaceHistoryState?.items || []),...(data.items || [])]:(data.items || [])});
+            } catch(error) {
+                if (requestId === historyRequest) document.getElementById('historyStatus').textContent = error.message;
+            } finally {
+                if (requestId === historyRequest) { historyLoading = false; moreButton.disabled = false; }
+            }
         }
         async function historyAction(id,action) {
             try {
@@ -1692,10 +1738,15 @@
             await sendDownload(payload);
         }
     </script>
+    <script src="{{ url_for('static', filename='interface-locales.js') }}"></script>
+    <script src="{{ url_for('static', filename='interface-localization.js') }}"></script>
     <script src="{{ url_for('static', filename='site-inspection.js') }}"></script>
     <script src="{{ url_for('static', filename='source-progress.js') }}"></script>
     <script src="{{ url_for('static', filename='diagnostics.js') }}"></script>
     <script src="{{ url_for('static', filename='bulk-quality.js') }}"></script>
     <script src="{{ url_for('static', filename='studio.js') }}"></script>
+    <script src="{{ url_for('static', filename='history-preview.js') }}"></script>
+    <script src="{{ url_for('static', filename='workspace.js') }}"></script>
+    <script src="{{ url_for('static', filename='help.js') }}"></script>
 </body>
 </html>

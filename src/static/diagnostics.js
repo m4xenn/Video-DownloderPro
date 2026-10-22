@@ -7,6 +7,9 @@ document.addEventListener('DOMContentLoaded',()=>{
         el('diagnosticsDescription').textContent=tr()?'Son 300 kayıt yeniden başlatma sonrasında korunur. Bağlantılar ve oturum bilgileri rapora eklenmez.':'The last 300 records survive restarts. URLs and session credentials are excluded.';
         el('diagnosticsLoad').textContent=tr()?'Kayıtları göster':'Show records';
         el('diagnosticsCopy').textContent=tr()?'Raporu kopyala':'Copy report';
+        if(typeof interfaceText==='function') {
+            for(const [id,key] of [['diagnosticsTitle','diagTitle'],['diagnosticsDescription','diagDescription'],['diagnosticsLoad','diagShow'],['diagnosticsCopy','diagCopy']])el(id).textContent=interfaceText(key);
+        }
     }
     el('diagnosticsPanel').addEventListener('toggle',texts);texts();
     el('diagnosticsLoad').addEventListener('click',async()=>{

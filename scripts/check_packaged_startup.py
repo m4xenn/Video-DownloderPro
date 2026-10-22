@@ -4,6 +4,7 @@ from pathlib import Path
 import psutil
 
 root = Path(__file__).resolve().parents[1]
+version = json.loads((root / 'version.json').read_text(encoding='utf-8'))['version']
 exe = root / 'dist/YoutubePro/YoutubePro.exe'
 with tempfile.TemporaryDirectory(prefix='package-smoke-', dir=root / 'build') as temp:
     env = dict(os.environ, APPDATA=temp)
@@ -22,8 +23,8 @@ with tempfile.TemporaryDirectory(prefix='package-smoke-', dir=root / 'build') as
                     try:
                         with urllib.request.urlopen('http://127.0.0.1:' + str(conn.laddr.port) + '/', timeout=2) as response:
                             html = response.read().decode('utf-8')
-                        if 'Video Downloader Pro' in html and '1.2.13' in html:
-                            result = {'status': 'passed', 'checks': ['packaged process running', 'local HTTP UI served', 'bundled version 1.2.13 rendered'], 'limits': 'No visual UI or installer upgrade verification.'}
+                        if 'Video Downloader Pro' in html and version in html:
+                            result = {'status': 'passed', 'checks': ['packaged process running', 'local HTTP UI served', 'bundled version '+version+' rendered'], 'limits': 'No visual UI or installer upgrade verification.'}
                             break
                     except (OSError, UnicodeError):
                         pass
@@ -42,4 +43,4 @@ with tempfile.TemporaryDirectory(prefix='package-smoke-', dir=root / 'build') as
         proc.wait(timeout=10)
         psutil.wait_procs(children, timeout=5)
     print(json.dumps(result, indent=2))
-    (root / 'build/packaged-startup-1.2.13.json').write_text(json.dumps(result, indent=2), encoding='utf-8')
+    (root / ('build/packaged-startup-'+version+'.json')).write_text(json.dumps(result, indent=2), encoding='utf-8')

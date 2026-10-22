@@ -7,6 +7,7 @@ def start_window():
     import webview
     from app import app, download_manager, ensure_download_state
     from services.site_browser import site_browser
+    from services.notification_service import notification_icon_path
     site_browser.enabled = True
     ensure_download_state()
     # Uygulama başlığını ve başlangıç sayfası özelliklerini ayarlıyoruz
@@ -16,6 +17,7 @@ def start_window():
         width=900, 
         height=750, 
         resizable=True,
+        maximized=True,
         min_size=(600, 500)
     )
     
@@ -23,7 +25,7 @@ def start_window():
 
     # Masaüstü penceresi başlatılıyor
     try:
-        webview.start()
+        webview.start(icon=str(notification_icon_path()))
     finally:
         site_browser.close_all()
         download_manager.close()

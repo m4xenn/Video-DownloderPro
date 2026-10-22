@@ -59,6 +59,28 @@ class FeatureTests(unittest.TestCase):
         self.store.commit_queue([], [record])
         return record
 
+    def test_history_preview_uses_record_and_supports_seeking(self):
+        record = self.record()
+        with patch.object(app, 'download_store', self.store):
+            client = app.app.test_client()
+            response = client.get('/history/one/media?path=evil.exe', headers={'Range':'bytes=0-3'})
+            self.assertEqual(response.status_code, 206)
+            self.assertEqual(response.data, b'test')
+            self.assertEqual(response.headers['Cache-Control'], 'private, no-store')
+            response.close()
+            self.assertEqual(client.get('/history/unknown/media').status_code, 404)
+            Path(record['path']).unlink()
+            self.assertEqual(client.get('/history/one/media').status_code, 404)
+
+    def test_history_preview_rejects_non_media(self):
+        record = self.record()
+        unsafe = self.folder / 'program.exe'
+        unsafe.write_bytes(b'executable')
+        record['path'] = str(unsafe)
+        record['file_exists'] = True
+        with patch.object(app.download_store, 'get_history', return_value=record):
+            self.assertEqual(app.app.test_client().get('/history/one/media').status_code, 415)
+
     def test_empty_store_read_does_not_create_database(self):
         self.assertEqual(self.store.load_queue(), [])
         self.assertEqual(self.store.history()['total'], 0)
@@ -145,6 +167,17 @@ class FeatureTests(unittest.TestCase):
         clock[0]=1000; manager.tick()
         self.assertEqual(manager.jobs[0].status,'paused')
         self.assertEqual(len(calls),1)
+
+    def test_completion_notifies_once_while_ui_polls(self):
+        with patch('core.queue_manager.show_notification') as notify:
+            manager = self.manager(lambda *_: True)
+            manager.submit(['https://example.com/video'], OPTIONS, str(self.folder))
+            self.assertEqual(manager.wait(4)['status'], 'finished_all')
+            for _ in range(3):
+                manager.tick()
+                manager.snapshot()
+            self.until(lambda: notify.call_count == 1)
+            notify.assert_called_once_with('Video Downloader Pro', 'Tüm indirmeler tamamlandı.')
 
     def test_success_writes_one_history_record(self):
         def worker(url,opts,path,request,*_):

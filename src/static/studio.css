@@ -23,7 +23,6 @@
 }
 * { box-sizing: border-box; }
 body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI Variable', 'Segoe UI', sans-serif; padding: 24px; align-items: center; overflow-x: hidden; }
-body * { transition: background-color .18s ease, border-color .18s ease, color .18s ease, box-shadow .18s ease; }
 body::before { background: radial-gradient(ellipse at 6% 8%, #253e62 0, transparent 48%), radial-gradient(ellipse at 95% 95%, #26375a 0, transparent 52%), linear-gradient(140deg,#111a2c,#0a0f1c 68%); }
 body::after { background: radial-gradient(ellipse at 4% 0%, #c5d9ef 0, transparent 52%), radial-gradient(ellipse at 100% 100%, #c7d3ef 0, transparent 55%), linear-gradient(140deg,#e2eaf6,#f1f4fa); }
 button,input,select { font-family: inherit; }
@@ -133,10 +132,10 @@ input:checked + .slider:before { transform: translateX(12px); }
 .app-footer br { display: none; }
 .app-footer i { margin-left: 8px; }
 /* All overlays use the same floating glass surface and scrolling contract. */
-.feature-overlay,#settingsModal,#appUpdateModal,#formatInfoModal,#updateOverlay { padding: 22px !important; background: rgba(5,10,20,.32) !important; backdrop-filter: blur(12px) saturate(90%) !important; -webkit-backdrop-filter: blur(12px) saturate(90%); }
-.feature-card,.component-dialog,#settingsModal > div,#appUpdateModal > div,#formatInfoModal > div { width: 520px !important; max-width: 100% !important; max-height: calc(100dvh - 44px) !important; padding: 26px !important; border-radius: 25px !important; background: var(--glass-bg) !important; border: 1px solid var(--glass-border); box-shadow: inset 0 1px 0 var(--edge-light),0 24px 70px var(--shadow) !important; overflow-y: auto; overflow-x: hidden; }
+.feature-overlay,#appUpdateModal,#formatInfoModal,#updateOverlay { padding: 22px !important; background: rgba(5,10,20,.32) !important; backdrop-filter: blur(12px) saturate(90%) !important; -webkit-backdrop-filter: blur(12px) saturate(90%); }
+.feature-card,.component-dialog,#appUpdateModal > div,#formatInfoModal > div { width: 520px !important; max-width: 100% !important; max-height: calc(100dvh - 44px) !important; padding: 26px !important; border-radius: 25px !important; background: var(--glass-bg) !important; border: 1px solid var(--glass-border); box-shadow: inset 0 1px 0 var(--edge-light),0 24px 70px var(--shadow) !important; overflow-y: auto; overflow-x: hidden; }
 .feature-card { gap: 13px; }
-.feature-heading h3,#settingsModal h3,#appUpdateModal h3,#formatInfoModal h3,#updateTitle { font-size: 17px; font-weight: 600; letter-spacing: -.4px; }
+.feature-heading h3,#appUpdateModal h3,#formatInfoModal h3,#updateTitle { font-size: 17px; font-weight: 600; letter-spacing: -.4px; }
 .feature-list { flex: 0 1 auto; max-height: 46vh; }
 .feature-heading,.feature-card > .feature-actions,.feature-card > button,.feature-card > input { flex-shrink: 0; }
 .feature-row { border-radius: 15px; padding: 14px; font-size: 12px; }
@@ -152,7 +151,7 @@ input:checked + .slider:before { transform: translateX(12px); }
 .app-update-heading { gap: 10px; }
 .app-update-icon { border-radius: 11px; }
 .component-version-row { background: var(--q-bg); border-radius: 14px; }
-#settingsModal .compress-mode-card div[style*="color: white"] { color: var(--text-main) !important; }
+#settingsView .compress-mode-card div[style*="color: white"] { color: var(--text-main) !important; }
 .compression-unavailable { opacity: .6; }
 .compression-unavailable .compress-mode-card { pointer-events: none; cursor: default !important; }
 #snackbar { max-width: calc(100vw - 40px); min-width: 0; width: max-content; border: 1px solid var(--glass-border); border-radius: 15px; background: var(--glass-bg); color: var(--text-main); box-shadow: inset 0 1px 0 var(--edge-light),0 10px 32px var(--shadow); backdrop-filter: blur(20px); font-size: 12px; line-height: 1.6; }
@@ -173,7 +172,7 @@ input:checked + .slider:before { transform: translateX(12px); }
     .app-footer { padding: 13px 18px; }
 }
 @media (prefers-reduced-motion: reduce) { *,*::before,*::after { animation: none !important; transition: none !important; scroll-behavior: auto !important; } }
-@media (prefers-reduced-transparency: reduce) { .glass-card { background: var(--glass-bg); backdrop-filter: none; } .feature-overlay,#settingsModal,#appUpdateModal,#formatInfoModal,#updateOverlay { backdrop-filter: none !important; background: rgba(5,10,20,.75) !important; } }
+@media (prefers-reduced-transparency: reduce) { .glass-card { background: var(--glass-bg); backdrop-filter: none; } .feature-overlay,#appUpdateModal,#formatInfoModal,#updateOverlay { backdrop-filter: none !important; background: rgba(5,10,20,.75) !important; } }
 @media (forced-colors: active) { .glass-card,.feature-card,button,input,.custom-select__trigger { border: 1px solid CanvasText; } .download-btn { background: Highlight; color: HighlightText; } }
 
 /* Graphite material: light belongs to the edges, content stays quiet. */
@@ -245,7 +244,7 @@ input:checked + .slider:before { transform:translateX(13px); }
 .empty-hint { display:none; }
 .queue-history-link { font-size:11px; padding-top:17px; border-top-color:rgba(128,128,128,.15); }
 .app-footer { padding:11px 24px; font-size:9px; border-top-color:rgba(128,128,128,.13); opacity:.75; }
-.feature-card,.component-dialog,#settingsModal > div,#appUpdateModal > div,#formatInfoModal > div { border-color:rgba(255,255,255,.15); background:linear-gradient(150deg,rgba(255,255,255,.045),transparent 50%),var(--glass-bg) !important; box-shadow:inset 0 1px 0 rgba(255,255,255,.3),inset 0 -1px 0 rgba(255,255,255,.06),0 24px 60px var(--shadow) !important; }
+.feature-card,.component-dialog,#appUpdateModal > div,#formatInfoModal > div { border-color:rgba(255,255,255,.15); background:linear-gradient(150deg,rgba(255,255,255,.045),transparent 50%),var(--glass-bg) !important; box-shadow:inset 0 1px 0 rgba(255,255,255,.3),inset 0 -1px 0 rgba(255,255,255,.06),0 24px 60px var(--shadow) !important; }
 .settings-action:not(.settings-action-primary) { border-radius:18px; background:linear-gradient(160deg,rgba(255,255,255,.075),rgba(0,0,0,.075)); box-shadow:inset 0 1px 0 rgba(255,255,255,.14); }
 .custom-options { border-radius:18px; background:var(--opt-bg); box-shadow:inset 0 1px 0 rgba(255,255,255,.25),0 12px 25px rgba(0,0,0,.3); }
 .feature-row,.queue-item,.app-update-card { border-radius:18px; border-color:rgba(128,128,128,.16); }

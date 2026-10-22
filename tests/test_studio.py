@@ -43,7 +43,8 @@ class StudioTests(unittest.TestCase):
             state.clear();state.update(saved)
 
     def test_offline_ui_assets_are_served(self):
-        for path in ['studio.css','studio.js','vendor/fontawesome/css/all.min.css',
+        for path in ['studio.css','studio.js','workspace.css','workspace.js','help.css','help.js','interface-locales.js','interface-localization.js',
+                     *['help/'+lang+'/'+name+'.png' for lang in ['tr','en','de','es','fr','pt','ru','zh','ja','hi'] for name in ['start','formats','playlist','queue','history','settings','troubleshooting']],'vendor/fontawesome/css/all.min.css',
                      'vendor/fontawesome/webfonts/fa-solid-900.woff2','vendor/flags/flags/4x3/tr.svg']:
             with self.subTest(path=path):
                 response=self.client.get('/static/'+path)
