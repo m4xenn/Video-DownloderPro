@@ -1,12 +1,12 @@
 const assert=require('node:assert/strict'), vm=require('node:vm'), cp=require('node:child_process');
 const script=cp.execFileSync('python',['-c',"import sys;sys.path.insert(0,'src');from services.player_activation import START_PLAYER;print(START_PLAYER)"],{encoding:'utf8'});
-function run(kind,{captcha=false,drm=false,target='https://player.example/embed',ambiguous=false}={}) {
+function run(kind,{captcha=false,drm=false,target='https://player.example/embed',ambiguous=false,title='Video'}={}) {
     const calls=[];
     const container={id:'main',mediaKeys:drm?{}:null,contains:()=>false,
         getBoundingClientRect:()=>({width:640,height:360}),matches:selector=>selector===(kind==='html5'?'video':kind==='jw'?'.jwplayer':'.video-js'),
         play:()=>{calls.push(['html5',container.muted]);return Promise.resolve();}};
     const containers=ambiguous?[container,{...container,id:'other'}]:[container];
-    const doc={title:'Video',querySelectorAll:selector=>selector==='video,.jwplayer,.video-js'?containers:captcha?[container]:[]};
+    const doc={title,querySelectorAll:selector=>selector==='video,.jwplayer,.video-js'?containers:captcha?[container]:[]};
     const player={getPlaylist:()=>[{drm}],setMute:value=>calls.push(['mute',value]),
         play:()=>calls.push(['jw']),currentSource:()=>({keySystems:drm?{}:null}),muted:value=>calls.push(['mute',value])};
     const win={document:doc,location:{href:'https://player.example/embed'},getComputedStyle:()=>({display:'block',visibility:'visible'}),
@@ -24,3 +24,6 @@ for(const kind of ['html5','jw','videojs']) {
     assert.deepEqual(run(kind,{ambiguous:true}),[]);
 }
 console.log('15 player activation checks passed (muted APIs, verification, DRM, target, ambiguity)');
+
+for(const title of ['Bir dakika lütfen...','Einen Moment bitte...','Un instant...','Un momento...','Um momento...','Подождите...','请稍候...','お待ちください...','कृपया प्रतीक्षा...'])for(const kind of ['html5','jw','videojs'])assert.deepEqual(run(kind,{title}),[]);
+console.log('27 localized verification-page activation checks passed');

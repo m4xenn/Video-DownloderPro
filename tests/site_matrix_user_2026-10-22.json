@@ -1,0 +1,96 @@
+{
+  "scope": "User supplied public pages; metadata and bounded samples only; full downloads not tested.",
+  "cases": [
+    {
+      "id": "hdfilm-batman",
+      "url": "https://www.hdfilmcehennemi.nl/batman-kara-sovalye-yukseliyor-hd-film-izle-hdf-hdf-5/",
+      "scenario": "user-film-or-episode",
+      "category": "user-supplied",
+      "player_family": "to-observe"
+    },
+    {
+      "id": "fullhd-ballerina",
+      "url": "https://www.fullhdfilmizlesene.now/film/john-wick-dunyasindan-ballerina/",
+      "scenario": "user-film-or-episode",
+      "category": "user-supplied",
+      "player_family": "to-observe"
+    },
+    {
+      "id": "dizipal-twd",
+      "url": "https://dizipal1591.com/bolum/the-walking-dead-1x1-c31",
+      "scenario": "user-film-or-episode",
+      "category": "user-supplied",
+      "player_family": "to-observe"
+    },
+    {
+      "id": "aniwaves-bleach",
+      "url": "https://aniwaves.ru/watch/bleach-80678/ep-1",
+      "scenario": "user-film-or-episode",
+      "category": "user-supplied",
+      "player_family": "to-observe"
+    },
+    {
+      "id": "9anime-cyberpunk",
+      "url": "https://9anime.si/watch/cyberpunk-edgerunners-episode-1",
+      "scenario": "user-film-or-episode",
+      "category": "user-supplied",
+      "player_family": "to-observe"
+    },
+    {
+      "id": "aniwatchtv-solo",
+      "url": "https://aniwatchtv.ro/solo-leveling-episode-1/",
+      "scenario": "user-film-or-episode",
+      "category": "user-supplied",
+      "player_family": "to-observe"
+    },
+    {
+      "id": "filmmakinesi-matrix",
+      "url": "https://filmmakinesi.to/film/matrix-izle-1999-fm3/",
+      "scenario": "user-film-or-episode",
+      "category": "user-supplied",
+      "player_family": "to-observe"
+    },
+    {
+      "id": "yomi-aot",
+      "url": "https://yomi.to/watch/attack-on-titan-16498/1",
+      "scenario": "user-film-or-episode",
+      "category": "user-supplied",
+      "player_family": "to-observe"
+    },
+    {
+      "id": "animevillage-demon",
+      "url": "https://www.animevillage.org/watch/101922/demon-slayer-kimetsu-no-yaiba-rzepv-1551%3Fep%3D1279",
+      "scenario": "user-film-or-episode",
+      "category": "user-supplied",
+      "player_family": "to-observe"
+    },
+    {
+      "id": "hotsflix-breaking",
+      "url": "https://hotsflix.net/serie/breaking-bad_B1396_1_1/",
+      "scenario": "user-film-or-episode",
+      "category": "user-supplied",
+      "player_family": "to-observe"
+    },
+    {
+      "id": "animexe-blue-lock",
+      "url": "https://animexe.com/watch/blue-lock/1/2",
+      "scenario": "user-film-or-episode",
+      "category": "user-supplied",
+      "player_family": "to-observe"
+    },
+    {
+      "id": "hianime-arcane",
+      "url": "https://hianime.ms/watch-arcane-episode-1-36d59",
+      "scenario": "user-film-or-episode",
+      "category": "user-supplied",
+      "player_family": "to-observe"
+    },
+    {
+      "id": "freeflix-episode",
+      "url": "https://freeflix.live/watch/?id=94664&type=tv&season=1&episode=1",
+      "scenario": "user-film-or-episode",
+      "category": "user-supplied",
+      "player_family": "to-observe"
+    }
+  ]
+}

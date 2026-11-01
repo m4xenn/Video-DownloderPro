@@ -52,6 +52,11 @@ class Job:
     retry_count: int = 0
     retry_at: float = 0
     restored: bool = False
+    is_live: bool = False
+    recorded_seconds: float = 0
+    recording_limit: float = 0
+    stop_requested: bool = False
+    recovery_reason: str = ''
 
 
 class DownloadManager:
@@ -92,6 +97,7 @@ class DownloadManager:
                 if job.status in ('finished','expanded'):
                     continue
                 if job.status in ('queued', 'starting', 'downloading', 'converting', 'pausing', 'retry_wait', 'paused'):
+                    job.recovery_reason = job.recovery_reason or ('paused' if job.status == 'paused' else 'interrupted')
                     job.status, job.speed, job.restored = 'paused', 'Önceki oturumdan geri yüklendi', True
                 job.retry_at = 0
                 job.future = None
@@ -214,6 +220,14 @@ class DownloadManager:
             self._publish()
             self._start_scheduler()
 
+    def finish_recording(self,url):
+        with self.lock:
+            job=self._find(url)
+            if not job.is_live or job.future is None or job.status not in ('starting','downloading'):
+                raise ValueError('No live recording is active for this item.')
+            job.stop_requested=True
+            self._publish()
+
     def pause(self, url):
         with self.lock:
             job = self._find(url)
@@ -229,24 +243,63 @@ class DownloadManager:
 
     def resume(self, url):
         with self.lock:
+            if self.closed.is_set():
+                raise ValueError('Uygulama kapanıyor. Kaydı tamamlayıp yeniden açın.')
             job = self._find(url)
             if job.future is not None:
                 raise ValueError('Önce duraklatma işleminin bitmesini bekleyin.')
             if job.status not in ('paused', 'error'):
                 raise ValueError('Bu öğe devam ettirilemez.')
+            previous = copy.deepcopy({name: getattr(job, name) for name in (
+                'status', 'error', 'speed', 'retry_count', 'retry_at', 'restored',
+                'stop_requested', 'recovery_reason', 'recorded_seconds',
+                'recording_limit', 'percent', 'duration', 'downloaded_bytes', 'total_bytes')})
+            previous_cancel = state['cancel_flags'].get(url, False)
             state_actions.set_cancel_flag(url, False)
             job.status, job.error, job.speed = 'queued', '', 'Sırada...'
             job.retry_count, job.retry_at, job.restored = 0, 0, False
+            job.stop_requested=False
+            job.recovery_reason=''
+            if job.is_live:
+                job.recorded_seconds=0;job.recording_limit=0;job.percent=0;job.duration=None;job.downloaded_bytes=0;job.total_bytes=None
             self.notified = False
-            self._persist(required=True)
+            try:
+                self._persist(required=True)
+            except Exception:
+                for name, value in previous.items():
+                    setattr(job, name, value)
+                state_actions.set_cancel_flag(url, previous_cancel)
+                raise
             self._publish()
             self._start_scheduler()
 
     def resume_restored(self):
         with self.lock:
             for job in self.jobs:
-                if job.restored and job.status == 'paused':
+                if job.restored and job.status == 'paused' and not job.is_live:
                     self.resume(job.url)
+
+    def recover(self, url, refresh=False):
+        """Re-resolve the original page; never accept a replacement media URL.
+
+        The worker still verifies source identity/validators before appending.
+        """
+        with self.lock:
+            job = self._find(url)
+            if self.closed.is_set() or job.future is not None or job.status not in ('paused', 'error'):
+                raise ValueError('Öğe henüz kurtarmaya hazır değil.')
+        if refresh:
+            # Never hold the manager lock while acquiring resolver locks: another
+            # inspection can report progress back into this manager.
+            from services.site_resolver import site_resolver
+            from services.generic_resolver import generic_resolver
+            for resolver in (site_resolver, generic_resolver):
+                with resolver.lock:
+                    resolver.cache.pop(url, None)
+                    resolver.pages.pop(url, None)
+                    if hasattr(resolver, 'jobs'):
+                        resolver.jobs.pop(url, None)
+        self.resume(url)  # Revalidates state under the manager lock.
 
     def remove(self, url):
         with self.lock:
@@ -275,6 +328,7 @@ class DownloadManager:
         return sum(n for _, n in self.samples) / max(1, min(10, now - self.samples[0][0]))
 
     def _publish(self):
+        from services.recovery import recovery_items
         visible = [j for j in self.jobs if j.status != 'expanded']
         running = any(j.future is not None or j.status in ('queued', 'retry_wait') for j in visible)
         failures = [j for j in visible if j.status == 'error']
@@ -292,10 +346,13 @@ class DownloadManager:
             'status': status, 'error': '; '.join(j.error for j in failures),
             'restored_count': sum(j.restored and j.status == 'paused' for j in visible),
             'storage_error': self.storage_error,
+            'recovery_items': recovery_items(visible),
+            'shutting_down': self.closed.is_set(),
             'total_items': len(visible), 'items': [
                 {'id': j.id, 'url': j.url, 'title': j.title, 'thumbnail': j.thumbnail,
                  'percent': j.percent, 'speed': j.speed, 'status': j.status, 'error': j.error,'error_code':j.error_code,'error_phase':j.error_phase,'phase':j.phase,
                  'total_bytes': j.total_bytes, 'downloaded_bytes': j.downloaded_bytes, 'eta': j.eta,
+                 'is_live':j.is_live,'recorded_seconds':j.recorded_seconds,'recording_limit':j.recording_limit,'stop_requested':j.stop_requested,
                  'format': j.options.get('format'), 'quality': j.options.get('quality'),
                  'size_estimated': j.size_estimated, 'retry_count': j.retry_count,
                  'retry_in': max(0, round(j.retry_at - self.clock())) if j.status == 'retry_wait' else None}
@@ -373,7 +430,8 @@ class DownloadManager:
         options = {'extract_flat': 'in_playlist', 'quiet': True, 'noplaylist': False}
         with YoutubeDL(options) as ydl:
             attach_budget(ydl, self.budget, lambda: bool(state['cancel_flags'].get(job.url)), self.record)
-            info = ydl.extract_info(job.url, download=False)
+            from services.youtube_region import extract_info
+            info = extract_info(ydl, job.url, download=False)
         if not info:
             raise ValueError('Oynatma listesi bilgileri alınamadı.')
         title = re.sub(r'[<>:"/\\|?*\x00-\x1f]', '_', info.get('title') or 'Playlist').rstrip('. ')[:120] or 'Playlist'
@@ -425,6 +483,10 @@ class DownloadManager:
                 total = data.get('total_bytes') or data.get('total_bytes_estimate')
                 if total:
                     job.percent = min(100, round(data.get('downloaded_bytes', 0) * 100 / total, 1))
+                if job.is_live and 'recorded_seconds' in data:
+                    job.recorded_seconds=data['recorded_seconds'];job.recording_limit=data['recording_limit']
+                    job.duration=job.recorded_seconds
+                    job.percent=min(99,round(job.recorded_seconds/max(1,job.recording_limit)*100,1))
                 job.downloaded_bytes = data.get('downloaded_bytes', job.downloaded_bytes)
                 job.total_bytes = total or job.total_bytes
                 job.size_estimated = not bool(data.get('total_bytes'))
@@ -460,6 +522,8 @@ class DownloadManager:
                     skip_unavailable_fragments=False,
                     retry_sleep_functions={'fragment': fragment_retry_wait(
                         lambda: bool(state['cancel_flags'].get(job.url)),progress=stage)})
+        from services.track_selection import apply_tracks
+        apply_tracks(opts, job.options)
         def protocol_support(native):
             with self.lock:
                 job.native = native
@@ -469,6 +533,8 @@ class DownloadManager:
             from services.source_recovery import source_checkpoint
             with self.lock:
                 job.source_signature=source_checkpoint(info)
+                job.is_live=bool(info.get('is_live'))
+                if job.is_live and info.get('duration'):job.recorded_seconds=info['duration']
                 job.title = info.get('title') or job.title
                 job.thumbnail = info.get('thumbnail') or job.thumbnail
                 job.media_key = media_key(job.url, info)
@@ -482,13 +548,20 @@ class DownloadManager:
         def thumbnail(path):
             with self.lock:
                 job.thumbnail=path
-        request = dict(job.options, _budget=self.budget, _record=self.record,_stage=stage,
+        def checkpoint_target(template):
+            # Persist identity and the exact reserved stem before the first byte,
+            # not merely at the scheduler's next periodic checkpoint.
+            with self.lock:
+                job.output_template = template
+                self._persist(required=True)
+        from utils.file_helpers import load_settings
+        request = dict(job.options, _transfer_mode=load_settings().get('transfer_mode','stable'), _stop_recording=lambda:job.stop_requested, _budget=self.budget, _record=self.record,_stage=stage,
                        _error=lambda message: setattr(job, 'error', message),
                        _protocol_support=protocol_support, _metadata=metadata, _completed=completed,
                        _thumbnail=thumbnail, _preview_id=job.id,
                        _preview_dir=str(self.store.path.parent/'previews') if self.store else None,
                        _resume_target=bool(job.output_template),_source_signature=copy.deepcopy(job.source_signature),
-                       _target=lambda template: setattr(job, 'output_template', template))
+                       _target=checkpoint_target)
         try:
             return (self.worker or _download_single)(job.url, opts, job.path, request, None)
         finally:
@@ -504,11 +577,19 @@ class DownloadManager:
         return self.snapshot()
 
     def close(self):
-        self.closed.set()
         with self.lock:
+            # Refuse a graceful exit if the initial durable checkpoint fails.
+            # Keep the scheduler usable in that case so the user can free space.
+            self._persist(required=True)
+            self.closed.set()
             for job in self.jobs:
-                if job.future is not None:
+                if job.future is not None and job.status != 'converting':
                     state_actions.set_cancel_flag(job.url, True)
+                    job.recovery_reason = 'shutdown'
+                elif job.future is None and job.status in ('queued', 'retry_wait'):
+                    state_actions.set_cancel_flag(job.url, True)
+                    job.status, job.speed = 'paused', 'Duraklatıldı'
+                    job.recovery_reason = 'shutdown'
         self.executor.shutdown(wait=True, cancel_futures=True)
         with self.lock:
             for job in self.jobs:
@@ -522,7 +603,7 @@ class DownloadManager:
                     elif job.status != 'expanded':
                         job.status, job.speed = 'paused', 'Duraklatıldı'
                     job.future = None
-            self._persist()
+            self._persist(required=True)
         if self.thread and self.thread is not threading.current_thread():
             self.thread.join(timeout=2)
 

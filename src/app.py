@@ -153,6 +153,12 @@ def pause_route():
     return queue_action('pause')
 
 
+@app.route('/recording/finish',methods=['POST'])
+def finish_live_route():
+    if not update_request_allowed():return jsonify(status='error',code='invalid_origin'),403
+    return queue_action('finish_recording')
+
+
 @app.route('/resume', methods=['POST'])
 def resume_route():
     return queue_action('resume')
@@ -230,7 +236,7 @@ def get_info():
             return jsonify(status='error', message='Geçerli bir video bağlantısı girin.'), 400
     except ValueError:
         return jsonify(status='error', message='Geçerli bir video bağlantısı girin.'), 400
-    
+
     try:
         from yt_dlp import YoutubeDL
         import os
@@ -263,7 +269,14 @@ def get_info():
                 "thumbnail": thumbnail,
                 "total_bytes": media_catalog.lookup(url).get("total_bytes"),
                 "duration": info.get("duration"),
+                "content_scope": info.get("content_scope", "unknown"),
+                "source_status": info.get("source_status", "unknown"),
+                "source_available_bytes":info.get("source_available_bytes"),
+                "source_declared_bytes":info.get("source_declared_bytes"),
+                "is_live":bool(info.get("is_live")),
                 "is_playlist": media_catalog.lookup(url).get('is_playlist', False),
+                "audio_languages": media_catalog.lookup(url).get("audio_languages", []),
+                "subtitle_languages": media_catalog.lookup(url).get("subtitle_languages", []),
                 "video_qualities": media_catalog.lookup(url).get('video_qualities', [])
             })
     except BrowserRequired as exc:
@@ -275,7 +288,16 @@ def get_info():
         diagnostics.record('metadata', url, error=e)
         from services.diagnostics import error_code
         message='Video bilgisi alınamadı. Hata raporunu Ayarlar → Sorun giderme kayıtları bölümünden kopyalayabilirsin.' if state.get('current_lang')=='tr' else 'Could not read media information. Copy the report from Settings → Troubleshooting records.'
-        return jsonify(status='error', message=message,error_code=error_code(e))
+        code=error_code(e)
+        availability_messages={
+            'region_restricted': ('YouTube veya kaynak platform bu videoya bulunduğunuz ülke/bölgede erişimi kısıtlıyor. Bağlantıyı tarayıcıda kontrol edin.',
+                                  'The platform restricts this video in your country/region. Check the original page in your browser.'),
+            'video_unavailable': ('Kaynak platform videonun kullanılamadığını bildiriyor. Bağlantıyı tarayıcıda kontrol edin; video kaldırılmış, gizli veya bölgesel olarak kısıtlanmış olabilir.',
+                                  'The platform reports that the video is unavailable. Check the original page; it may be removed, private, or region-restricted.')
+        }
+        if code in availability_messages:
+            message=availability_messages[code][0 if state.get('current_lang')=='tr' else 1]
+        return jsonify(status='error', message=message,error_code=code)
 
 
 @app.route('/diagnostics', methods=['POST'])
@@ -287,6 +309,18 @@ def diagnostics_report():
     url=data.get('url') if isinstance(data,dict) else None
     if url is not None and (not isinstance(url,str) or len(url)>8192):return jsonify(status='error'),400
     return jsonify(status='success', **diagnostics.report(url))
+
+
+@app.route('/browser-companion/focus',methods=['POST'])
+def focus_companion():
+    if not update_request_allowed():return jsonify(status='error',code='invalid_origin'),403
+    from services.extension_bridge import extension_bridge
+    data=request.get_json(silent=True)
+    try:
+        if not isinstance(data,dict) or not isinstance(data.get('url'),str):raise ValueError('Invalid link.')
+        extension_bridge.request_focus(data['url'])
+        return jsonify(status='success')
+    except ValueError as exc:return jsonify(status='error',message=str(exc)),409
 
 
 @app.route('/source-progress',methods=['POST'])
@@ -354,6 +388,19 @@ def download():
         return jsonify(status='error', message='Toplam hız sınırını Ayarlar üzerinden kaydedin.'), 400
     options = {'format': kind, 'quality': quality, 'embed_subs': data.get('embed_subs', False)}
     try:
+        from services.track_selection import normalize_tracks
+        tracks = normalize_tracks(dict(data, format=kind))
+        cached = media_catalog.lookup(urls[0])
+        for field, default, choices in [('audio_language', 'auto', 'audio_languages'), ('subtitle_language', 'all', 'subtitle_languages')]:
+            if tracks[field] != default and (len(urls) != 1 or data.get('is_playlist') or tracks[field] not in cached.get(choices, [])):
+                raise ValueError('Dil seçimi yalnız incelenen tek videonun sunduğu diller için kullanılabilir. / Refresh the single video before selecting a language.')
+        options.update(tracks)
+        if cached.get('is_live') or 'live_record_minutes' in data or data.get('live_record_until') is not None:
+            from services.live_recording import live_options
+            if len(urls)!=1 or data.get('is_playlist') or not cached.get('is_live') or kind!='video':
+                raise ValueError('Live recording requires one inspected live video and MP4 output.')
+            if data.get('embed_subs'):raise ValueError('Live recording currently supports video and audio; subtitles are available for VOD downloads.')
+            options.update(live_options(data))
         selected = data.get('playlist_selection')
         if data.get('is_playlist'):
             if not isinstance(selected, dict):
@@ -445,6 +492,24 @@ def resume_restored_queue():
         return jsonify(status='error', message=str(exc)), 409
 
 
+@app.route('/queue/recover', methods=['POST'])
+def recover_queue_item():
+    if not update_request_allowed():
+        return jsonify(status='error', message='Geçersiz istek kaynağı.'), 403
+    ensure_download_state()
+    data = request.get_json(silent=True)
+    if not isinstance(data, dict) or not isinstance(data.get('url'), str) or data.get('action') not in ('resume', 'refresh'):
+        return jsonify(status='error', message='Geçersiz kurtarma isteği.'), 400
+    try:
+        with operation_lock:
+            if app_updater.snapshot()['status'] == 'installing' or component_updater.snapshot()['status'] == 'downloading':
+                raise ValueError('Güncellemenin bitmesini bekleyin.')
+            download_manager.recover(data['url'], refresh=data['action'] == 'refresh')
+        return jsonify(status='success')
+    except ValueError as exc:
+        return jsonify(status='error', message=str(exc)), 409
+
+
 @app.route('/queue/drafts', methods=['GET','POST'])
 def draft_queue():
     ensure_download_state()
@@ -530,7 +595,8 @@ def history_action():
             raise ValueError('Geçmiş kaydı bulunamadı.')
         action = data.get('action')
         if action == 'repeat':
-            options = {key: record[key] for key in ('format','quality','embed_subs')}
+            options = {key: record[key] for key in ('format','quality','embed_subs','audio_language','subtitle_language')}
+            if record.get('live_record_minutes'):options['live_record_minutes']=record['live_record_minutes']
             entry = {key: record[key] for key in ('url','title','thumbnail','media_key')}
             entry['path'] = os.path.dirname(record['path'])
             return prepare_download([entry], options)
@@ -632,6 +698,30 @@ def update_request_allowed():
     origin = request.headers.get('Origin')
     return (request.is_json and request.headers.get('Sec-Fetch-Site') != 'cross-site'
             and (not origin or origin == request.host_url.rstrip('/')))
+
+@app.route('/browser-companion/status',methods=['POST'])
+def browser_companion_status():
+    if not update_request_allowed():return jsonify(status='error',code='invalid_origin'),403
+    from services.companion_setup import status
+    try:return jsonify(status='success',**status())
+    except (OSError,ValueError,KeyError):return jsonify(status='error',code='package_incomplete'),503
+
+@app.route('/browser-companion/action',methods=['POST'])
+def browser_companion_action():
+    if not update_request_allowed():return jsonify(status='error',code='invalid_origin'),403
+    from services import companion_setup
+    data=request.get_json(silent=True) or {}
+    if not isinstance(data,dict):return jsonify(status='error',code='invalid_request'),400
+    try:
+        action=data.get('action');browser=data.get('browser')
+        if action=='prepare':result=companion_setup.prepare(browser,data.get('consent'))
+        elif action=='browser':companion_setup.open_browser(browser);result=companion_setup.status()
+        elif action=='folder':companion_setup.open_folder();result=companion_setup.status()
+        else:raise ValueError('invalid_action')
+        return jsonify(status='success',**result)
+    except ValueError as error:
+        return jsonify(status='error',code=str(error) if str(error) in {'invalid_browser','consent_required','browser_missing','package_incomplete','manifest_conflict','prepare_first','invalid_action'} else 'setup_failed'),400
+    except (OSError,ImportError):return jsonify(status='error',code='setup_failed'),500
 
 if __name__ == '__main__':
     app.run(debug=True)

@@ -4,6 +4,7 @@ Run explicitly: python tests/verify_generic_native.py
 The public-address guard is relaxed ONLY inside this fixture for its local server.
 """
 import functools
+from contextlib import nullcontext
 import http.server
 import json
 import os
@@ -22,12 +23,15 @@ class Handler(http.server.SimpleHTTPRequestHandler):
     handoff_check=None
     def log_message(self,*args):pass
     def do_GET(self):
+        if self.path=='/redirect-player':
+            self.send_response(302);self.send_header('Location','/player.html');self.end_headers();return
         if self.path.split('?')[0].endswith('.ts') and type(self).handoff_check:
             check=type(self).handoff_check;type(self).handoff_check=None;check()
         super().do_GET()
     def translate_path(self,path):
-        return super().translate_path('/master.m3u8' if path.split('?')[0]=='/opaque-stream' else path)
+        return super().translate_path('/master.m3u8' if path.split('?')[0]=='/opaque-stream' else '/master.m3u8' if path.split('?')[0]=='/opaque-cover.jpg' else path)
     def guess_type(self,path):
+        if self.path.split('?')[0]=='/opaque-cover.jpg':return 'image/jpeg'
         if str(path).endswith('.m3u8'):return 'application/vnd.apple.mpegurl'
         return super().guess_type(path)
     def end_headers(self):
@@ -35,7 +39,7 @@ class Handler(http.server.SimpleHTTPRequestHandler):
         super().end_headers()
 
 
-def main():
+def run_fixture():
     import webview
     from yt_dlp import YoutubeDL
     from services.site_browser import site_browser
@@ -85,6 +89,24 @@ def main():
         </script>''')
         (base/'network.html').write_text('''<h1>Opaque network fixture</h1><canvas width="640" height="360"></canvas>
           <script>fetch('/opaque-stream').then(r=>r.text());</script>''')
+        (base/'poster-modern.html').write_text('''<title>Modern episode 1</title><h1>Modern poster fixture</h1>
+          <div style="position:relative;width:640px;height:360px">
+            <button aria-label="Play Modern episode 1" style="position:absolute;left:288px;top:148px;width:64px;height:64px" onclick="this.hidden=true;const f=this.nextElementSibling;f.style.display='block';f.src='/player.html'">Play</button>
+            <iframe width="640" height="360" src="about:blank" style="display:none"></iframe>
+          </div>''')
+        (base/'poster-visual.html').write_text('''<h1>Visual poster fixture</h1><div style="width:640px;height:360px">
+          <div style="width:640px;height:360px;cursor:pointer" onclick="this.style.display='none';const f=this.nextElementSibling;f.style.display='block';f.src=f.dataset.src"><img alt="Visual poster fixture" src="data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7"><svg viewBox="0 0 24 24"><path d="M6 3L20 12L6 21Z"/></svg></div>
+          <iframe width="640" height="360" data-src="/player.html" style="display:none"></iframe></div>''')
+        (base/'watch-cover.html').write_text('''<h1>Watch cover fixture</h1><a href="?vod=hd" style="display:block;width:640px;height:360px"><img alt="Watch cover fixture" src="data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7"></a><script>if(location.search)document.body.innerHTML='<h1>Watch cover fixture</h1><iframe width=640 height=360 src=/player.html></iframe>'</script>''')
+        (base/'artplayer.html').write_text('''<h1>Artplayer fixture</h1><div id="art" style="width:640px;height:360px"></div><script>
+          const container=document.querySelector('#art');window.Artplayer={instances:[{id:1,url:'blob:fixture',duration:2,template:{$player:container,$video:{}},option:{url:location.origin+'/master.m3u8'}}]};</script>''')
+        (base/'preroll.html').write_text('''<h1>Preroll exclusion fixture</h1><div id="preroll-ad" role="region" aria-label="Reklam"></div><script>const ad=document.createElement("video");ad.width=640;ad.height=360;ad.src="/promo"+".jpg";document.querySelector("#preroll-ad").append(ad);</script><iframe width="640" height="360" src="/player.html"></iframe>''')
+        (base/'promo.jpg').write_bytes((base/'native.mp4').read_bytes())
+        (base/'opaque-manifest.html').write_text('''<h1>Opaque HLS response fixture</h1><video id="opaque" width="640" height="360"></video><script>const v=document.querySelector('video');v.src=URL.createObjectURL(new Blob(['fixture'],{type:'video/mp4'}));fetch('/opaque-cover.jpg');</script>''')
+        (base/'playerjs.html').write_text('''<h1>Playerjs fixture</h1><div id="Player" style="width:640px;height:360px"></div><script>window.Playerjs=function(){};window.player={api:key=>key==='id'?'Player':key==='hls'?{url:location.origin+'/opaque-cover.jpg',levels:[{url:[location.origin+'/opaque-cover.jpg']}]}:key==='duration'?2:null};</script>''')
+        (base/'frame-redirect.html').write_text('<h1>Redirect frame fixture</h1><iframe width=640 height=360 src=/redirect-player></iframe>')
+        (base/'network-related.html').write_text('''<h1>Related manifests fixture</h1><canvas width="640" height="360"></canvas>
+          <script>fetch('/master.m3u8').then(()=>Promise.all([fetch('/180.m3u8'),fetch('/360.m3u8')]));</script>''')
         (base/'network-frame.html').write_text('''<h1>Opaque iframe network fixture</h1><script>
           const f=document.createElement('iframe');f.width=640;f.height=360;
           f.src=location.origin.replace('127.0.0.1','localhost')+'/network.html';document.body.append(f);
@@ -110,8 +132,11 @@ def main():
                     heights=sorted({f.get('height') for f in info['formats'] if f.get('height')})
                     assert heights==[180,360],heights
                     result['checks']+=['native yt-dlp failure -> hidden browser fallback','cross-origin dynamic nested iframe traversal preserving real parent','muted automatic JW Player activation before source is available','180p/360p source qualities','scoped native request cookie capture']
-                    for route,title in [('html5','HTML5 fixture'),('videojs','Video.js fixture'),('dash','DASH fixture'),('blob','Network blob fixture'),('cookie','Cookie fixture'),('gate','Lazy iframe fixture'),('network','Opaque network fixture'),('network-frame','Opaque iframe network fixture')]:
-                        with YoutubeDL(options) as ydl:
+                    for route,title in [('html5','HTML5 fixture'),('videojs','Video.js fixture'),('dash','DASH fixture'),('blob','Network blob fixture'),('cookie','Cookie fixture'),('gate','Lazy iframe fixture'),('network','Opaque network fixture'),('network-frame','Opaque iframe network fixture'),('network-related','Related manifests fixture'),('poster-modern','Modern poster fixture'),('frame-redirect','Redirect frame fixture'),('poster-visual','Visual poster fixture'),('watch-cover','Watch cover fixture'),('artplayer','Artplayer fixture'),('preroll','Preroll exclusion fixture'),('opaque-manifest','Opaque HLS response fixture'),('playerjs','Playerjs fixture')]:
+                        # This case must use the browser's original response body,
+                        # not a second HTTP read that could generate different signed URLs.
+                        context=patch('services.manifest_relations.ManifestRelations.enrich',new=lambda self,records:records) if route=='network-related' else nullcontext()
+                        with context, YoutubeDL(options) as ydl:
                             extra=extract_media_info(ydl,origin+route+'.html')
                         assert extra['title']==title,(route,extra.get('title'))
                         if route.startswith('network'):
@@ -163,7 +188,8 @@ def main():
                 result['status']='failed';result['error']=str(exc);traceback.print_exc()
                 if site_browser.session:
                     session=site_browser.session
-                    result['diagnostic']={'snapshot':session.get('evaluation_result'),
+                    probe=session.get('frame_probe')
+                    result['diagnostic']={'native_records':[{k:v for k,v in item.items() if k in ('url','mime','document','variants','body_hls')} for item in probe.network_candidates()] if probe else [],'body_read_count':len(probe.body_requests) if probe else 0,'snapshot':session.get('evaluation_result'),
                         'media_responses':[{'url':item['url'],'referer':item['headers'].get('Referer')} for item in session['candidates']]}
             finally:
                 site_browser.close_all()
@@ -175,5 +201,14 @@ def main():
         print(json.dumps(result,indent=2))
         return 0 if result.get('status')=='passed' else 1
 
+
+def main():
+    with tempfile.TemporaryDirectory(prefix='native-fixture-profile-',dir=ROOT/'build') as profile:
+        previous=os.environ.get('VIDEO_DOWNLOADER_DATA_DIR')
+        os.environ['VIDEO_DOWNLOADER_DATA_DIR']=profile
+        try:return run_fixture()
+        finally:
+            if previous is None:os.environ.pop('VIDEO_DOWNLOADER_DATA_DIR',None)
+            else:os.environ['VIDEO_DOWNLOADER_DATA_DIR']=previous
 
 if __name__=='__main__':raise SystemExit(main())

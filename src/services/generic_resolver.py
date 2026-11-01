@@ -91,6 +91,12 @@ class GenericResolver(SiteResolver):
             if cached and self.clock()-cached[0]<(60 if fresh else 120):
                 self.browser.adopt_handoff(cached[1].get('_handoff_token'))
                 return dict(cached[1])
+            from services.extension_bridge import extension_bridge
+            external=extension_bridge.resolve(url)
+            if external:
+                self.cache[url]=(self.clock(),external)
+                self.jobs.pop(url,None)
+                return dict(external)
             if url not in self.jobs:
                 if len(self.jobs)>=20:self.jobs.pop(next(iter(self.jobs)))
                 self.jobs[url]={'created':self.clock(),'started':self.clock(),'queue':[(url,None,0)],'visited':set(),'title':'Video','thumbnail':''}
@@ -127,6 +133,8 @@ class GenericResolver(SiteResolver):
                             contexts.setdefault(stream,{'Referer':final_url,'User-Agent':observed.get('user_agent') or ''})
                         result={'stream':streams[0],'streams':streams,'embed':target,'headers':{},'source_headers':contexts,
                                 'discovery_method':observed.get('discovery_method','dom'),
+                                'content_scope':observed.get('content_scope','unknown'),
+                                'source_types':{source:'hls' for source in streams if (observed.get('source_types') or {}).get(source)=='hls'},
                                 '_handoff_token':observed.get('_handoff_token'),
                                 'title':job['title'],'thumbnail':job['thumbnail']}
                         if len(self.cache)>=20:self.cache.pop(next(iter(self.cache)))
@@ -134,6 +142,12 @@ class GenericResolver(SiteResolver):
                         self.jobs.pop(url,None)
                         return dict(result)
                     if depth<3:
+                        # Follow only one observed same-page watch-state cover link.
+                        pages=observed.get('watch_pages') or []
+                        if len(pages)==1 and public_url(pages[0],resolve=True):
+                            before,after=urlsplit(final_url),urlsplit(pages[0])
+                            if (before.scheme,before.netloc,before.path)==(after.scheme,after.netloc,after.path) and after.query and after.query!=before.query and pages[0] not in job['visited']:
+                                job['queue'].append((pages[0],final_url,depth+1))
                         frames=[frame for frame in observed.get('embeds',[]) if isinstance(frame,dict) and public_url(frame.get('url'))]
                         frames.sort(key=lambda frame:float(frame.get('area') or 0),reverse=True)
                         for frame in frames[:3]:

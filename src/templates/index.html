@@ -7,7 +7,7 @@
     <link rel="icon" type="image/svg+xml" href="{{ url_for('static', filename='app-icon.svg') }}">
     <link rel="stylesheet" href="{{ url_for('static', filename='vendor/flags/css/flag-icons.min.css') }}">
     <link rel="stylesheet" href="{{ url_for('static', filename='vendor/fontawesome/css/all.min.css') }}">
-    
+
     <style>
         /* global error handler for debug */
     </style>
@@ -28,7 +28,7 @@
         .glass-card { background: var(--glass-bg); backdrop-filter: blur(40px); border: 1px solid var(--glass-border); border-radius: 24px; padding: 35px 40px; width: 450px; display: flex; flex-direction: column; gap: 15px; box-shadow: 0 40px 80px -12px rgba(0, 0, 0, 0.6); position: relative; transition: background-color 0.4s ease, border-color 0.4s ease; }
         h1 { font-weight: 600; font-size: 24px; margin: 0; text-align: center; }
         p.subtitle { color: var(--text-sub); text-align: center; font-size: 13px; margin-top: 5px; margin-bottom: 5px; }
-        
+
         /* KLASÖR */
         .app-header { display: flex; flex-direction: column; gap: 14px; }
         .app-brand { display: flex; align-items: center; gap: 10px; min-width: 0; }
@@ -55,11 +55,11 @@
         input { width: 100%; background: var(--input-bg); border: 1px solid var(--glass-border); padding: 16px 16px 16px 45px; border-radius: 12px; color: var(--text-main); font-size: 14px; outline: none; transition: 0.3s; box-sizing: border-box; }
         input:focus { background: var(--hover-bg); border-color: var(--primary); }
         input:focus + i { color: var(--primary); }
-        
-        input[type=number]::-webkit-inner-spin-button, 
+
+        input[type=number]::-webkit-inner-spin-button,
         input[type=number]::-webkit-outer-spin-button { -webkit-appearance: none; margin: 0; }
         input[type=number] { -moz-appearance: textfield; }
-        
+
         .add-btn { background: var(--input-bg); border: 1px solid var(--glass-border); border-radius: 12px; width: 50px; color: var(--primary); cursor: pointer; transition: 0.3s; display: flex; justify-content: center; align-items: center; font-size: 18px; }
         .add-btn:hover { background: var(--hover-bg); transform: scale(1.05); }
         .add-btn.loading i { animation: spin 1s infinite linear; color: var(--text-sub); }
@@ -69,7 +69,7 @@
         .queue-container::-webkit-scrollbar { width: 6px; }
         .queue-container::-webkit-scrollbar-track { background: transparent; }
         .queue-container::-webkit-scrollbar-thumb { background: var(--hover-bg); border-radius: 10px; }
-        
+
         .queue-item { display: flex; align-items: center; background: var(--q-bg); padding: 8px 12px; border-radius: 12px; border: 1px solid var(--glass-border); gap: 12px; animation: slideDown 0.3s cubic-bezier(0.2, 0.8, 0.2, 1); transition: 0.3s; }
         .queue-item:hover { background: var(--q-hover); }
         .queue-thumb { width: 64px; height: 36px; border-radius: 6px; object-fit: cover; background: var(--thumb-bg); }
@@ -177,16 +177,16 @@
         .component-version-row { background: var(--q-bg); border: 1px solid var(--glass-border); border-radius: 12px; padding: 12px; font-size: 12px; line-height: 1.6; overflow-wrap: anywhere; white-space: pre-wrap; color: var(--text-sub); }
         .component-version-row strong { display: block; font-size: 13px; color: var(--primary); margin-bottom: 5px; }
         #appUpdateAction { margin-top: 14px; }
-        
+
         #snackbar { visibility: hidden; min-width: 280px; background: var(--glass-bg); backdrop-filter: blur(20px); border: 1px solid var(--glass-border); color: var(--text-main); font-weight: 500; font-size: 14px; text-align: center; border-radius: 12px; padding: 16px 20px; position: fixed; bottom: 30px; left: 50%; transform: translateX(-50%) translateY(30px); opacity: 0; transition: transform 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275), opacity 0.4s ease; box-shadow: 0 15px 30px rgba(0,0,0,0.3); z-index: 2000; display: flex; align-items: center; justify-content: center; gap: 12px; }
         #snackbar.show { visibility: visible; transform: translateX(-50%) translateY(0); opacity: 1; }
         #snackbar i.success-icon { color: #32D74B; font-size: 18px; }
         #snackbar i.error-icon { color: var(--danger); font-size: 18px; }
-        
+
         @keyframes shake { 0% { transform: translateX(0); } 25% { transform: translateX(-5px); } 50% { transform: translateX(5px); } 75% { transform: translateX(-5px); } 100% { transform: translateX(0); } }
         @keyframes slideDown { from { opacity: 0; transform: translateY(-10px); } to { opacity: 1; transform: translateY(0); } }
         @keyframes spin { 100% { transform: rotate(360deg); } }
-        
+
         /* Custom Player */
         .cp-controls-hidden #cpControls { opacity: 0; transform: translateY(10px); pointer-events: none; }
         .cp-controls-hidden { cursor: none !important; }
@@ -197,21 +197,21 @@
         .cp-menu-item { padding: 8px 16px; margin: 2px 8px; border-radius: 8px; color: var(--text-main); font-size: 13px; cursor: pointer; transition: 0.2s; text-align: left; background: transparent; border: none; width: calc(100% - 16px); display: flex; align-items: center; gap: 10px; box-sizing: border-box; }
         .cp-menu-item:hover { background: rgba(255,255,255,0.1); }
         .cp-menu-item.active { color: var(--primary); font-weight: 600; background: rgba(10,132,255,0.1); }
-        
+
         .lib-card .heart-icon { opacity: 0; transform: scale(0.8); transition: 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275); }
         .lib-card:hover .heart-icon { opacity: 1; transform: scale(1); }
         .lib-card .heart-icon.favorited { opacity: 1; transform: scale(1); }
         .next-preview { position: absolute; bottom: 85px; right: 20px; background: rgba(15,15,20,0.95); border: 1px solid var(--glass-border); border-radius: 12px; padding: 15px; color: white; display: flex; align-items: center; gap: 20px; z-index: 15; cursor: pointer; box-shadow: 0 10px 30px rgba(0,0,0,0.7); backdrop-filter: blur(10px); opacity: 0; pointer-events: none; transform: translateY(30px) scale(0.9); transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275); }
         .next-preview.show { opacity: 1; pointer-events: auto; transform: translateY(0) scale(1); }
         .cp-controls-hidden .next-preview { cursor: pointer !important; }
-        
+
         .cp-timeline-container { width: 100%; height: 20px; display: flex; align-items: center; cursor: pointer; position: relative; }
         .cp-timeline-track { width: 100%; height: 3px; background: rgba(255,255,255,0.3); position: relative; transition: height 0.15s ease; }
         .cp-timeline-container:hover .cp-timeline-track { height: 5px; }
         .cp-timeline-progress { height: 100%; width: 0%; background: var(--primary); position: relative; pointer-events: none; transition: width 0.1s linear; }
         .cp-timeline-thumb { position: absolute; right: -6px; top: 50%; transform: translateY(-50%) scale(0); width: 12px; height: 12px; background: var(--primary); border-radius: 50%; transition: transform 0.15s ease; pointer-events: none; }
         .cp-timeline-container:hover .cp-timeline-thumb { transform: translateY(-50%) scale(1); }
-        
+
         #cpWrapper:fullscreen #cpVideo { max-height: 100vh !important; height: 100% !important; }
         #cpWrapper:-webkit-full-screen { max-height: 100vh !important; width: 100vw !important; height: 100vh !important; border-radius: 0 !important; }
         #cpWrapper:-webkit-full-screen #cpVideo { max-height: 100vh !important; height: 100% !important; }
@@ -248,7 +248,7 @@
     <link rel="stylesheet" href="{{ url_for('static', filename='studio.css') }}">
     <link rel="stylesheet" href="{{ url_for('static', filename='workspace.css') }}">
     <link rel="stylesheet" href="{{ url_for('static', filename='help.css') }}">
-</head>
+<style>.companion-setup summary{display:flex;align-items:center;gap:12px;cursor:pointer;flex-wrap:wrap}.companion-steps{padding-left:24px;display:grid;gap:16px}.companion-steps li{padding:6px 0 12px 6px;border-bottom:1px solid var(--border-color,rgba(128,148,188,.22))}.companion-consent{display:flex;align-items:flex-start;gap:10px;margin:12px 0;line-height:1.5}.companion-consent input{flex:0 0 18px;width:18px!important;height:18px;margin:2px 0!important;padding:0;accent-color:var(--primary)}.companion-consent span{flex:1;text-align:left}#companionBadge{font-size:12px;font-weight:400;color:var(--text-muted,#9caccc);margin-left:auto}#companionFolderPath{width:100%;box-sizing:border-box}#companionSetupStatus{white-space:pre-line}</style></head>
 <body data-welcome-seen="{{ 'true' if welcome_seen else 'false' }}">
 
     <div id="updateOverlay" style="display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.6); z-index: 1004; flex-direction: column; justify-content: center; align-items: center; backdrop-filter: blur(5px); padding: 20px; box-sizing: border-box;">
@@ -284,7 +284,7 @@
                     <p class="subtitle">Video & Audio Studio</p>
                 </div>
             </div>
-            
+
             <div class="app-toolbar" role="toolbar" aria-label="Uygulama araçları">
                 <div class="custom-select-wrapper language-control">
                     <div class="custom-select" id="langSelectDiv">
@@ -385,6 +385,20 @@
             </label>
         </div>
 
+        <div id="trackChoices" hidden>
+            <div class="options-grid" style="margin-top:10px">
+                <label><span id="audioLanguageLabel">Ses dili</span><select id="audioLanguage" style="width:100%;padding:10px;background:var(--bg-color,#10162b);color:inherit;border:1px solid #45516b;border-radius:10px"><option value="auto">Otomatik</option></select></label>
+                <label><span id="subtitleLanguageLabel">Altyazı dili</span><select id="subtitleLanguage" style="width:100%;padding:10px;background:var(--bg-color,#10162b);color:inherit;border:1px solid #45516b;border-radius:10px"><option value="all">Tüm diller</option></select></label>
+            </div><p id="trackHint" class="feature-muted" style="font-size:11px"></p>
+        </div>
+        <section id="liveRecordingOptions" hidden aria-labelledby="liveRecordingTitle" style="margin-top:10px">
+            <strong id="liveRecordingTitle"></strong>
+            <div class="options-grid">
+                <label><span id="liveRecordMinutesLabel"></span><input id="liveRecordMinutes" class="settings-number" type="number" min="1" max="1440" value="60"></label>
+                <label><span id="liveRecordUntilLabel"></span><input id="liveRecordUntil" class="settings-number" type="datetime-local"></label>
+            </div><details id="liveRecordingDetails"><summary id="liveRecordingDetailsLabel"></summary><p id="liveRecordingHint" class="feature-muted" style="font-size:11px"></p></details>
+        </section>
+        <button id="companionContinue" type="button" class="settings-action" hidden></button>
         <button class="download-btn" onclick="startDownload()" id="dlBtn">İndirmeyi Başlat</button>
         <p class="studio-footnote" id="studioFootnote"><i class="fa-solid fa-shield-halved" aria-hidden="true"></i><span>Dosyaların, seçtiğin klasörde.</span></p>
         </section>
@@ -402,6 +416,10 @@
                 </div>
             </div>
             <div class="queue-overview" aria-live="polite" aria-atomic="true"><span id="workspaceQueueStatus"></span><span class="queue-live-dot" aria-hidden="true"></span></div>
+            <section id="recoveryCenter" class="recovery-center" hidden aria-labelledby="recoveryTitle">
+                <h3 id="recoveryTitle"></h3><p id="recoveryIntro" class="feature-muted"></p>
+                <div id="recoveryItems"></div>
+            </section>
             <div id="restoredQueueNotice" class="restore-notice" style="display:none"><span id="restoredQueueText"></span><button class="settings-action" onclick="resumeRestoredQueue()">Tümüne devam et</button></div>
             <p id="storageWarning" class="storage-warning" role="alert" style="display:none"></p>
             <p id="downloadSummary" class="download-summary" role="status" style="display:none"></p>
@@ -413,7 +431,7 @@
         </aside>
 <section id="settingsView" class="settings-section" tabindex="-1" aria-labelledby="settingsTitle">
             <h2 id="settingsTitle"><i class="fa-solid fa-gear" style="color: var(--primary); margin-right: 8px;"></i>Ayarlar</h2>
-            
+
             <div style="display: flex; flex-direction: column; gap: 15px;">
                 <div class="app-update-card" style="margin-top: 0;">
                     <label for="settingMode" class="setting-label">İndirme yönetimi</label>
@@ -434,9 +452,14 @@
                     <input type="number" id="settingSpeed" min="0" max="100000" step="0.1" value="0" placeholder="0 = Sınırsız" class="settings-number">
                     <p class="app-update-status">Tüm medya indirmeleri ve parçalar bu sınırı paylaşır. 8 Mbps ≈ 1 MB/s. 0 = sınırsız.</p>
                 </div>
+                <div class="app-update-card" style="margin-top:0">
+                    <label for="settingTransfer" id="transferModeLabel" class="setting-label"></label>
+                    <select id="settingTransfer" class="settings-select"><option value="stable"></option><option value="auto"></option></select>
+                    <p id="transferModeHint" class="app-update-status"></p>
+                </div>
                 <input type="hidden" id="settingCompressMode" value="false">
             </div>
-            
+
             <div class="app-update-card">
                 <div class="app-update-heading">
                     <span class="app-update-icon" aria-hidden="true"><i class="fa-solid fa-cloud-arrow-down"></i></span>
@@ -446,6 +469,19 @@
                 <button id="checkAppUpdateBtn" class="settings-action" onclick="checkAppUpdate(true)">Uygulama güncellemelerini kontrol et</button>
                 <p id="appUpdateCheckStatus" class="app-update-status" role="status" aria-live="polite"></p>
             </div>
+            <details class="app-update-card companion-setup" id="companionPanel">
+                <summary><img src="{{ url_for('static', filename='app-icon.svg') }}" width="28" height="28" alt=""><span data-companion="title">Tarayıcı eklentisi</span><span id="companionBadge" role="status"></span></summary>
+                <p data-companion="intro" class="feature-muted"></p>
+                <label for="companionBrowser" data-companion="browser" class="setting-label"></label>
+                <select id="companionBrowser" class="settings-select"><option value="brave">Brave</option><option value="chrome">Chrome</option><option value="edge">Edge</option></select>
+                <ol class="companion-steps">
+                    <li><p data-companion-step="0"></p><label class="companion-consent"><input type="checkbox" id="companionConsent"><span data-companion="consent"></span></label><button id="companionPrepare" type="button" class="settings-action settings-action-primary" data-companion="prepare" disabled></button></li>
+                    <li><p data-companion-step="1"></p><button id="companionOpen" type="button" class="settings-action" data-companion="open" disabled></button></li>
+                    <li><p data-companion-step="2"></p><input id="companionFolderPath" class="settings-number" type="text" readonly aria-label="Extension folder"><div class="feature-actions"><button id="companionCopy" type="button" class="settings-action" data-companion="copy" disabled></button><button id="companionFolder" type="button" class="settings-action" data-companion="folder" disabled></button></div></li>
+                    <li><p data-companion-step="3"></p><button id="companionCheck" type="button" class="settings-action" data-companion="check"></button></li>
+                </ol>
+                <p id="companionSetupStatus" class="app-update-status" role="status" aria-live="polite"></p><p data-companion="footnote" class="feature-muted"></p>
+            </details>
             <details class="app-update-card" id="diagnosticsPanel">
                 <summary id="diagnosticsTitle">Sorun giderme kayıtları</summary>
                 <p id="diagnosticsDescription" class="app-update-status">Hata kayıtları uygulama kapatılsa da korunur. Bağlantılar ve oturum bilgileri paylaşılmaz.</p>
@@ -768,14 +804,14 @@
             const t = translations[currentLang];
             document.querySelector("h1").innerText = t.title;
             document.querySelector(".subtitle").innerText = t.sub;
-            
+
             let pathDisplay = document.getElementById('pathDisplay');
             if (pathDisplay.innerText.includes("Lütfen") || pathDisplay.innerText.includes("Please") || pathDisplay.innerText.includes("Seleccione") || pathDisplay.innerText.includes("Veuillez") || pathDisplay.innerText.includes("Bitte") || pathDisplay.innerText.includes("Пожалуйста") || pathDisplay.innerText.includes("Selecione") || pathDisplay.innerText.includes("请") || pathDisplay.innerText.includes("フォルダ") || pathDisplay.innerText.includes("कृपया")) {
                 pathDisplay.innerText = t.defPath;
             }
-            
+
             document.getElementById('urlInput').placeholder = t.placeholder;
-            
+
             // Format options
             const formatSelected = document.getElementById('formatValue').value;
             const formatTrigger = document.querySelector("#formatSelectDiv .custom-select__trigger span");
@@ -783,29 +819,29 @@
             document.querySelectorAll("#formatSelectDiv .custom-option")[1].innerText = t.audio;
             if (formatSelected === 'video') formatTrigger.innerText = t.video;
             else formatTrigger.innerText = t.audio;
-            
+
             document.querySelector("#formatInfoLinkContainer button").innerHTML = `<i class="fa-solid fa-circle-info" style="margin-right: 4px;"></i>${t.formatInfo}`;
             document.getElementById("playlistLabel").innerHTML = `<i class="fa-solid fa-list-ul"></i>${t.playlist}`;
-            
+
             updateDownloadButtonText();
-            
+
             document.querySelector("#formatInfoModalContent h3").innerHTML = `<i class="fa-solid fa-music" style="color: var(--primary); margin-right: 8px;"></i>${t.modalTitle}`;
             const divs = document.querySelectorAll("#formatInfoModalContent > div > div");
             divs[0].innerHTML = `<strong style="color: var(--primary);">MP3 & M4A:</strong> ${t.mp3d} <span style="color: #32D74B; font-weight: 600;">${t.mp3c}</span>`;
             divs[1].innerHTML = `<strong style="color: var(--primary);">WAV:</strong> ${t.wavd} <span style="color: var(--danger); font-weight: 600;">${t.wavc}</span>`;
             divs[2].innerHTML = `<strong style="color: var(--primary);">Opus:</strong> ${t.opusd} <span style="color: var(--danger); font-weight: 600;">${t.opusc}</span>`;
-            
+
             document.querySelector("#formatInfoModalContent button:last-child").innerText = t.okBtn;
-            
+
             document.getElementById('platformFootnote').textContent = `${t.bottom1} ${t.bottom2}`;
             videoQualities[0].label = t.tQualityBest;
             updateQualityMenu(document.getElementById("formatValue").value);
-            
+
             document.getElementById('subLabel').innerHTML = `<i class="fa-solid fa-closed-captioning"></i>${t.tSubtitle}`;
-            
 
 
-            
+
+
             document.getElementById('currentLangFlag').innerHTML = t.flag;
             if (typeof updateStudioTexts === 'function') updateStudioTexts();
             if (typeof updateQualityHint === 'function') updateQualityHint();
@@ -929,7 +965,7 @@
             if(typeof beginThemeSwitch === 'function') beginThemeSwitch();
             const isDark = document.documentElement.classList.contains('light-mode');
             const targetLight = forceDark !== null ? !forceDark : !isDark;
-            
+
             if (targetLight) {
                 document.documentElement.classList.add('light-mode');
                 document.getElementById('themeIcon').className = 'fa-solid fa-moon';
@@ -940,7 +976,7 @@
             if (forceDark === null) localStorage.setItem('ytpro_theme', targetLight ? 'light' : 'dark');
             document.getElementById('themeToggleBtn').setAttribute('aria-pressed', String(targetLight));
         }
-        
+
         // Auto-detect and set theme on load
         (function() {
             const savedTheme = localStorage.getItem('ytpro_theme');
@@ -1121,7 +1157,7 @@
             const div = document.createElement('div');
             div.className = 'queue-item';
             div.id = 'queue-' + btoa(encodeURIComponent(url)).replace(/=/g, '');
-            
+
             div.innerHTML = `
                 <img class="queue-thumb" alt="">
                 <div class="queue-info">
@@ -1188,6 +1224,7 @@
 
         function updateDownloadButtonText() {
             const btn = document.getElementById('dlBtn');
+            if(typeof inspectedDownload!=='undefined' && inspectedDownload?.is_live && singleQualityURL() && typeof downloadToolText==='function'){btn.innerText=downloadToolText(13);return;}
             if (downloadQueue.length > 0) {
                 btn.innerText = `${translations[currentLang].startBtn} (${downloadQueue.length} Video)`;
             } else {
@@ -1213,14 +1250,14 @@
             const previous = hiddenInput.value;
             container.innerHTML = "";
             const options = (type === "video") ? (typeof getVideoQualityOptions === "function" ? getVideoQualityOptions() : videoQualities) : audioFormats;
-            
+
             options.forEach((opt, index) => {
                 const span = document.createElement("span");
                 span.className = "custom-option";
                 if (opt.value === previous || (index === 0 && !options.some(item => item.value === previous))) span.classList.add("selected");
                 span.setAttribute("data-value", opt.value);
                 span.innerText = opt.label;
-                
+
                 span.addEventListener("click", function() {
                     container.querySelectorAll(".custom-option").forEach(o => o.classList.remove("selected"));
                     this.classList.add("selected");
@@ -1252,11 +1289,11 @@
         document.querySelectorAll('.custom-select-wrapper').forEach(wrapper => {
             const select = wrapper.querySelector('.custom-select');
             const trigger = select.querySelector('.custom-select__trigger');
-            
+
             trigger.addEventListener('click', (e) => {
                 const isOpen = select.classList.contains('open');
                 document.querySelectorAll('.custom-select').forEach(other => other.classList.remove('open'));
-                if (!isOpen) { select.classList.add('open'); wrapper.style.zIndex = "100"; } 
+                if (!isOpen) { select.classList.add('open'); wrapper.style.zIndex = "100"; }
                 else { select.classList.remove('open'); setTimeout(() => wrapper.style.zIndex = "10", 300); }
                 e.stopPropagation();
             });
@@ -1272,7 +1309,7 @@
                 document.getElementById('formatValue').value = selectedFormat;
                 document.getElementById('formatSelectDiv').classList.remove('open');
                 updateQualityMenu(selectedFormat);
-                
+
                 if (selectedFormat === 'audio') {
                     document.getElementById('formatInfoLinkContainer').style.display = 'flex';
                 } else {
@@ -1341,7 +1378,8 @@
                 if (!response.ok) throw new Error('İndirme durumu alınamadı.');
                 const data = await response.json();
                 const notice = document.getElementById('restoredQueueNotice');
-                notice.style.display = data.restored_count ? 'block' : 'none';
+                if (typeof updateRecoveryCenter === 'function') updateRecoveryCenter(data);
+                notice.style.display = data.restored_count && !(data.recovery_items || []).length ? 'block' : 'none';
                 document.getElementById('restoredQueueText').textContent = `${data.restored_count || 0} yarım kalan iş önceki oturumdan geri yüklendi.`;
                 const warning = document.getElementById('storageWarning');
                 warning.style.display = data.storage_error ? 'block' : 'none';
@@ -1389,6 +1427,7 @@
                     resume.title = item.status === 'error' ? 'Tekrar dene' : 'Devam et';
                     resume.setAttribute('aria-label', resume.title);
                     row.querySelector('.queue-remove').style.display = ['queued','paused','error','finished','retry_wait'].includes(item.status) ? 'block' : 'none';
+                    if(typeof decorateLiveQueue==='function')decorateLiveQueue(row,item);
                 });
                 const summary = document.getElementById('downloadSummary');
                 summary.style.display = data.total_items && data.status === 'downloading' ? 'block' : 'none';
@@ -1432,6 +1471,7 @@
                 document.getElementById('settingMode').value = data.concurrency_mode || 'auto';
                 document.getElementById('settingConcurrent').value = data.concurrent_downloads || 3;
                 document.getElementById('settingSpeed').value = data.speed_limit_mbps || '0';
+                document.getElementById('settingTransfer').value = data.transfer_mode || 'stable';
                 setCompressModeUI(data.auto_compress ? 'true' : 'false');
                 updateConcurrencyUI();
             } catch (error) { showToast(error.message, true); }
@@ -1454,6 +1494,7 @@
                 concurrency_mode: document.getElementById('settingMode').value,
                 concurrent_downloads: document.getElementById('settingConcurrent').value,
                 speed_limit_mbps: document.getElementById('settingSpeed').value || '0',
+                transfer_mode:document.getElementById('settingTransfer').value,
                 auto_compress: document.getElementById('settingCompressMode').value === 'true'
             };
             try {
@@ -1727,22 +1768,31 @@
             if (typeof addingLinks !== 'undefined' && addingLinks) { showToast('Bağlantıların incelenmesini bekleyin.',true); return; }
             if (!downloadQueue.length && document.getElementById('urlInput').value.trim()) await addToQueue();
             if (!downloadQueue.length) { showToast(translations[currentLang].tErrQueue, true); return; }
+            let tools={};
+            try{if(typeof selectedDownloadTools==='function')tools=selectedDownloadTools();}catch(error){showToast(error.message,true);return;}
             const payload = {
+                ...tools,
                 urls: downloadQueue.slice(), format: document.getElementById('formatValue').value,
                 quality: document.getElementById('qualityValue').value,
                 is_playlist: document.getElementById('playlistCheck').checked,
-                embed_subs: document.getElementById('subCheck').checked
+                embed_subs: document.getElementById('subCheck').checked,
+                ...selectedTracks()
             };
             pendingSubmissionURLs = payload.urls.slice();
             if (payload.is_playlist) { await beginPlaylistSelection(payload); return; }
             await sendDownload(payload);
         }
     </script>
+    <div id="shutdownOverlay" class="shutdown-overlay" hidden role="alert" tabindex="-1"><p id="shutdownMessage"></p></div>
+    <script src="{{ url_for('static', filename='recovery.js') }}"></script>
     <script src="{{ url_for('static', filename='interface-locales.js') }}"></script>
     <script src="{{ url_for('static', filename='interface-localization.js') }}"></script>
     <script src="{{ url_for('static', filename='site-inspection.js') }}"></script>
     <script src="{{ url_for('static', filename='source-progress.js') }}"></script>
+    <script src="{{ url_for('static', filename='companion-setup.js') }}"></script>
     <script src="{{ url_for('static', filename='diagnostics.js') }}"></script>
+    <script src="{{ url_for('static', filename='track-selection.js') }}"></script>
+    <script src="{{ url_for('static', filename='download-tools.js') }}"></script>
     <script src="{{ url_for('static', filename='bulk-quality.js') }}"></script>
     <script src="{{ url_for('static', filename='studio.js') }}"></script>
     <script src="{{ url_for('static', filename='history-preview.js') }}"></script>

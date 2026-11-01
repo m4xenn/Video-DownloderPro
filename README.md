@@ -6,6 +6,12 @@ A Windows video and audio downloader with a redesigned blue-and-navy workspace, 
 
 ## ✨ Features
 
+- 🧩 **Optional browser companion** — guided Chrome/Edge/Brave setup, clearer embedded-source labels and automatic synchronization with the app's ten languages. See the [setup guide](docs/BROWSER_EXTENSION.md). Loading the unpacked extension still requires browser approval.
+- 🛟 **Recovery center and safe closure** — restore unfinished jobs, refresh expired sources, preserve partial files, confirm closure during downloads and prevent duplicate app instances. Resume depends on source support.
+- 📡 **Bounded live recording** — single-video MP4 capture with duration/stop-time controls and a finish/save action. Live subtitles, audio-only live export and a positive shared speed cap are not supported.
+- 🎚️ **Track selection and stronger output checks** — choose offered audio/subtitle languages for one inspected video; identify known truncated sources and verify downloaded streams, duration and file tails.
+- 🌐 **YouTube player-country discovery** — try a limited sequence of country preferences on eligible availability errors. This does not change your IP or guarantee every regional restriction can be resolved.
+
 - 🧪 **Embedded video discovery** — when native extraction cannot find a video, an on-demand background browser inspects HTML5, JW Player, Video.js, and nested players for HLS, DASH, or direct media sources. Nested players retain their parent page and actual request context. Use **Continue in browser**, then **Check again** if interaction is needed. DRM and universal site support are outside its scope.
 
 - 🌍 **Automatic language selection** — starts in your system UI language when supported, falls back to English, and remembers your manual language choice.
@@ -73,7 +79,7 @@ Found a problem? [Open an issue](https://github.com/m4xenn/Video-DownloderPro/is
 
 ## 🧑‍💻 Source Code
 
-The `v1.2.14` tag contains the matching release source. Browse the [documentation index](docs/README.md), [development guide](docs/development/DEVELOPMENT.md), [publishing guide](docs/development/RELEASE_PUBLISHING.md), or [1.2.14 acceptance report](docs/releases/RELEASE_ACCEPTANCE_1.2.14.md). For normal installation, use [Releases](https://github.com/m4xenn/Video-DownloderPro/releases/latest).
+The `v1.4.0` tag contains the matching release source. Browse the [documentation index](docs/README.md), [development guide](docs/development/DEVELOPMENT.md), [publishing guide](docs/development/RELEASE_PUBLISHING.md), or [1.4.0 acceptance report](docs/releases/RELEASE_ACCEPTANCE_1.4.0.md). For normal installation, use [Releases](https://github.com/m4xenn/Video-DownloderPro/releases/latest).
 
 ## 📄 License
 

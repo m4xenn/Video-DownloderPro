@@ -7,16 +7,21 @@ let qualityLoadingURL = null;
 let inspectionTimer = null;
 const pastedMetadata = new Map();
 function showLinkPreview(data, message) {
+    if(typeof setTrackChoices==='function') setTrackChoices(data);
+    if(typeof setDownloadTools==='function') setDownloadTools(data);
     const panel=document.getElementById("linkPreview");
     if(!panel) return;
     panel.hidden=!data && !message;
     document.getElementById("linkPreviewTitle").textContent=data?.title || message || "";
     const details=[];
     if(data) {
+        if(typeof sourceCertaintyText==='function')details.push(sourceCertaintyText(data));
+        if(data.source_available_bytes && data.source_declared_bytes)details.push(formatBytes(data.source_available_bytes)+' / '+formatBytes(data.source_declared_bytes));
+        if(data.content_scope==='preview' && typeof previewScopeText==='function') details.push(previewScopeText());
         if(data.duration) details.push(Math.floor(data.duration/60)+":"+String(Math.floor(data.duration%60)).padStart(2,"0"));
         const choices=data.video_qualities || [];
         if(choices.length) details.push(choices[0].label);
-        details.push(data.total_bytes ? "Yaklaşık "+formatBytes(data.total_bytes) : "Dosya boyutu kaynak tarafından belirtilmiyor");
+        details.push(data.total_bytes ? "≈ "+formatBytes(data.total_bytes) : typeof downloadToolText==='function'?downloadToolText(15):"Dosya boyutu kaynak tarafından belirtilmiyor");
     }
     document.getElementById("linkPreviewMeta").textContent=details.join(" · ");
 }

@@ -53,6 +53,8 @@ class DownloadStore:
                     title TEXT NOT NULL, thumbnail TEXT NOT NULL, format TEXT NOT NULL,
                     quality TEXT NOT NULL, embed_subs INTEGER NOT NULL, path TEXT NOT NULL,
                     size INTEGER, completed_at TEXT NOT NULL)''')
+                if 'track_options' not in {row[1] for row in connection.execute('PRAGMA table_info(history)')}:
+                    connection.execute("ALTER TABLE history ADD COLUMN track_options TEXT NOT NULL DEFAULT '{}'")
                 connection.execute('CREATE INDEX IF NOT EXISTS history_match ON history(media_key, format, quality, embed_subs)')
             yield connection
             if write:
@@ -87,7 +89,8 @@ class DownloadStore:
             connection.execute('INSERT OR REPLACE INTO state VALUES (?,?)', ('queue', json.dumps(jobs)))
             for record in completed:
                 connection.execute('''INSERT OR IGNORE INTO history
-                    VALUES (:id,:media_key,:url,:title,:thumbnail,:format,:quality,:embed_subs,:path,:size,:completed_at)''', record)
+                    (id,media_key,url,title,thumbnail,format,quality,embed_subs,path,size,completed_at,track_options)
+                    VALUES (:id,:media_key,:url,:title,:thumbnail,:format,:quality,:embed_subs,:path,:size,:completed_at,:track_options)''', dict(record, track_options=record.get('track_options', '{}')))
             if clear_drafts:
                 row = connection.execute("SELECT payload FROM state WHERE name='drafts'").fetchone()
                 drafts = json.loads(row['payload']) if row else []
@@ -114,18 +117,24 @@ class DownloadStore:
     @staticmethod
     def _public(row):
         record = dict(row)
+        tracks = json.loads(record.pop('track_options', '{}'))
+        record['live_record_minutes']=tracks.get('live_record_minutes')
+        record.update(audio_language=tracks.get('audio_language', 'auto'), subtitle_language=tracks.get('subtitle_language', 'all'))
         record['file_exists'] = Path(record['path']).is_file()
         record['embed_subs'] = bool(record['embed_subs'])
         return record
 
     def duplicates(self, key, url, options):
+        if options.get('live_record_minutes'):return []
         if not self.path.exists():
             return []
         with self.connection() as connection:
             rows = connection.execute('''SELECT * FROM history WHERE (media_key=? OR url=?)
                 AND format=? AND quality=? AND embed_subs=? ORDER BY completed_at DESC''',
                 (key, url, options['format'], options['quality'], bool(options.get('embed_subs')))).fetchall()
-            return [dict(row) for row in rows if Path(row['path']).is_file()]
+            return [self._public(row) for row in rows if Path(row['path']).is_file()
+                    and all(self._public(row)[key] == options.get(key, default)
+                            for key, default in [('audio_language', 'auto'), ('subtitle_language', 'all')])]
 
 
 def completion_record(job):
@@ -134,4 +143,5 @@ def completion_record(job):
             'title': job.title, 'thumbnail': job.thumbnail, 'format': job.options['format'],
             'quality': job.options['quality'], 'embed_subs': bool(job.options.get('embed_subs')),
             'path': str(path.resolve()), 'size': path.stat().st_size,
+            'track_options': json.dumps(dict({key: job.options.get(key, default) for key, default in [('audio_language', 'auto'), ('subtitle_language', 'all')]},live_record_minutes=job.options.get('live_record_minutes') if getattr(job,'is_live',False) else None)),
             'completed_at': datetime.now(timezone.utc).isoformat()}

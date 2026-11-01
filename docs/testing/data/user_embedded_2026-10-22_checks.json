@@ -1,0 +1,85 @@
+{
+  "unit": {
+    "tests": 315,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 0,
+    "passed": true
+  },
+  "native": {
+    "status": "passed",
+    "checks": [
+      "native yt-dlp failure -> hidden browser fallback",
+      "cross-origin dynamic nested iframe traversal preserving real parent",
+      "muted automatic JW Player activation before source is available",
+      "180p/360p source qualities",
+      "scoped native request cookie capture",
+      "html5: dynamic source inspection and metadata",
+      "videojs: dynamic source inspection and metadata",
+      "dash: dynamic source inspection and metadata",
+      "blob: dynamic source inspection and metadata",
+      "cookie: dynamic source inspection and metadata",
+      "gate: dynamic source inspection and metadata",
+      "network: dynamic source inspection and metadata",
+      "network-frame: dynamic source inspection and metadata",
+      "network-related: dynamic source inspection and metadata",
+      "selected: 180p HLS download with audio",
+      "maximum: 360p HLS download with audio",
+      "browser retained through first segment request and released after media bytes",
+      "metadata preview browser handed to cached download and released after first bytes",
+      "helper windows cleaned up"
+    ]
+  },
+  "freeflix_repeat": {
+    "status": "success",
+    "duration": 1427,
+    "qualities": [
+      "source:1080:24",
+      "source:720:24",
+      "source:360:24"
+    ],
+    "handoffs": 1,
+    "error_code": null
+  },
+  "freeflix_old_repeat": {
+    "created_at": "2026-10-22T08:54:00.106515+00:00",
+    "engine": "app",
+    "sampling": false,
+    "scope": "Public page discovery and metadata; explicit sample reads limited to 16 KiB per page; full downloads not tested. Browser playback may buffer additional media.",
+    "planned_cases": 1,
+    "cases": [
+      {
+        "id": "freeflix-episode",
+        "host": "freeflix.live",
+        "scenario": "user-film-or-episode",
+        "player_family": "to-observe",
+        "category": "user-supplied",
+        "engine": "app",
+        "outcome": "interaction_required",
+        "seconds": 26.5,
+        "error_code": null,
+        "discovery_resolved": false,
+        "source_count": 0,
+        "format_count": 0,
+        "discovery_method": "unknown",
+        "observed_player_groups": [],
+        "heights": [],
+        "qualities": [],
+        "duration": null,
+        "sample_status": "not_tested",
+        "sample_kind": null,
+        "sample_error_code": null,
+        "sample_error_kind": null,
+        "sample_detail": null,
+        "sample_bytes": 0,
+        "sample_http_status": null,
+        "full_download": "not_tested"
+      }
+    ],
+    "totals": {
+      "automatic": 0,
+      "interaction_required": 1,
+      "failed": 0
+    }
+  }
+}

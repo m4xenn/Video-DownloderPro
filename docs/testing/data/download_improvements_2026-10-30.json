@@ -1,0 +1,66 @@
+{
+  "date": "2026-10-30",
+  "released": false,
+  "production_installation_changed": false,
+  "python_regression": {
+    "tests": 438,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 0,
+    "passed": true
+  },
+  "additional_dynamic_live_dash_test": "passed",
+  "native_webview2": {
+    "status": "passed",
+    "checks": 27
+  },
+  "javascript_ui": "all suites passed",
+  "rendered_app_ui": {
+    "status": "passed",
+    "locales": 10,
+    "live_payload": "passed",
+    "language_choices": "preserved",
+    "transfer_setting": "saved",
+    "partial_submission": "blocked",
+    "page_errors": []
+  },
+  "isolated_brave": "native connection, current version and automatic blob/HLS source handoff passed; no personal profile",
+  "controlled_speed_benchmark": {
+    "environment": "synthetic per-connection throttle at 180000 bytes/s",
+    "runs": [
+      {
+        "fragments": 1,
+        "seconds": 15.906,
+        "bytes": 2686619,
+        "verified_audio_video": true
+      },
+      {
+        "fragments": 2,
+        "seconds": 8.032,
+        "bytes": 2686619,
+        "verified_audio_video": true
+      }
+    ],
+    "speedup": 1.98,
+    "public_cdn_claim": false
+  },
+  "frozen_package": {
+    "scope": "Frozen app, isolated user data, no actual registry writes",
+    "checks": [
+      "Download controls, ten live guide images, stable transfer default and new guarded APIs present in frozen app",
+      "Bundled extension, icons, ten localized help images, native executable and live setup API present",
+      "No local registration/files written without consent",
+      "Bundled native executable exchanges real stdio frames with frozen bridge; current-version status updates"
+    ],
+    "status": "passed"
+  },
+  "streamrecorder": {
+    "page": "https://streamrecorder.io/kick/caglararts",
+    "preflight": "partial",
+    "available_bytes": 200000000,
+    "declared_bytes": 6432055465,
+    "full_download_claimed": false
+  },
+  "companion_source_version": "0.4.0",
+  "packaged_source_differences": []
+}

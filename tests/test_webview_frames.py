@@ -25,6 +25,17 @@ class FrameMergeTests(unittest.TestCase):
         self.assertEqual(result['media'][0]['document'],PLAYER)
         self.assertEqual(result['media'][0]['area'],300000)
 
+    def test_native_redirect_keeps_original_dom_frame_ancestry(self):
+        frames=self.frames();final='https://final.example/player'
+        frames[1]['navigation_urls']=[PLAYER,final]
+        frames[1]['snapshot']['url']=final
+        self.assertEqual(len(merge_frames(self.root(),frames)['media']),1)
+
+    def test_stale_redirect_chain_cannot_attach_unrelated_document(self):
+        frames=self.frames();frames[1]['navigation_urls']=[PLAYER,'https://old.example/player']
+        frames[1]['snapshot']['url']='https://unrelated.example/ad'
+        self.assertEqual(merge_frames(self.root(),frames)['media'],[])
+
     def test_out_of_order_native_events_supported(self):
         self.assertEqual(len(merge_frames(self.root(),list(reversed(self.frames())))['media']),1)
 
@@ -58,6 +69,28 @@ class FrameMergeTests(unittest.TestCase):
         self.assertEqual(contexts[STREAM],{'Origin':'https://player.example','Referer':PLAYER,'User-Agent':'Browser-UA','Cookie':'session=private'})
         self.assertEqual(contexts['https://other.example/master.m3u8'],{})
         frames.close();self.assertEqual(frames.requests,{})
+
+    def test_visible_preroll_keeps_same_parent_session_for_continue(self):
+        import threading
+        from services.site_browser import BrowserRequired
+        browser=SiteBrowser();browser.enabled=True
+        browser.session={'url':ROOT,'target':ROOT,'discovery':True,'closed':False,'token':'a'*32,
+            'window':Mock(),'frame_probe':Mock(),'evaluation_result':{'url':ROOT,'media':[],
+            'embeds':[{'url':PLAYER,'area':300000}],'interaction':True,'ad_pending':True}}
+        with patch('webview.windows',[Mock()]),patch('services.source_operation.current_operation',return_value=None),patch('services.source_operation.report_stage'),patch('services.site_browser.time.monotonic',side_effect=[0,20]),patch.object(browser,'close') as close:
+            with self.assertRaises(BrowserRequired):browser.inspect(ROOT,discovery=True)
+            close.assert_not_called()
+        self.assertEqual(browser.session['token'],'a'*32)
+
+    def test_visible_player_initialization_gap_preserves_parent(self):
+        from services.site_browser import BrowserRequired
+        browser=SiteBrowser();browser.enabled=True
+        browser.session={'url':ROOT,'target':ROOT,'discovery':True,'closed':False,'token':'a'*32,
+            'shown':True,'player_seen':True,'window':Mock(),'frame_probe':Mock(),
+            'evaluation_result':{'url':ROOT,'media':[],'players':[],'embeds':[],'interaction':False}}
+        with patch('webview.windows',[Mock()]),patch('services.source_operation.current_operation',return_value=None),patch('services.source_operation.report_stage'),patch('services.site_browser.time.monotonic',side_effect=[0,20]),patch.object(browser,'close') as close:
+            with self.assertRaises(BrowserRequired):browser.inspect(ROOT,discovery=True)
+            close.assert_not_called()
 
     def test_continue_recreates_visible_control_once_and_keeps_token(self):
         browser=SiteBrowser();window=Mock();replacement=Mock()

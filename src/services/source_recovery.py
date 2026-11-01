@@ -28,12 +28,16 @@ def source_checkpoint(info):
     return {'id':info.get('id'),'duration':info.get('duration'),'is_live':info.get('is_live',False),
         'extractor_key':info.get('extractor_key'),
         'requested_formats':[{key:part.get(key) for key in keys} for part in parts],
+        '_representations':[part.get('_representation') for part in parts],
         '_source_urls':[hashlib.sha256(part['url'].encode()).hexdigest() for part in parts if part.get('url')]}
 
 
 def can_resume_embedded(previous,info):
     current=source_checkpoint(info)
-    return bool(previous and previous.get('_source_urls') and previous['_source_urls']==current['_source_urls'] and same_media(previous,info))
+    if not previous or not same_media(previous,info):return False
+    if previous.get('_source_urls') and previous['_source_urls']==current['_source_urls']:return True
+    before,after=previous.get('_representations'),current['_representations']
+    return bool(before and len(before)==len(after) and all(a and b and a==b and set(a)=={'resource','etag','size'} for a,b in zip(before,after)))
 
 
 def template_has_partial(template):

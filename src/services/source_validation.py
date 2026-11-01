@@ -15,7 +15,7 @@ def validate_media_sample(body, content_type=''):
 def validate_embedded_info(info):
     if not isinstance(info, dict) or info.get('_type') in ('playlist', 'multi_video'):
         raise ValueError('Oynatıcı geçerli bir tekil medya kaynağı vermedi.')
-    if info.get('has_drm'):
+    if info.get('has_drm') or any(isinstance(f,dict) and f.get('has_drm') for f in info.get('requested_formats',[])):
         raise ValueError('Bu oynatıcının kaynağı DRM korumalı.')
     formats = info.get('formats') or info.get('requested_formats') or [info]
     playable = []

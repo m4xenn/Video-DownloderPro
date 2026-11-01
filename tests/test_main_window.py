@@ -11,10 +11,11 @@ class WindowTests(unittest.TestCase):
     def test_launch_maximized_with_shared_app_icon(self):
         webview=Mock()
         webview.create_window.return_value.events.closed=MagicMock()
+        webview.create_window.return_value.events.closing=MagicMock()
         application=SimpleNamespace(app=object(),download_manager=Mock(),ensure_download_state=Mock())
         browser=Mock()
         with patch.dict(sys.modules,{'webview':webview,'app':application,'services.site_browser':SimpleNamespace(site_browser=browser)}):
-            main.start_window()
+            main._start_window()  # Lifecycle/mutex behavior has its own process tests.
         options=webview.create_window.call_args.kwargs
         self.assertTrue(options['maximized'])
         self.assertTrue(options['resizable'])

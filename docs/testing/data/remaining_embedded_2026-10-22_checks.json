@@ -1,0 +1,277 @@
+{
+  "python": {
+    "tests": 337,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 0,
+    "passed": true
+  },
+  "native": {
+    "checks": [
+      "native yt-dlp failure -> hidden browser fallback",
+      "cross-origin dynamic nested iframe traversal preserving real parent",
+      "muted automatic JW Player activation before source is available",
+      "180p/360p source qualities",
+      "scoped native request cookie capture",
+      "html5: dynamic source inspection and metadata",
+      "videojs: dynamic source inspection and metadata",
+      "dash: dynamic source inspection and metadata",
+      "blob: dynamic source inspection and metadata",
+      "cookie: dynamic source inspection and metadata",
+      "gate: dynamic source inspection and metadata",
+      "network: dynamic source inspection and metadata",
+      "network-frame: dynamic source inspection and metadata",
+      "network-related: dynamic source inspection and metadata",
+      "poster-modern: dynamic source inspection and metadata",
+      "frame-redirect: dynamic source inspection and metadata",
+      "poster-visual: dynamic source inspection and metadata",
+      "watch-cover: dynamic source inspection and metadata",
+      "artplayer: dynamic source inspection and metadata",
+      "preroll: dynamic source inspection and metadata",
+      "opaque-manifest: dynamic source inspection and metadata",
+      "playerjs: dynamic source inspection and metadata",
+      "selected: 180p HLS download with audio",
+      "maximum: 360p HLS download with audio",
+      "browser retained through first segment request and released after media bytes",
+      "metadata preview browser handed to cached download and released after first bytes",
+      "helper windows cleaned up"
+    ],
+    "status": "passed"
+  },
+  "ui": "All JavaScript UI suites passed, including Artplayer, Playerjs, advertising wait/exclusion and poster navigation.",
+  "app_batch": {
+    "source_fingerprint": "800f2e9215b62170c44b415e434bdce75848f5a920c8930dee7fea65a7e01ce6",
+    "created_at": "2026-10-22T09:38:16.738834+00:00",
+    "engine": "app",
+    "sampling": false,
+    "scope": "Public page discovery and metadata; explicit sample reads limited to 16 KiB per page; full downloads not tested. Browser playback may buffer additional media.",
+    "planned_cases": 4,
+    "cases": [
+      {
+        "id": "dizipal-twd",
+        "host": "dizipal1591.com",
+        "scenario": "user-film-or-episode",
+        "player_family": "to-observe",
+        "category": "user-supplied",
+        "engine": "app",
+        "outcome": "interaction_required",
+        "seconds": 26.9,
+        "error_code": null,
+        "discovery_resolved": false,
+        "source_count": 0,
+        "format_count": 0,
+        "discovery_method": "unknown",
+        "observed_player_groups": [],
+        "heights": [],
+        "qualities": [],
+        "duration": null,
+        "sample_status": "not_tested",
+        "sample_kind": null,
+        "sample_error_code": null,
+        "sample_error_kind": null,
+        "sample_detail": null,
+        "sample_bytes": 0,
+        "sample_http_status": null,
+        "full_download": "not_tested"
+      },
+      {
+        "id": "filmmakinesi-matrix",
+        "host": "filmmakinesi.to",
+        "scenario": "user-film-or-episode",
+        "player_family": "to-observe",
+        "category": "user-supplied",
+        "engine": "app",
+        "outcome": "automatic",
+        "seconds": 22.6,
+        "error_code": null,
+        "discovery_resolved": true,
+        "source_count": 0,
+        "format_count": 0,
+        "discovery_method": "unknown",
+        "observed_player_groups": [],
+        "heights": [],
+        "qualities": [
+          "source:800:0"
+        ],
+        "duration": 8177,
+        "sample_status": "not_tested",
+        "sample_kind": null,
+        "sample_error_code": null,
+        "sample_error_kind": null,
+        "sample_detail": null,
+        "sample_bytes": 0,
+        "sample_http_status": null,
+        "full_download": "not_tested"
+      },
+      {
+        "id": "animevillage-demon",
+        "host": "www.animevillage.org",
+        "scenario": "user-film-or-episode",
+        "player_family": "to-observe",
+        "category": "user-supplied",
+        "engine": "app",
+        "outcome": "interaction_required",
+        "seconds": 26.3,
+        "error_code": null,
+        "discovery_resolved": false,
+        "source_count": 0,
+        "format_count": 0,
+        "discovery_method": "unknown",
+        "observed_player_groups": [],
+        "heights": [],
+        "qualities": [],
+        "duration": null,
+        "sample_status": "not_tested",
+        "sample_kind": null,
+        "sample_error_code": null,
+        "sample_error_kind": null,
+        "sample_detail": null,
+        "sample_bytes": 0,
+        "sample_http_status": null,
+        "full_download": "not_tested"
+      },
+      {
+        "id": "hotsflix-breaking",
+        "host": "hotsflix.net",
+        "scenario": "user-film-or-episode",
+        "player_family": "to-observe",
+        "category": "user-supplied",
+        "engine": "app",
+        "outcome": "automatic",
+        "seconds": 32.8,
+        "error_code": null,
+        "discovery_resolved": true,
+        "source_count": 0,
+        "format_count": 0,
+        "discovery_method": "unknown",
+        "observed_player_groups": [],
+        "heights": [],
+        "qualities": [],
+        "duration": null,
+        "sample_status": "not_tested",
+        "sample_kind": null,
+        "sample_error_code": null,
+        "sample_error_kind": null,
+        "sample_detail": null,
+        "sample_bytes": 0,
+        "sample_http_status": null,
+        "full_download": "not_tested"
+      }
+    ],
+    "totals": {
+      "automatic": 2,
+      "interaction_required": 2,
+      "failed": 0
+    }
+  },
+  "media_checks": [
+    {
+      "case": "hotsflix-breaking",
+      "status": "resolved",
+      "continued_in_browser": null,
+      "duration": null,
+      "heights": [],
+      "metadata_status": "passed",
+      "sample_status": "passed",
+      "sample_bytes": 16384,
+      "sample_http_status": 206,
+      "sample_kind": "direct"
+    },
+    {
+      "case": "filmmakinesi-matrix",
+      "status": "resolved",
+      "continued_in_browser": null,
+      "duration": 8177,
+      "heights": [
+        800
+      ],
+      "metadata_status": "passed",
+      "sample_status": "passed",
+      "sample_bytes": 16384,
+      "sample_http_status": 206,
+      "sample_kind": "hls-segment"
+    },
+    {
+      "case": "animevillage-demon",
+      "status": "resolved",
+      "continued_in_browser": true,
+      "duration": 1419,
+      "heights": [
+        1080
+      ],
+      "metadata_status": "passed",
+      "sample_status": "passed",
+      "sample_bytes": 16384,
+      "sample_http_status": 206,
+      "sample_kind": "hls-segment"
+    },
+    {
+      "case": "aniwaves-player-only",
+      "status": "resolved",
+      "continued_in_browser": null,
+      "duration": 1384,
+      "heights": [
+        720
+      ],
+      "metadata_status": "passed",
+      "sample_status": "passed",
+      "sample_bytes": 16384,
+      "sample_http_status": 200,
+      "sample_kind": "hls-segment"
+    }
+  ],
+  "aniwaves_parent_page_acceptance": {
+    "status": "resolved",
+    "continued_in_browser": true,
+    "continue_checks": 2,
+    "title": "Bleach Episode 1 - The Day I Became a Shinigami",
+    "duration": 1384,
+    "heights": [
+      720
+    ],
+    "metadata_status": "passed",
+    "sample_status": "passed",
+    "sample_bytes": 16384,
+    "sample_http_status": 200,
+    "sample_kind": "hls-segment"
+  },
+  "dizipal_rejected_preroll": {
+    "discovery_duration_seconds": 14.280933,
+    "outcome": "metadata_validation_rejected",
+    "fix": "Exclude labelled advertising regions from discovery and activation; retain strict source validation.",
+    "actual_episode_acceptance": "See dizipal_two_phase_acceptance; historical preroll rejection superseded."
+  },
+  "human_followups_historical": [
+    {
+      "case": "dizipal-human",
+      "acceptance": "not_established",
+      "diagnostic_status": "interaction_required",
+      "note": "Timed visible test session ended without establishing a source; not evidence that the site is unavailable."
+    },
+    {
+      "case": "aniwaves-artplayer",
+      "acceptance": "not_established",
+      "diagnostic_status": "interaction_required",
+      "note": "Timed visible test session ended without establishing a source; not evidence that the site is unavailable."
+    }
+  ],
+  "dizipal_two_phase_acceptance": {
+    "discovery_evidence": "Actual supplied parent-page run resolved the source and 1080p metadata; this follow-up reuses the same public player configuration to test the transfer fix.",
+    "metadata_status": "passed",
+    "heights": [
+      1080
+    ],
+    "browser_transport_retry": true,
+    "sample_bytes": 16384,
+    "sample_http_status": 206,
+    "sample_kind": "hls-segment",
+    "sample_status": "passed"
+  },
+  "hdfilm_verification": {
+    "status": "interaction_required",
+    "webview2_user_verification": "unsuccessful",
+    "isolated_normal_edge_user_verification": "unsuccessful",
+    "media_established": false
+  },
+  "native_timing_note": "Earlier network-related body-capture check intermittently failed; unchanged repeat and final 27-check run passed."
+}

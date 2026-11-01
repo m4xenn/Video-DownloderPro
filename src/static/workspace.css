@@ -266,3 +266,27 @@ body {--workspace-inset:28px;height:100dvh;min-height:0;overflow:hidden;box-sizi
  .workspace-content[data-view=new] .input-group textarea {height:100%;max-height:none;min-height:66px;}
  .workspace-content[data-view=new] .input-wrapper:has(textarea) .add-btn {align-self:flex-start;}
 }
+
+/* Optional download controls keep their hidden state and the fixed shell. */
+#companionContinue[hidden],.queue-finish-recording[hidden],#liveRecordingOptions[hidden],#trackChoices[hidden] {display:none !important;}
+#liveRecordingOptions {flex-shrink:0;font-size:12px;}
+#liveRecordingOptions > strong {display:block;margin-bottom:8px;}
+#liveRecordingOptions label {display:flex;flex-direction:column;gap:5px;min-width:0;font-size:11px;color:var(--text-sub);}
+#liveRecordingOptions .settings-number {min-width:0;}
+#trackChoices label {font-size:11px;color:var(--text-sub);}
+.workspace-content[data-view] .queue-item button.queue-finish-recording {width:100%;height:auto;min-height:36px;margin-top:8px;padding:8px 10px;font-size:11px !important;}
+#liveRecordingDetails {margin-top:8px;font-size:11px;color:var(--text-sub);}
+#liveRecordingDetails summary {cursor:pointer;}
+#liveRecordingHint {line-height:1.6;}
+/* Recovery stays in the fixed workspace and scrolls with the queue. */
+.recovery-center {border:1px solid var(--primary);border-radius:14px;padding:16px;margin:12px 0;background:var(--q-bg);}
+.recovery-center[hidden],.shutdown-overlay[hidden] {display:none;}
+.recovery-center h3 {font-size:16px;margin:0 0 6px;}
+.recovery-item {padding:12px 0;border-top:1px solid var(--glass-border);overflow-wrap:anywhere;}
+.recovery-item p {font-size:12px;line-height:1.6;margin:6px 0;}
+.recovery-actions {display:flex;flex-wrap:wrap;gap:8px;}
+.recovery-actions .settings-action {width:auto;flex:0 1 auto;padding:9px 16px;}
+.recovery-actions button:disabled {opacity:.55;cursor:wait;}
+.shutdown-overlay {position:fixed;inset:0;z-index:10000;display:grid;place-items:center;background:rgba(5,12,26,.94);color:#fff;padding:32px;text-align:center;font-size:17px;line-height:1.8;}
+.shutdown-overlay p {max-width:600px;}
+.shutdown-overlay.shutdown-error {inset:auto 16px 16px;border-radius:12px;font-size:13px;padding:12px;pointer-events:none;}

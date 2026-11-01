@@ -60,7 +60,7 @@ class RecoveryLocalTests(unittest.TestCase):
                 return {'stream':stream,'headers':{},'title':'Recovery fixture','thumbnail':''}
             manager=DownloadManager()
             try:
-                with patch.object(site_resolver,'details',side_effect=details),patch('core.queue_manager.show_notification'):
+                with patch('services.media_discovery.public_url',return_value=True),patch.object(site_resolver,'details',side_effect=details),patch('core.queue_manager.show_notification'):
                     manager.submit(['https://www.fullhdfilmizlesene.now/film/recovery-fixture/'],
                         {'format':'video','quality':'max','embed_subs':False},str(out),str(binary))
                     result=manager.wait(20)

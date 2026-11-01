@@ -17,6 +17,10 @@ class SourceValidationTests(unittest.TestCase):
     def test_drm_and_all_protected_formats_rejected(self):
         for info in [dict(self.source(),has_drm=True),{'formats':[dict(self.source(),has_drm=True)]}]:
             with self.assertRaisesRegex(ValueError,'DRM'):validate_embedded_info(info)
+    def test_selected_protected_format_cannot_hide_behind_clear_metadata(self):
+        with self.assertRaisesRegex(ValueError,'DRM'):
+            validate_embedded_info({'formats':[self.source()],'requested_formats':[dict(self.source(),has_drm=True)]})
+
     def test_clear_format_among_protected_is_accepted(self):
         validate_embedded_info({'formats':[dict(self.source(),has_drm=True),self.source()]})
     def test_empty_and_non_http_and_storyboard_rejected(self):

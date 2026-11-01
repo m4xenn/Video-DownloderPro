@@ -7,6 +7,7 @@ from urllib.parse import urlsplit
 
 from services.download_store import media_key
 from services.source_quality import source_qualities
+from services.track_selection import track_choices
 
 
 def estimate_size(info):
@@ -29,8 +30,11 @@ class MediaCatalog:
                 self.cache.pop(next(iter(self.cache)))
             self.cache[url] = (time.monotonic(), {'url': url, 'title': info.get('title') or 'Video',
                 'thumbnail': info.get('thumbnail') or '', 'media_key': media_key(url, info),
-                'total_bytes': estimate_size(info), 'duration': info.get('duration'),
+                'total_bytes': estimate_size(info), 'duration': info.get('duration'), 'content_scope':info.get('content_scope','unknown'),
+                'source_status':info.get('source_status','unknown'), 'source_available_bytes':info.get('source_available_bytes'),
+                'source_declared_bytes':info.get('source_declared_bytes'), 'is_live':bool(info.get('is_live')),
                 'is_playlist': info.get('entries') is not None,
+                **track_choices(info),
                 'video_qualities': source_qualities(info) if info.get('entries') is None else []})
 
     def lookup(self, url):
@@ -64,7 +68,8 @@ class MediaCatalog:
                             'lazy_playlist': True, 'playlistend': 2001,
                             'socket_timeout': 15, 'extractor_retries': 2}) as ydl:
                 for url in urls:
-                    info = ydl.extract_info(url, download=False)
+                    from services.youtube_region import extract_info
+                    info = extract_info(ydl, url, download=False)
                     if not info:
                         raise ValueError('Liste bilgisi alınamadı.')
                     group = info.get('title') or 'Playlist'

@@ -12,6 +12,32 @@ SOURCE='https://cdn.example/opaque'
 class NetworkMediaTests(unittest.TestCase):
     def snapshot(self):return {'url':PAGE,'players':[{'document':PAGE,'area':200000,'kind':'canvas'}]}
     def response(self,url=SOURCE):return {'url':url,'mime':'application/vnd.apple.mpegurl','status':200,'document':PAGE,'headers':{'Referer':PAGE}}
+    def test_opaque_fetch_is_promoted_only_after_actual_manifest_bytes(self):
+        import json
+        source='https://cdn.example/cover.jpg'
+        probe=NativeFrames(object());probe.request_documents[('', '1')]=PAGE
+        probe.observe_response({'requestId':'1','type':'Fetch','response':{'url':source,'mimeType':'image/jpeg','status':200}})
+        self.assertEqual(probe.network_candidates(),[])
+        probe.observe_response_body(source,json.dumps({'body':'#EXTM3U\n#EXT-X-TARGETDURATION:5\n#EXTINF:5,\nsegment.ts\n'}))
+        result=select_network_media(self.snapshot(),probe.network_candidates())
+        self.assertEqual(result['sources'],[source]);self.assertEqual(result['source_types'],{source:'hls'})
+        probe.close();self.assertFalse(probe.opaque_responses)
+
+    def test_opaque_image_or_error_body_is_not_media(self):
+        import json,base64
+        source='https://cdn.example/cover.jpg'
+        for body in [b'\xff\xd8real-image',b'<html>error</html>',b'{"error":1}',b'#EXTM3Unot-a-playlist']:
+            probe=NativeFrames(object())
+            probe.observe_response({'requestId':'1','type':'Fetch','response':{'url':source,'mimeType':'image/jpeg','status':200}})
+            probe.observe_response_body(source,json.dumps({'body':base64.b64encode(body).decode(),'base64Encoded':True}))
+            self.assertFalse(probe.network_candidates())
+
+    def test_opaque_resource_filter_excludes_images_json_failures_and_private_hosts(self):
+        for resource,mime,status,source in [('Image','image/jpeg',200,SOURCE),('Fetch','application/json',200,SOURCE),('Fetch','image/jpeg',403,SOURCE),('Fetch','text/plain',200,'http://127.0.0.1/a')]:
+            probe=NativeFrames(object())
+            probe.observe_response({'requestId':'1','type':resource,'response':{'url':source,'mimeType':mime,'status':status}})
+            self.assertFalse(probe.opaque_responses)
+
     def test_extensionless_manifest_with_no_dom_source(self):
         result=select_network_media(self.snapshot(),[self.response()])
         self.assertEqual(result['sources'],[SOURCE]);self.assertEqual(result['discovery_method'],'network')

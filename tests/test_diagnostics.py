@@ -77,6 +77,18 @@ class DiagnosticsTests(unittest.TestCase):
         for message,code in [('HTTP Error 429','rate_limited'),('fragment 15 failed','fragment_failed'),
                              ('No such file or directory','local_file_missing'),('random secret','unexpected')]:
             self.assertEqual(error_code(message),code)
+    def test_video_availability_errors(self):
+        cases=[('Video unavailable. This content is not available on this country domain due to a legal complaint from the government.', 'region_restricted'),
+               ('This video is not available in your country', 'region_restricted'),
+               ('Video unavailable', 'video_unavailable')]
+        for message,code in cases:
+            with self.subTest(code=code), patch.object(app,'extract_media_info',side_effect=RuntimeError(message+' https://example.com/?sig=SECRET')):
+                self.assertEqual(error_code(message),code)
+                data=app.app.test_client().post('/get-info',json={'url':'https://www.youtube.com/watch?v=_hJNUVZPRuc'}).get_json()
+                self.assertEqual(data['error_code'],code)
+                self.assertNotIn('SECRET',json.dumps(data))
+                self.assertNotIn('Troubleshooting',data['message'])
+
     def test_metadata_error_does_not_echo_signed_urls(self):
         with patch.object(app,'extract_media_info',side_effect=RuntimeError('403 https://cdn.example/private?sig=SECRET')):
             data=app.app.test_client().post('/get-info',json={'url':'https://example.com/video'}).get_json()

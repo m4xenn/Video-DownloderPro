@@ -78,6 +78,14 @@ class DiscoveryPolicyTests(unittest.TestCase):
         self.assertEqual(selected['sources'],[STREAM])
         self.assertEqual(selected['source_headers'][STREAM]['Referer'],FRAME)
 
+    def test_explicit_preview_scope_survives_dom_and_network_selection(self):
+        data={'url':PAGE,'media':[{'sources':[STREAM],'area':300000,'document':FRAME,'preview':True}]}
+        self.assertEqual(choose_media(data)['content_scope'],'preview')
+        network=[{'url':STREAM,'document':FRAME,'mime':'application/vnd.apple.mpegurl','status':200}]
+        self.assertEqual(choose_media(data,network)['content_scope'],'preview')
+        data['media'][0]['preview']=False
+        self.assertEqual(choose_media(data,network)['content_scope'],'unknown')
+
     def test_equal_unrelated_videos_are_not_merged(self):
         data={'media':[{'sources':[STREAM],'area':10000},{'sources':['https://ads.example/ad.mp4'],'area':10000}]}
         self.assertIsNone(choose_media(data))
@@ -141,6 +149,20 @@ class GenericTraversalTests(unittest.TestCase):
         data=self.resolver.details(PAGE)
         self.assertEqual(data['title'],'Example film');self.assertEqual(data['stream'],STREAM)
         self.assertEqual(self.browser.discover.call_args.kwargs['parent_url'],FRAME)
+
+    def test_same_page_watch_cover_preserves_parent_and_title(self):
+        watch=PAGE+'?vod=hd'
+        self.browser.discover.side_effect=[observation(watch_pages=[watch]),{'url':watch,'sources':[STREAM]}]
+        data=self.resolver.details(PAGE)
+        self.assertEqual(data['stream'],STREAM);self.assertEqual(data['title'],'Example film')
+        self.assertEqual(self.browser.discover.call_args.kwargs['parent_url'],PAGE)
+
+    def test_watch_cover_cannot_change_origin_path_or_be_ambiguous(self):
+        for links in [['https://ad.example/watch?vod=hd'],[PAGE+'/other?vod=hd'],[PAGE+'?a=1',PAGE+'?a=2'],[PAGE]]:
+            browser=Mock();browser.discover.return_value=observation(watch_pages=links)
+            resolver=GenericResolver(browser=browser)
+            with self.assertRaises(ValueError):resolver.details(PAGE)
+            self.assertEqual(browser.discover.call_count,1)
 
     def test_cycles_and_frame_count_bounded(self):
         self.browser.discover.side_effect=lambda url,parent_url=None:{'url':url,'embeds':[{'url':PAGE,'area':1000},{'url':url+'/next','area':1000}]}

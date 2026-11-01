@@ -1,13 +1,15 @@
 # -*- mode: python ; coding: utf-8 -*-
-from PyInstaller.utils.hooks import copy_metadata
+from PyInstaller.utils.hooks import copy_metadata, collect_all
+
+transport_datas, transport_binaries, transport_imports = collect_all("curl_cffi")
 
 
 a = Analysis(
     ['src/main.py'],
     pathex=[],
-    binaries=[],
-    datas=[('build_assets/icon.ico', '.'), ('src/templates', 'templates'), ('src/static', 'static'), ('src/core', 'core'), ('src/state', 'state'), ('src/services', 'services'), ('src/utils', 'utils'), ('antigravity_config.py', '.'), ('version.json', '.')] + copy_metadata('yt-dlp'),
-    hiddenimports=[],
+    binaries=transport_binaries,
+    datas=[('browser-extension', 'browser-extension'), ('dist/BrowserBridge/VDPBrowserBridge.exe', 'browser-bridge'), ('build_assets/icon.ico', '.'), ('src/templates', 'templates'), ('src/static', 'static'), ('src/core', 'core'), ('src/state', 'state'), ('src/services', 'services'), ('src/utils', 'utils'), ('antigravity_config.py', '.'), ('version.json', '.')] + copy_metadata('yt-dlp') + transport_datas,
+    hiddenimports=transport_imports,
     hookspath=[],
     hooksconfig={},
     runtime_hooks=[],

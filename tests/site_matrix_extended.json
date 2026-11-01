@@ -1,0 +1,114 @@
+{
+  "scope": "Public-page discovery and metadata; bounded media samples; no full video downloads. Player family is a test target, not proof of observed implementation.",
+  "cases": [
+    {
+      "id": "aniwatch-nested",
+      "url": "https://aniwatch.co.at/one-piece-episode-1-english-subbed/",
+      "scenario": "nested-player",
+      "category": "previous-regression"
+    },
+    {
+      "id": "fullhd-film",
+      "url": "https://www.fullhdfilmizlesene.now/film/batman-2-kara-sovalye/",
+      "scenario": "embedded-player",
+      "category": "previous-regression"
+    },
+    {
+      "id": "hdfilm-film",
+      "url": "https://www.hdfilmcehennemi.nl/batman-kara-sovalye-yukseliyor-hd-film-izle-hdf-hdf-5/",
+      "scenario": "embedded-player",
+      "category": "previous-regression"
+    },
+    {
+      "id": "hdfilm-esaret",
+      "url": "https://www.hdfilmcehennemi.nl/1-esaretin-bedeli-film-izle-hdf-hdf-6/",
+      "scenario": "lazy-iframe-player",
+      "category": "previous-regression"
+    },
+    {
+      "id": "html5-w3schools",
+      "url": "https://www.w3schools.com/html/html5_video.asp",
+      "player_family": "HTML5",
+      "scenario": "direct-mp4",
+      "category": "public-player-demo"
+    },
+    {
+      "id": "videojs-hls",
+      "url": "https://videojs.github.io/videojs-contrib-hls/",
+      "player_family": "Video.js",
+      "scenario": "hls",
+      "category": "public-player-demo"
+    },
+    {
+      "id": "plyr-home",
+      "url": "https://plyr.io/",
+      "player_family": "Plyr / current Video.js",
+      "scenario": "modern-player",
+      "category": "public-player-demo"
+    },
+    {
+      "id": "hlsjs-demo",
+      "url": "https://hlsjs.video-dev.org/demo/",
+      "player_family": "hls.js",
+      "scenario": "hls",
+      "category": "public-player-demo"
+    },
+    {
+      "id": "dashjs-reference",
+      "url": "https://reference.dashif.org/dash.js/latest/samples/dash-if-reference-player/index.html",
+      "player_family": "dash.js",
+      "scenario": "dash",
+      "category": "public-player-demo"
+    },
+    {
+      "id": "shaka-angel-one",
+      "url": "https://shaka-project.github.io/shaka-player/demo/#asset=https://storage.googleapis.com/shaka-demo-assets/angel-one/dash.mpd;lang=en-US",
+      "player_family": "Shaka",
+      "scenario": "dash",
+      "category": "public-player-demo"
+    },
+    {
+      "id": "bitmovin-stream",
+      "url": "https://bitmovin.com/demos/test-stream/",
+      "player_family": "Bitmovin",
+      "scenario": "adaptive",
+      "category": "public-player-demo"
+    },
+    {
+      "id": "mediaelement-home",
+      "url": "https://www.mediaelementjs.com/",
+      "player_family": "MediaElement.js",
+      "scenario": "multiple-media",
+      "category": "public-player-demo"
+    },
+    {
+      "id": "clappr-demo",
+      "url": "https://clappr.io/demo/",
+      "player_family": "Clappr",
+      "scenario": "direct-mp4",
+      "category": "public-player-demo"
+    },
+    {
+      "id": "jw-stream-tester",
+      "url": "https://developer.jwplayer.com/tools/stream-tester/",
+      "player_family": "JW Player",
+      "scenario": "interactive-demo",
+      "category": "public-player-demo"
+    },
+    {
+      "id": "vimeo-iframe",
+      "url": "https://player.vimeo.com/video/76979871",
+      "player_family": "Vimeo",
+      "scenario": "hosted-iframe",
+      "category": "public-player-demo"
+    },
+    {
+      "id": "jw-intel-embed",
+      "url": "https://cdn.jwplayer.com/players/EwJonN6F-v2VOXzX8.html",
+      "player_family": "JW Player",
+      "scenario": "hosted-iframe",
+      "category": "public-player-demo",
+      "reference": "https://www.intel.com/content/dam/www/central-libraries/us/en/documents/2022-04/icx-workload-brief-cdn-v8.pdf"
+    }
+  ]
+}

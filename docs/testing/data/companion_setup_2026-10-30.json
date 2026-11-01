@@ -1,0 +1,35 @@
+{
+  "date": "2026-10-30",
+  "extension_version": "0.2.0",
+  "python": {
+    "tests": 361,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 0,
+    "passed": true
+  },
+  "guided_ui": "Consent gate, prepare action, safe browser/folder actions, 10 languages and connected status passed; OS registration mocked.",
+  "localized_help_captures": 10,
+  "native_brave": {
+    "native_connection": "passed",
+    "current_version_status": "passed",
+    "status": "passed",
+    "browser": "isolated Brave",
+    "media": "synthetic 65-second WebM",
+    "automatic_source_handoff": "passed",
+    "blob_hls": true,
+    "app_generic_resolver": "passed",
+    "personal_profile_used": false
+  },
+  "frozen_package": {
+    "scope": "Frozen app, isolated user data, no actual registry writes",
+    "checks": [
+      "Bundled extension, icons, ten localized help images, native executable and live setup API present",
+      "No local registration/files written without consent",
+      "Bundled native executable exchanges real stdio frames with frozen bridge; current-version status updates"
+    ],
+    "status": "passed"
+  },
+  "production_changed": false,
+  "published": false
+}

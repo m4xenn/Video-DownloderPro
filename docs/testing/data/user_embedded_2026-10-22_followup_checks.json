@@ -1,0 +1,66 @@
+{
+  "python": {
+    "tests": 325,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 0,
+    "passed": true
+  },
+  "native": {
+    "status": "passed",
+    "checks": [
+      "native yt-dlp failure -> hidden browser fallback",
+      "cross-origin dynamic nested iframe traversal preserving real parent",
+      "muted automatic JW Player activation before source is available",
+      "180p/360p source qualities",
+      "scoped native request cookie capture",
+      "html5: dynamic source inspection and metadata",
+      "videojs: dynamic source inspection and metadata",
+      "dash: dynamic source inspection and metadata",
+      "blob: dynamic source inspection and metadata",
+      "cookie: dynamic source inspection and metadata",
+      "gate: dynamic source inspection and metadata",
+      "network: dynamic source inspection and metadata",
+      "network-frame: dynamic source inspection and metadata",
+      "network-related: dynamic source inspection and metadata",
+      "poster-modern: dynamic source inspection and metadata",
+      "frame-redirect: dynamic source inspection and metadata",
+      "selected: 180p HLS download with audio",
+      "maximum: 360p HLS download with audio",
+      "browser retained through first segment request and released after media bytes",
+      "metadata preview browser handed to cached download and released after first bytes",
+      "helper windows cleaned up"
+    ]
+  },
+  "javascript": "All test_*ui.cjs suites passed; see local command output.",
+  "native_repeat_note": "One earlier run stopped at network-related with missing browser manifest relationship evidence; the subsequent unchanged-code repeat passed all cases. Timing sensitivity remains an open regression concern.",
+  "new_positive_samples": [
+    {
+      "page": "https://yomi.to/watch/attack-on-titan-16498/1",
+      "status": "resolved",
+      "metadata_status": "passed",
+      "duration": 1556,
+      "heights": [
+        1080
+      ],
+      "sample_status": "passed",
+      "sample_kind": "hls-segment",
+      "sample_bytes": 16384,
+      "sample_http_status": 206
+    },
+    {
+      "page": "https://hianime.ms/watch-arcane-episode-1-36d59",
+      "status": "resolved",
+      "metadata_status": "passed",
+      "duration": 2605,
+      "heights": [
+        360,
+        720
+      ],
+      "sample_status": "passed",
+      "sample_kind": "hls-segment",
+      "sample_bytes": 16384,
+      "sample_http_status": 206
+    }
+  ]
+}

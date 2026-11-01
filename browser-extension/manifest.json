@@ -1,0 +1,49 @@
+{
+  "manifest_version": 3,
+  "name": "Video Downloader Pro Companion",
+  "version": "0.4.1",
+  "description": "Find the video in a tab requested by Video Downloader Pro.",
+  "permissions": [
+    "nativeMessaging",
+    "webRequest",
+    "alarms",
+    "storage"
+  ],
+  "host_permissions": [
+    "http://*/*",
+    "https://*/*"
+  ],
+  "background": {
+    "service_worker": "background.js"
+  },
+  "action": {
+    "default_popup": "popup.html",
+    "default_icon": {
+      "16": "icons/icon-16.png",
+      "32": "icons/icon-32.png",
+      "48": "icons/icon-48.png",
+      "128": "icons/icon-128.png"
+    },
+    "default_title": "Video Downloader Pro"
+  },
+  "content_scripts": [
+    {
+      "matches": [
+        "http://*/*",
+        "https://*/*"
+      ],
+      "js": [
+        "content.js"
+      ],
+      "all_frames": true,
+      "run_at": "document_start"
+    }
+  ],
+  "key": "MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAlosy+4EijUA5vgZoNqNEY9wIPdY6b85XHgUsa/CE5+uH0NUG7/I/hAXVQqvmjmJbq5/eGNtP1f0o1pGUjwalpsER0EFKF+/qf2xXwAtczDeOLIhwLCyuAXrWBiX8sWtIaRPfZmJKsBWzzGz2pIZJYuxQXZZBOwgzSnH5O4o7aw7yChSv2T14NcV19Cw1tIj9thtpFYSA+D1pDsOtzdl/qpiVwMroje5Hy5crk3EgtbMYhR7ShLKoKNWwwwAoVdSb4beITftm02QDjUCnJqBlMyBEZ601/RgwS8tBMrL82eXmZqeTpOv9x+oULBB0uU+K8MDoqAcsm0jxSMuOu3goGwIDAQAB",
+  "icons": {
+    "16": "icons/icon-16.png",
+    "32": "icons/icon-32.png",
+    "48": "icons/icon-48.png",
+    "128": "icons/icon-128.png"
+  }
+}

@@ -1,0 +1,39 @@
+{
+  "date": "2026-10-30",
+  "released": false,
+  "python": {
+    "tests": 399,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 0,
+    "passed": true
+  },
+  "javascript_ui": "all suites passed",
+  "field_test": {
+    "page": "https://streamrecorder.io/kick/caglararts",
+    "status": "resolved",
+    "content_scope": "preview",
+    "source_count": 2,
+    "metadata_status": "passed",
+    "duration": null,
+    "format_count": 2,
+    "sample_status": "passed",
+    "sample_bytes": 16384,
+    "sample_http_status": 206,
+    "sample_kind": "direct",
+    "full_vod_verified": false,
+    "drm_protection_established": false,
+    "drm_decryption_implemented": false
+  },
+  "recovery": {
+    "scope": "FFmpegMergerPP final rename during same run",
+    "bounded_wait_seconds": 8,
+    "real_windows_sharing_lock_test": "passed",
+    "repeated_merge": false,
+    "restart_time_recovery": false
+  },
+  "native_webview2": {
+    "status": "passed",
+    "checks": 27
+  }
+}

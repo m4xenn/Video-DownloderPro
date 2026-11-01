@@ -1,7 +1,7 @@
 """Bounded, muted playback through known player controls; no verification clicks."""
 import json
 from services.media_discovery import DISCOVERY_SNAPSHOT, public_url
-from services.player_controls import LAZY_PLAYER_GATES
+from services.player_controls import LAZY_PLAYER_GATES, AD_MEDIA_REGION
 
 
 def activation_document(snapshot):
@@ -27,6 +27,7 @@ def activation_document(snapshot):
 START_PLAYER = r"""(target => {
  const visited=new Set();
  const lazyGates=__LAZY_PLAYER_GATES__;
+ const isAd=__AD_MEDIA_REGION__;
  function scan(win,depth=0) {
    if(depth>3 || visited.has(win)) return;
    visited.add(win);
@@ -34,9 +35,9 @@ START_PLAYER = r"""(target => {
      const doc=win.document;
      if(win.location.href===target) {
        const visible=e=>{const r=e.getBoundingClientRect();const s=win.getComputedStyle(e);return r.width>=100 && r.height>=60 && s.display!=='none' && s.visibility!=='hidden'};
-       if(/just a moment|checking your browser|verify you are human|security verification/i.test(doc.title) ||
+       if(/just a moment|checking your browser|verify you are human|security verification|^bir dakika l[\xfcu]tfen|^einen moment(?: bitte)?|^un instant|^un momento|^um momento|^\u043f\u043e\u0434\u043e\u0436\u0434\u0438\u0442\u0435|^\u8bf7\u7a0d\u5019|^\u304a\u5f85\u3061\u304f\u3060\u3055\u3044|^\u0915\u0943\u092a\u092f\u093e \u092a\u094d\u0930\u0924\u0940\u0915\u094d\u0937\u093e/i.test(doc.title) ||
          [...doc.querySelectorAll('iframe[src*="captcha"],iframe[src*="challenges.cloudflare"],.g-recaptcha,.h-captcha,.cf-turnstile,input[type="password"]')].some(e=>{const r=e.getBoundingClientRect(),s=win.getComputedStyle(e);return r.width>0 && r.height>0 && s.display!=='none' && s.visibility!=='hidden'})) return;
-       const containers=[...doc.querySelectorAll('video,.jwplayer,.video-js')].filter(visible);
+       const containers=[...doc.querySelectorAll('video,.jwplayer,.video-js')].filter(e=>visible(e) && !isAd(e));
        containers.sort((a,b)=>{const x=a.getBoundingClientRect(),y=b.getBoundingClientRect();return y.width*y.height-x.width*x.height});
        const container=containers[0];
        if(!container) {
@@ -66,7 +67,7 @@ START_PLAYER = r"""(target => {
    } catch(_) {}
  }
  scan(window);
-})""".replace('__LAZY_PLAYER_GATES__', LAZY_PLAYER_GATES)
+})""".replace('__LAZY_PLAYER_GATES__', LAZY_PLAYER_GATES).replace('__AD_MEDIA_REGION__', AD_MEDIA_REGION)
 
 
 def inspection_script(document=None):

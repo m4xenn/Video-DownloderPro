@@ -1,10 +1,13 @@
 import copy
+import os
 import json
+import struct
 from pathlib import Path
 import sys
 import tempfile
 import unittest
 from unittest.mock import Mock,patch
+os.environ.setdefault('VIDEO_DOWNLOADER_DATA_DIR',str(Path(__file__).resolve().parents[1]/'build/handoff-profile'))
 sys.path.insert(0,str(Path(__file__).resolve().parents[1]/'src'))
 from services.source_operation import source_operation,current_operation
 from services.source_recovery import same_media,has_partial,source_checkpoint,can_resume_embedded
@@ -21,8 +24,25 @@ class HandoffTests(unittest.TestCase):
     def tearDown(self):self.temp.cleanup()
     def info(self):return {'id':'video','duration':120,'height':1080,'width':1920,'fps':30,'vcodec':'h264','acodec':'aac','ext':'mp4','protocol':'m3u8_native','extractor_key':'EmbeddedMedia'}
 
-    def run_download(self,second=None,partial=False,bytes_seen=False,always=False):
-        released=[];phases=[];errors=[];captured={};calls=[]
+    def test_truncated_original_stops_before_remux_or_completion(self):
+        captured={};completed=Mock();errors=[];ydl=Mock()
+        ydl.params={'outtmpl':{'default':'unused'}}
+        ydl.__enter__=Mock(return_value=ydl);ydl.__exit__=Mock(return_value=False)
+        output=self.base/'video.mp4'
+        ydl.prepare_filename.return_value=str(output)
+        def create(options):captured.update(options);return ydl
+        def process(info,download):
+            output.write_bytes(struct.pack('>I4s',16,b'ftyp')+b'isom0000'+struct.pack('>I4sQ',1,b'mdat',6432055465)+b'partial')
+            captured['postprocessor_hooks'][-1]({'status':'started','info_dict':dict(info,filepath=str(output))})
+            self.fail('Truncated source reached remux')
+        ydl.process_ie_result.side_effect=process
+        with patch('yt_dlp.YoutubeDL',side_effect=create),patch('services.site_resolver.extract_media_info',return_value=self.info()):
+            result=_download_single(URL,{'outtmpl':'unused'},str(self.base),{'format':'video','_completed':completed,'_error':errors.append})
+        self.assertFalse(result);completed.assert_not_called();self.assertTrue(output.is_file())
+        self.assertTrue(any('Incomplete MP4 source' in error for error in errors))
+
+    def run_download(self,second=None,partial=False,bytes_seen=False,always=False,validation_error=None):
+        released=[];phases=[];errors=[];captured={};calls=[];self.completed=Mock()
         ydl=Mock();ydl.params={'outtmpl':{'default':'unused'}}
         ydl.__enter__=Mock(return_value=ydl);ydl.__exit__=Mock(return_value=False)
         ydl.prepare_filename.return_value=str(self.base/'video.mp4')
@@ -44,8 +64,8 @@ class HandoffTests(unittest.TestCase):
             self.assertTrue(released)
             return info
         ydl.process_ie_result.side_effect=process
-        with patch('yt_dlp.YoutubeDL',side_effect=create),patch('services.site_resolver.extract_media_info',side_effect=extract),patch('services.source_recovery.refresh_source',return_value=second or self.info()) as refresh:
-            result=_download_single(URL,{},str(self.base),{'format':'video','_stage':phases.append,'_error':errors.append})
+        with patch('services.output_validation.validate_output',return_value={'video':True,'audio':True},side_effect=validation_error),patch('yt_dlp.YoutubeDL',side_effect=create),patch('services.site_resolver.extract_media_info',side_effect=extract),patch('services.source_recovery.refresh_source',return_value=second or self.info()) as refresh:
+            result=_download_single(URL,{},str(self.base),{'format':'video','_stage':phases.append,'_error':errors.append,'_completed':self.completed})
         self.assertTrue(released)
         return result,refresh.call_count,calls,phases,errors
 
@@ -53,6 +73,11 @@ class HandoffTests(unittest.TestCase):
         result,count,calls,phases,_=self.run_download()
         self.assertTrue(result);self.assertEqual(count,1);self.assertEqual(len(calls),2)
         self.assertIn('refreshing_source',phases)
+    def test_unverified_output_is_preserved_but_not_marked_complete(self):
+        from services.output_validation import OutputValidationError
+        result,_,_,_,errors=self.run_download(validation_error=OutputValidationError('Expected video stream missing'))
+        self.assertFalse(result);self.completed.assert_not_called();self.assertTrue((self.base/'video.mp4').is_file());self.assertIn('video stream missing',errors[0])
+
     def test_partial_file_not_appended_to_new_source(self):
         result,count,_,_,_=self.run_download(partial=True)
         self.assertFalse(result);self.assertEqual(count,0)

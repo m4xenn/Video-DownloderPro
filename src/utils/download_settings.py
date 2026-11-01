@@ -1,7 +1,7 @@
 from decimal import Decimal, InvalidOperation
 
 DEFAULTS = {'concurrency_mode': 'auto', 'concurrent_downloads': 3,
-            'speed_limit_mbps': '0', 'auto_compress': False}
+            'speed_limit_mbps': '0', 'auto_compress': False, 'transfer_mode':'stable'}
 
 
 def normalize_settings(data, strict=True):
@@ -10,6 +10,8 @@ def normalize_settings(data, strict=True):
     result = dict(DEFAULTS, **data)
     if result['concurrency_mode'] not in ('auto', 'manual'):
         raise ValueError('İndirme yönetimi otomatik veya manuel olmalı.')
+    if result['transfer_mode'] not in ('stable','auto'):
+        raise ValueError('Invalid transfer mode.')
     value = result['concurrent_downloads']
     if isinstance(value, bool) or str(value) not in [str(n) for n in range(1, 11)]:
         raise ValueError('Manuel indirme sayısı 1–10 arasında olmalı.')

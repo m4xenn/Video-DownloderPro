@@ -1,0 +1,31 @@
+{
+  "date": "2026-10-30",
+  "python": {
+    "tests": 348,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 0,
+    "passed": true
+  },
+  "direct": {
+    "native_connection": "passed",
+    "status": "passed",
+    "browser": "isolated Chromium",
+    "media": "synthetic 65-second WebM",
+    "automatic_source_handoff": "passed",
+    "app_generic_resolver": "passed",
+    "personal_profile_used": false
+  },
+  "blob_hls": {
+    "native_connection": "passed",
+    "status": "passed",
+    "browser": "isolated Chromium",
+    "media": "synthetic 65-second WebM",
+    "automatic_source_handoff": "passed",
+    "blob_hls": true,
+    "app_generic_resolver": "passed",
+    "personal_profile_used": false
+  },
+  "ui": "All JS suites passed including companion tab isolation, popup command boundary, DRM and lifecycle checks.",
+  "scope": "Synthetic source handoff through actual extension, compiled native host and GenericResolver; not a film download or normal user Chrome/Edge acceptance. Production install/version unchanged."
+}

@@ -179,27 +179,46 @@ class SiteResolver:
         def extract_source(stream):
             from services.generic_resolver import apply_source_context
             apply_source_context(ydl, stream, data.get('source_headers', {}).get(stream, data['headers']))
-            return ydl.extract_info(stream,download=False)
+            def read_source():
+                if (data.get('source_types') or {}).get(stream)=='hls' or urlsplit(stream).path.lower().endswith('.m3u8'):
+                    from services.hls_metadata import extract_hls
+                    raw=extract_hls(ydl,stream,self.media_identity(url),data['title'])
+                    return ydl.process_ie_result(raw,download=False)
+                if (data.get('source_types') or {}).get(stream)=='dash' or urlsplit(stream).path.lower().endswith('.mpd'):
+                    from services.dash_metadata import extract_dash
+                    raw=extract_dash(ydl,stream,self.media_identity(url),data['title'])
+                    return ydl.process_ie_result(raw,download=False)
+                return ydl.extract_info(stream,download=False)
+            try:
+                return read_source()
+            except Exception as error:
+                from services.browser_transport import enable_browser_transport
+                if not enable_browser_transport(ydl,stream,error):raise
+                return read_source()
         if len(streams)==1:
             info=extract_source(streams[0])
         else:
             previous=ydl.params.get('format')
             previous_selector=ydl.format_selector
-            parts=[]
+            parts=[];source_errors=[]
             try:
-                ydl.params['format']='bestvideo+bestaudio/best'
-                ydl.format_selector=ydl.build_format_selector('bestvideo+bestaudio/best')
+                ydl.params['format']='bestvideo+bestaudio/bestvideo/bestaudio/best'
+                ydl.format_selector=ydl.build_format_selector('bestvideo+bestaudio/bestvideo/bestaudio/best')
                 for stream in streams:
                     try:
                         part=extract_source(stream)
                         if part and not part.get('has_drm'):parts.append(part)
-                    except Exception:
-                        continue
+                    except Exception as error:
+                        source_errors.append(error);continue
             finally:
                 ydl.format_selector=previous_selector
                 if previous is None:ydl.params.pop('format',None)
                 else:ydl.params['format']=previous
-            if not parts:raise ValueError('Oynatıcının video kaynakları okunamadı.')
+            if not parts:
+                from services.hls_metadata import ProtectedMediaError,UnsupportedEncryptionError
+                if source_errors and all(isinstance(e,ProtectedMediaError) for e in source_errors):raise source_errors[0]
+                if source_errors and all(isinstance(e,UnsupportedEncryptionError) for e in source_errors):raise source_errors[0]
+                raise ValueError('Oynatıcının video kaynakları okunamadı.')
             info=dict(parts[0]);formats=[]
             for index,part in enumerate(parts):
                 for item in part.get('formats') or [part]:
@@ -207,11 +226,19 @@ class SiteResolver:
                     candidate['format_id']=str(index)+'-'+str(candidate.get('format_id') or 'source')
                     formats.append(candidate)
             info['formats']=formats
+            combined_subtitles={}
+            for part in parts:
+                for language,tracks in (part.get('subtitles') or {}).items():
+                    existing=combined_subtitles.setdefault(language,[])
+                    for track in tracks:
+                        if not any(t.get('url')==track.get('url') and t.get('ext')==track.get('ext') for t in existing):existing.append(track)
+            info['subtitles']=combined_subtitles
             # Select again from the combined source set with the user's requested quality.
             for key in ('requested_formats','requested_downloads','format_id','url','protocol','format','format_note','width','height','fps','vcodec','acodec'):
                 info.pop(key,None)
         if not info or info.get('has_drm'):
             raise ValueError('Video kaynağı kullanılamıyor veya korumalı.')
+        info['content_scope']=data.get('content_scope','unknown')
         info.update(title=data['title'],webpage_url=url,original_url=url,
                     id=self.media_identity(url),extractor_key=self.extractor_key)
         if len(streams)>1:
@@ -220,6 +247,8 @@ class SiteResolver:
         info['http_headers']=dict(info.get('http_headers') or {}, **data['headers'])
         from services.source_validation import validate_embedded_info
         validate_embedded_info(info)
+        from services.media_preflight import preflight_media
+        preflight_media(ydl,info)
         return info
 
 
@@ -234,6 +263,9 @@ def extract_media_info(ydl,url,fresh=False):
         try:
             return site_resolver.extract(ydl,url,fresh=fresh)
         except BrowserRequired:
+            from services.extension_bridge import extension_bridge
+            if extension_bridge.available():
+                return generic_resolver.extract(ydl,url,fresh=fresh)
             raise
         except (ValueError,requests.RequestException) as exc:
             if 'drm' in str(exc).lower():raise
@@ -241,7 +273,8 @@ def extract_media_info(ydl,url,fresh=False):
     if generic_resolver.pending(url):
         return generic_resolver.extract(ydl,url,fresh=fresh)
     try:
-        return ydl.extract_info(url,download=False)
+        from services.youtube_region import extract_info
+        return extract_info(ydl,url,download=False)
     except (DownloadError, UnsupportedError) as exc:
         if not can_discover_after(url,exc):raise
         return generic_resolver.extract(ydl,url,fresh=fresh)

@@ -8,3 +8,6 @@ Pillow==11.3.0
 beautifulsoup4==4.14.2
 packaging==25.0
 psutil==7.1.3
+
+# Optional yt-dlp browser-compatible HTTP transport for resolved embedded media.
+curl_cffi==0.16.3

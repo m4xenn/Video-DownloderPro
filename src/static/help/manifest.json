@@ -54,14 +54,14 @@
       "topic": "settings",
       "path": "tr/settings.png",
       "width": 760,
-      "height": 731
+      "height": 966
     },
     {
       "language": "tr",
       "topic": "troubleshooting",
       "path": "tr/troubleshooting.png",
       "width": 760,
-      "height": 126
+      "height": 127
     },
     {
       "language": "tr",
@@ -103,14 +103,14 @@
       "topic": "settings",
       "path": "en/settings.png",
       "width": 760,
-      "height": 731
+      "height": 966
     },
     {
       "language": "en",
       "topic": "troubleshooting",
       "path": "en/troubleshooting.png",
       "width": 760,
-      "height": 126
+      "height": 127
     },
     {
       "language": "en",
@@ -152,14 +152,14 @@
       "topic": "settings",
       "path": "de/settings.png",
       "width": 760,
-      "height": 731
+      "height": 966
     },
     {
       "language": "de",
       "topic": "troubleshooting",
       "path": "de/troubleshooting.png",
       "width": 760,
-      "height": 126
+      "height": 127
     },
     {
       "language": "de",
@@ -201,14 +201,14 @@
       "topic": "settings",
       "path": "es/settings.png",
       "width": 760,
-      "height": 731
+      "height": 966
     },
     {
       "language": "es",
       "topic": "troubleshooting",
       "path": "es/troubleshooting.png",
       "width": 760,
-      "height": 126
+      "height": 127
     },
     {
       "language": "es",
@@ -250,14 +250,14 @@
       "topic": "settings",
       "path": "fr/settings.png",
       "width": 760,
-      "height": 731
+      "height": 966
     },
     {
       "language": "fr",
       "topic": "troubleshooting",
       "path": "fr/troubleshooting.png",
       "width": 760,
-      "height": 126
+      "height": 127
     },
     {
       "language": "fr",
@@ -299,14 +299,14 @@
       "topic": "settings",
       "path": "pt/settings.png",
       "width": 760,
-      "height": 731
+      "height": 966
     },
     {
       "language": "pt",
       "topic": "troubleshooting",
       "path": "pt/troubleshooting.png",
       "width": 760,
-      "height": 126
+      "height": 127
     },
     {
       "language": "pt",
@@ -348,14 +348,14 @@
       "topic": "settings",
       "path": "ru/settings.png",
       "width": 760,
-      "height": 731
+      "height": 966
     },
     {
       "language": "ru",
       "topic": "troubleshooting",
       "path": "ru/troubleshooting.png",
       "width": 760,
-      "height": 126
+      "height": 127
     },
     {
       "language": "ru",
@@ -397,14 +397,14 @@
       "topic": "settings",
       "path": "zh/settings.png",
       "width": 760,
-      "height": 731
+      "height": 966
     },
     {
       "language": "zh",
       "topic": "troubleshooting",
       "path": "zh/troubleshooting.png",
       "width": 760,
-      "height": 126
+      "height": 127
     },
     {
       "language": "zh",
@@ -446,14 +446,14 @@
       "topic": "settings",
       "path": "ja/settings.png",
       "width": 760,
-      "height": 754
+      "height": 993
     },
     {
       "language": "ja",
       "topic": "troubleshooting",
       "path": "ja/troubleshooting.png",
       "width": 760,
-      "height": 130
+      "height": 131
     },
     {
       "language": "ja",
@@ -495,14 +495,14 @@
       "topic": "settings",
       "path": "hi/settings.png",
       "width": 760,
-      "height": 731
+      "height": 966
     },
     {
       "language": "hi",
       "topic": "troubleshooting",
       "path": "hi/troubleshooting.png",
       "width": 760,
-      "height": 126
+      "height": 127
     },
     {
       "language": "hi",

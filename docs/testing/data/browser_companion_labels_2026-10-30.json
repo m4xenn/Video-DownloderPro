@@ -1,0 +1,19 @@
+{
+  "version": "0.1.1",
+  "date": "2026-10-30",
+  "labels": "Master, variant resolution/bitrate, audio language, explicit unknown; parsed HLS declarations only.",
+  "ui_tests": "All JavaScript UI suites passed.",
+  "popup_render": "Master priority and original candidate selection index passed in rendered fixture.",
+  "native_acceptance": {
+    "native_connection": "passed",
+    "status": "passed",
+    "browser": "isolated Chromium",
+    "media": "synthetic 65-second WebM",
+    "automatic_source_handoff": "passed",
+    "blob_hls": true,
+    "app_generic_resolver": "passed",
+    "personal_profile_used": false
+  },
+  "new_film_label_acceptance": "not_tested",
+  "production_changed": false
+}

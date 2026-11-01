@@ -1,0 +1,53 @@
+{
+  "date": "2026-10-30",
+  "case": "fullhd-family-plan",
+  "browser": "isolated Microsoft Edge",
+  "acceptance": "user_assisted_source_handoff_and_sample_passed",
+  "user_steps": [
+    "Started the main video",
+    "Selected the first observed source in the extension popup"
+  ],
+  "native_connection": "passed",
+  "discovery_method": "extension",
+  "metadata_status": "passed",
+  "heights": [
+    268,
+    356,
+    536,
+    804
+  ],
+  "duration": null,
+  "sample_status": "passed",
+  "sample_bytes": 16384,
+  "sample_http_status": 206,
+  "sample_kind": "hls-segment",
+  "full_download": "not_tested",
+  "production_changed": false,
+  "limitations": [
+    "User-assisted acceptance, not a one-click automatic success.",
+    "Popup lists same-host sources without distinguishing quality or master/variant role.",
+    "A small readable HLS sample does not prove full movie content or complete download."
+  ],
+  "initial_attempt": {
+    "date": "2026-10-30",
+    "case": "fullhd-family-plan",
+    "browser": "isolated Microsoft Edge",
+    "native_connection": "passed",
+    "discovery_status": "interaction_required",
+    "observed_player_host": "rapidvid.org",
+    "video_elements_observed": 0,
+    "extension_state": [
+      {
+        "state": "Videoyu oynat\u0131n / Play the video",
+        "candidates": 0,
+        "playable": false,
+        "blocked": false
+      }
+    ],
+    "metadata_status": "not_tested",
+    "sample_status": "not_tested",
+    "full_download": "not_tested",
+    "production_changed": false,
+    "limitation": "Film page opened, but no playable video or HLS candidate appeared in this isolated session after normal player controls and scrolling. This does not establish failure in the normal user browser; confirmation requested."
+  }
+}

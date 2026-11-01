@@ -38,6 +38,7 @@ def main():
     if output.exists():
         parser.error(f'{output} already exists. Use a new version; release files are not overwritten.')
     (ROOT / 'version.json').write_text(json.dumps({'version': version}, indent=2) + '\n', encoding='utf-8')
+    subprocess.run([sys.executable, '-m', 'PyInstaller', '--noconfirm', '--onefile', '--console', '--name', 'VDPBrowserBridge', '--distpath', 'dist/BrowserBridge', '--workpath', 'build/browser-host', '--specpath', 'build/browser-host', 'scripts/extension_native_host.py'], cwd=ROOT, check=True)
     subprocess.run([sys.executable, '-m', 'PyInstaller', '--noconfirm', '--clean', 'YoutubePro.spec'], cwd=ROOT, check=True)
     command = [iscc, f'/DMyAppVersion={version}', f'/DProjectRoot={ROOT}', str(ROOT / 'build_assets/YoutubePro_Setup.iss')]
     for attempt in range(3):

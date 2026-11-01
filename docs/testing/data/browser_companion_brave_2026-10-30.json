@@ -1,0 +1,14 @@
+{
+  "native_connection": "passed",
+  "status": "passed",
+  "browser": "isolated Brave",
+  "media": "synthetic 65-second WebM",
+  "automatic_source_handoff": "passed",
+  "blob_hls": true,
+  "app_generic_resolver": "passed",
+  "personal_profile_used": false,
+  "date": "2026-10-30",
+  "personal_installation": "pending explicit native-messaging approval and unpacked extension load",
+  "registration": "Chrome-compatible Windows HKCU host key; Brave-specific key-only attempt failed",
+  "production_changed": false
+}

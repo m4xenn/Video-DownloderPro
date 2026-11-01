@@ -33,7 +33,7 @@ class SiteLocalDownloadTests(unittest.TestCase):
             worker=threading.Thread(target=server.serve_forever,daemon=True);worker.start()
             stream=f'http://127.0.0.1:{server.server_port}/master.m3u8'
             try:
-                with patch.object(site_resolver,'details',return_value={'stream':stream,'streams':[stream.replace('master.m3u8','master360.m3u8'),stream.replace('master.m3u8','master180.m3u8')],'headers':{'Referer':'https://rapidvid.net/'},'title':'Synthetic embedded video','thumbnail':''}) as resolve,patch('core.queue_manager.show_notification'):
+                with patch('services.media_discovery.public_url',return_value=True),patch.object(site_resolver,'details',return_value={'stream':stream,'streams':[stream.replace('master.m3u8','master360.m3u8'),stream.replace('master.m3u8','master180.m3u8')],'headers':{'Referer':'https://rapidvid.net/'},'title':'Synthetic embedded video','thumbnail':''}) as resolve,patch('core.queue_manager.show_notification'):
                     manager=DownloadManager()
                     try:
                         manager.submit(['https://www.fullhdfilmizlesene.now/film/synthetic/'],{'format':'video','quality':'source:180:10','embed_subs':False},str(output),str(bin_dir))

@@ -38,14 +38,12 @@ def get_ydl_opts(format_type, quality, save_path, speed_limit, embed_subs, progr
         'progress_hooks': [progress_hook],
         'ignoreerrors': True,
         'verbose': False,
-        'nocheckcertificate': True,
         'extract_flat': False,
         'concurrent_fragment_downloads': CONCURRENT_FRAGMENT_DOWNLOADS,
         'ffmpeg_location': bin_dir,
         'writethumbnail': True,
         'outtmpl': os.path.join(save_path, '%(title)s.%(ext)s'),
         'noplaylist': True,
-        'nocheckcertificate': True,
         'restrictfilenames': True
     }
 

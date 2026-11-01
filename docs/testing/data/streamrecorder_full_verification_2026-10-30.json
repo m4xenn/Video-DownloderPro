@@ -1,0 +1,78 @@
+{
+  "date": "2026-10-30",
+  "page": "https://streamrecorder.io/kick/caglararts",
+  "context": "public page, no login, normal discovered URLs unchanged",
+  "full_download_verified": false,
+  "result": "public sources are truncated at 200000000 bytes",
+  "listed_duration_seconds": 15890,
+  "formats": [
+    {
+      "format_id": "1-mp4",
+      "total_bytes": 200000000,
+      "duration_seconds": 15889.928,
+      "movie_metadata_bytes": 29058040,
+      "following_box": "mdat",
+      "declared_container_end": 6432055465,
+      "container_truncated": true,
+      "full_file_tail_http_status": 416,
+      "range_samples": [
+        {
+          "position": 0,
+          "bytes": 16384,
+          "http_status": 206,
+          "passed": true
+        },
+        {
+          "position": 0.5,
+          "bytes": 16384,
+          "http_status": 206,
+          "passed": true
+        },
+        {
+          "position": 1,
+          "bytes": 16384,
+          "http_status": 206,
+          "passed": true
+        }
+      ],
+      "diagnostic_bytes_read": 1097744
+    },
+    {
+      "format_id": "0-mp4",
+      "total_bytes": 200000000,
+      "duration_seconds": 15889.928,
+      "movie_metadata_bytes": 16000097,
+      "following_box": "mdat",
+      "declared_container_end": 2643957116,
+      "container_truncated": true,
+      "full_file_tail_http_status": 416,
+      "range_samples": [
+        {
+          "position": 0,
+          "bytes": 16384,
+          "http_status": 206,
+          "passed": true
+        },
+        {
+          "position": 0.5,
+          "bytes": 16384,
+          "http_status": 206,
+          "passed": true
+        },
+        {
+          "position": 1,
+          "bytes": 16384,
+          "http_status": 206,
+          "passed": true
+        }
+      ],
+      "diagnostic_bytes_read": 1097760
+    }
+  ],
+  "limitations": [
+    "No complete download was attempted; byte ranges and MP4 headers were checked.",
+    "Successful start/middle/end ranges refer to the exposed 200 MB prefix, not the full recording.",
+    "MP4 duration describes the original recording and does not prove all its bytes are accessible.",
+    "No account, purchase, license access, URL token manipulation or DRM decryption was used."
+  ]
+}

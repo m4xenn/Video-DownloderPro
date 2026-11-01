@@ -34,3 +34,7 @@ Thumbs.db
 
 # Isolated native site inspection tests
 site-preview-*/
+
+# Generated test diagnostics and preview captures
+/tests/*-results.txt
+/tests/*.png

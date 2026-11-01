@@ -12,6 +12,10 @@ from urllib.parse import urlsplit
 
 
 MESSAGES = {
+    'region_restricted': 'The platform restricts this video in the current country or region.',
+    'video_unavailable': 'The platform reports that this video is unavailable. Check playback on the original page.',
+    'recording_gap':'Live segments are missing; the captured temporary recording is preserved.',
+    'partial_source':'Only a truncated recording or preview is accessible; full download stopped.',
     'started': 'Operation started.', 'resolved': 'Media source resolved.',
     'finished': 'Download completed.', 'interaction_required': 'Browser interaction required.',
     'no_player': 'No usable player was detected before the inspection deadline.',
@@ -26,6 +30,9 @@ MESSAGES = {
     'fragment_failed': 'A video fragment could not be downloaded.',
     'local_file_missing': 'A local or temporary file could not be found.',
     'network_error': 'Connection failed or timed out.', 'unsupported': 'No supported media source was found.',
+    'encrypted_unsupported': 'Encrypted stream scheme is unsupported; DRM was not established.',
+    'file_access_denied': 'A local file is in use or write permission was denied; downloaded files are preserved.',
+    'disk_full': 'The destination disk has no free space.',
     'drm': 'Protected media detected.', 'unexpected': 'Operation failed; see the stage and error code.',
     'invalid_media': 'Embedded media metadata or playable formats could not be validated.',
 }
@@ -33,8 +40,16 @@ STAGES = {'metadata', 'browser', 'playback', 'download', 'postprocess'}
 
 
 def error_code(error):
+    explicit=getattr(error,'code',None)
+    if isinstance(explicit,str) and explicit in MESSAGES:return explicit
     text = str(error).lower()
+    marker=re.match(r'^\[(encrypted_unsupported|invalid_media|partial_source|recording_gap)\]',text)
+    if marker:return marker[1]
+    if isinstance(error,PermissionError) or re.search(r'winerror (?:5|32|33)\b|permission denied|access is denied|erişim engellendi',text):return 'file_access_denied'
+    if re.search(r'no space left|disk full|winerror 112\b',text):return 'disk_full'
     for pattern, code in [
+        (r'legal complaint|not available (?:on this country domain|in your country|in your region)|geo.?restricted', 'region_restricted'),
+        (r'video unavailable|video is unavailable|video has been removed|private video', 'video_unavailable'),
         (r'aynı video ve format', 'source_mismatch'),(r'kısmi dosya korundu', 'partial_preserved'),
         (r'\b429\b', 'rate_limited'), (r'\b(?:401|403)\b', 'access_denied'),
         (r'\b404\b', 'not_found'), (r'drm|widevine|playready', 'drm'),

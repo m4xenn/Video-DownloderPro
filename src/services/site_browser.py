@@ -219,6 +219,7 @@ class SiteBrowser:
                     session['evaluation'] = None
                     if isinstance(result, dict):
                         if discovery:
+                            if result.get('players') or result.get('media') or result.get('ad_pending'):session['player_seen']=True
                             from services.media_discovery import choose_media
                             try:
                                 with self.lock:
@@ -228,6 +229,11 @@ class SiteBrowser:
                                 if session.get('frame_probe'):
                                     candidates.extend(session['frame_probe'].network_candidates())
                                 selected=choose_media(result,candidates)
+                                if not selected and not result.get('verification') and not result.get('drm') and (result.get('players') or result.get('media')):
+                                    from services.manifest_relations import ManifestRelations
+                                    relations=session.setdefault('manifest_relations',ManifestRelations())
+                                    candidates=relations.enrich(candidates)
+                                    selected=choose_media(result,candidates)
                                 if not selected and candidates and (result.get('players') or result.get('media')):
                                     result['interaction']=True
                             except ValueError:
@@ -278,12 +284,26 @@ class SiteBrowser:
                             self.close(session['token'])
                             return result
             time.sleep(.75)
+        if discovery and isinstance(session.get('evaluation_result'),dict):
+            result=session['evaluation_result']
+            if result.get('watch_pages') and not result.get('verification') and not result.get('drm'):
+                self.close(session['token'])
+                return result
+        if discovery and session.get('shown') and isinstance(session.get('evaluation_result'),dict):
+            # Preserve the real parent across preroll -> iframe initialization gaps.
+            # Navigating the child alone can lose the working parent/session context.
+            if session.get('player_seen') or session['evaluation_result'].get('embeds'):
+                raise BrowserRequired(session['token'])
         if discovery and isinstance(session.get('evaluation_result'),dict) and session['evaluation_result'].get('embeds'):
             result=session['evaluation_result']
             if session.get('frame_probe') and (result.get('interaction') or result.get('verification') or session.get('awaiting_frame_request')):
                 raise BrowserRequired(session['token'])
             self.close(session['token'])
             return result
+        if discovery and isinstance(session.get('evaluation_result'),dict) and session['evaluation_result'].get('deferred_app'):
+            # Client applications can defer hydration while the native window is hidden.
+            # Offer the existing visible Continue flow rather than declaring no player.
+            raise BrowserRequired(session['token'])
         if discovery and isinstance(session.get('evaluation_result'), dict) and not session['evaluation_result'].get('interaction') and not session['evaluation_result'].get('verification'):
             from services.diagnostics import diagnostics
             diagnostics.record('browser', url, 'no_player')
@@ -330,7 +350,7 @@ class SiteBrowser:
                 if probe:probe.close()
                 session['loaded'].clear()
                 session['requests']={};session['candidates']=[]
-                for key in ('evaluation','evaluation_result','selected_signature','selected_at','discovered_at','awaiting_frame_request'):
+                for key in ('evaluation','evaluation_result','selected_signature','selected_at','discovered_at','awaiting_frame_request','manifest_relations'):
                     session.pop(key,None)
         # Never hold the capture lock while invoking the UI thread.
         if recreate:

@@ -67,6 +67,10 @@ function localizeProgress(data) {
  document.getElementById('downloadSummary').textContent=`${mode} · ${data.active_count || 0}/${data.concurrency_limit || 2} ${interfaceText('active')} · ${((data.total_speed_bps || 0)/1000000).toLocaleString(currentLang,{minimumFractionDigits:2,maximumFractionDigits:2})} MB/s${cap}`;
 }
 function updateInterfaceTexts() {
+ if(typeof updateRecoveryTexts==='function')updateRecoveryTexts();
+ if(typeof updateTrackTexts==='function')updateTrackTexts();
+ if(typeof updateDownloadToolTexts==='function')updateDownloadToolTexts();
+ if(typeof updateCompanionTexts==='function')updateCompanionTexts();
  const labels={
  '#settingsTitle':'settings','label[for=settingMode]':'management','#settingMode option[value=auto]':'auto','#settingMode option[value=manual]':'manual',
  '#settingMode + p':'managementHint','.advanced-download-settings summary':'advanced','label[for=settingConcurrent]':'concurrency','.advanced-download-settings p':'manualHint',

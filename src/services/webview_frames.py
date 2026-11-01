@@ -22,6 +22,13 @@ class NativeFrames:
         self.request_documents={}
         self.media_responses={}
         self.worker_sessions=set()
+        self.response_keys={}
+        self.body_requests=set()
+        self.response_failures=[]
+        self.opaque_responses={}
+        self.opaque_keys=set()
+        self.opaque_body_requests=set()
+        self.opaque_body_diagnostics=[]
 
     def attach(self):
         try:
@@ -90,6 +97,39 @@ class NativeFrames:
                         if not self.closed:
                             self.observe_response(json.loads(args.ParameterObjectAsJson),str(getattr(args,'SessionId','')))
                     listen('Network.responseReceived',response)
+                    def failed(sender,args):
+                        if self.closed:return
+                        data=json.loads(args.ParameterObjectAsJson)
+                        key=(str(getattr(args,'SessionId','')),data.get('requestId'))
+                        from urllib.parse import urlsplit
+                        with self.lock:
+                            url=self.request_ids.get(key,'')
+                            # Only Chromium error codes, never arbitrary server text/URLs.
+                            error=str(data.get('errorText',''))
+                            if not error.startswith('net::ERR_'):error='network_error'
+                            self.response_failures.append({'host':urlsplit(url).hostname,'error':error[:80],'type':data.get('type','')})
+                            self.response_failures=self.response_failures[-24:]
+                    listen('Network.loadingFailed',failed)
+                    def finished(sender,args):
+                        if self.closed:return
+                        data=json.loads(args.ParameterObjectAsJson)
+                        session=str(getattr(args,'SessionId',''));key=(session,data.get('requestId'))
+                        from services.manifest_relations import MAX_MANIFEST_BYTES
+                        with self.lock:
+                            url=self.response_keys.get(key)
+                            attempted=self.opaque_body_requests if key in self.opaque_keys else self.body_requests
+                            if not url or key in attempted or len(attempted)>=6:return
+                            if not 0 < float(data.get('encodedDataLength') or 0) <= MAX_MANIFEST_BYTES:return
+                            attempted.add(key)
+                        try:
+                            from System import Action,String
+                            from System.Threading.Tasks import Task
+                            def complete(task):
+                                try:self.observe_response_body(url,task.Result)
+                                except Exception:pass
+                            protocol('Network.getResponseBody',{'requestId':key[1]},session).ContinueWith(Action[Task[String]](complete),self.scheduler)
+                        except Exception:pass
+                    listen('Network.loadingFinished',finished)
                     protocol('Network.enable',{})
                     protocol('Target.setAutoAttach',{'autoAttach':True,'waitForDebuggerOnStart':False,'flatten':True})
                 except Exception:
@@ -104,13 +144,57 @@ class NativeFrames:
         from services.network_media import media_kind
         response=data.get('response') or {}
         url=response.get('url','');mime=response.get('mimeType','');status=response.get('status')
-        if not media_kind(url,mime,status):return
+        if isinstance(status,(int,float)) and status>=400:
+            from urllib.parse import urlsplit
+            with self.lock:
+                if not self.closed:
+                    self.response_failures.append({'host':urlsplit(url).hostname,'status':int(status),'type':data.get('type','')})
+                    self.response_failures=self.response_failures[-24:]
+        kind=media_kind(url,mime,status)
+        opaque=False
+        if not kind:
+            from services.media_discovery import public_url
+            allowed={'application/octet-stream','text/plain','image/jpeg','image/png','image/gif','image/webp'}
+            if status not in (200,206) or data.get('type') not in ('XHR','Fetch') or mime.split(';')[0].lower() not in allowed or not public_url(url):return
+            opaque=True
         with self.lock:
             if self.closed:return
             if len(self.media_responses)>=40:self.media_responses.pop(next(iter(self.media_responses)))
-            self.media_responses[url]={'url':url,'mime':mime,'status':status,
+            if (kind=='hls' or opaque) and data.get('requestId'):
+                if len(self.response_keys)>=40:self.response_keys.pop(next(iter(self.response_keys)))
+                self.response_keys[(session,data['requestId'])]=url
+            record={'url':url,'mime':mime,'status':status,
                 'worker':session in self.worker_sessions,
                 'document':self.request_documents.get((session,data.get('requestId')),''),'resource_type':data.get('type','')}
+            if opaque:
+                if len(self.opaque_responses)>=40:self.opaque_responses.pop(next(iter(self.opaque_responses)))
+                if len(self.opaque_keys)>=40:self.opaque_keys.pop()
+                self.opaque_responses[url]=record
+                self.opaque_keys.add((session,data.get('requestId')))
+            else:self.media_responses[url]=record
+
+    def observe_response_body(self,url,payload):
+        from services.manifest_relations import MAX_MANIFEST_BYTES,variant_links
+        import base64
+        if self.closed or not isinstance(payload,str) or len(payload)>MAX_MANIFEST_BYTES*2:return
+        try:
+            data=json.loads(payload)
+            if not isinstance(data,dict):return
+            body=data.get('body','')
+            if not isinstance(body,str):return
+            content=base64.b64decode(body,validate=True) if data.get('base64Encoded') else body.encode('utf-8')
+        except (ValueError,TypeError):return
+        if len(content)>MAX_MANIFEST_BYTES:return
+        links=variant_links(url,content)
+        with self.lock:
+            if self.closed:return
+            if url in self.opaque_responses:
+                if len(self.opaque_body_diagnostics)<6:self.opaque_body_diagnostics.append({'bytes':len(content),'prefix_hex':content[:16].hex(),'hls_offset':content[:4096].find(b'#EXTM3U')})
+                # MIME/extension guesses never promote an opaque response; require actual HLS bytes.
+                if content.lstrip(b'\xef\xbb\xbf \r\n\t').split(b'\n',1)[0].strip()!=b'#EXTM3U':return
+                if len(self.media_responses)>=40:self.media_responses.pop(next(iter(self.media_responses)))
+                self.media_responses[url]=dict(self.opaque_responses[url],mime='application/vnd.apple.mpegurl',body_hls=True)
+            if links and url in self.media_responses:self.media_responses[url]['variants']=links
 
     def network_candidates(self):
         with self.lock:
@@ -124,8 +208,16 @@ class NativeFrames:
         key=int(frame.GetHashCode())
         with self.lock:
             if len(self.frames)>=24:return
-            entry={'frame':frame,'key':key,'parent':parent,'depth':depth,'pending':False,'snapshot':None,'alive':True}
+            entry={'frame':frame,'key':key,'parent':parent,'depth':depth,'pending':False,'snapshot':None,'alive':True,'navigation_urls':[]}
             self.frames[key]=entry
+        def navigating(sender,args):
+            uri=str(args.Uri)
+            with self.lock:
+                if not getattr(args,'IsRedirected',False):entry['navigation_urls']=[]
+                if len(entry['navigation_urls'])<12:entry['navigation_urls'].append(uri)
+        entry['navigation_handler']=navigating
+        try:frame.NavigationStarting += navigating
+        except Exception:pass
         def child(sender,args):self._created(sender,args,key,depth+1)
         def destroyed(sender,args):
             with self.lock:
@@ -173,7 +265,7 @@ class NativeFrames:
         except Exception:
             return []
         with self.lock:
-            return [{'key':entry['key'],'parent':entry['parent'],'snapshot':entry['snapshot']}
+            return [{'key':entry['key'],'parent':entry['parent'],'snapshot':entry['snapshot'],'navigation_urls':list(entry['navigation_urls'])}
                     for entry in self.frames.values() if entry['alive'] and entry['snapshot']]
 
     def close(self):
@@ -182,7 +274,8 @@ class NativeFrames:
         with self.lock:
             self.frames.clear();self.requests.clear();self.request_ids.clear();self.extra_headers.clear();self.receivers.clear()
             self.media_responses.clear();self.request_documents.clear()
-            self.worker_sessions.clear()
+            self.worker_sessions.clear();self.response_keys.clear();self.body_requests.clear();self.response_failures.clear()
+            self.opaque_responses.clear();self.opaque_keys.clear();self.opaque_body_requests.clear();self.opaque_body_diagnostics.clear()
 
     def headers(self,sources):
         names={'referer':'Referer','origin':'Origin','user-agent':'User-Agent','cookie':'Cookie'}
@@ -206,7 +299,12 @@ def merge_frames(root,frames):
             document=data.get('url')
             if not public_url(document):
                 remaining.remove(entry);continue
-            frame=next((frame for frame in container.get('embeds',[]) if isinstance(frame,dict) and frame.get('url','').split('#')[0]==document.split('#')[0]),None)
+            aliases=[document.split('#')[0]]
+            navigations=entry.get('navigation_urls') or []
+            # Trust redirects only when the native navigation ends at this document.
+            if navigations and navigations[-1].split('#')[0]==document.split('#')[0]:
+                aliases.extend(value.split('#')[0] for value in navigations if public_url(value))
+            frame=next((frame for frame in container.get('embeds',[]) if isinstance(frame,dict) and frame.get('url','').split('#')[0] in aliases),None)
             if not frame:continue
             area=min(float(frame.get('area') or 0),inherited)
             if area<6000:

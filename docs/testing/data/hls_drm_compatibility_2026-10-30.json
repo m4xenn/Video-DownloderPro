@@ -1,0 +1,71 @@
+{
+  "date": "2026-10-30",
+  "extension_version": "0.3.0",
+  "python": {
+    "tests": 382,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 0,
+    "passed": true
+  },
+  "native_webview2": {
+    "checks": [
+      "native yt-dlp failure -> hidden browser fallback",
+      "cross-origin dynamic nested iframe traversal preserving real parent",
+      "muted automatic JW Player activation before source is available",
+      "180p/360p source qualities",
+      "scoped native request cookie capture",
+      "html5: dynamic source inspection and metadata",
+      "videojs: dynamic source inspection and metadata",
+      "dash: dynamic source inspection and metadata",
+      "blob: dynamic source inspection and metadata",
+      "cookie: dynamic source inspection and metadata",
+      "gate: dynamic source inspection and metadata",
+      "network: dynamic source inspection and metadata",
+      "network-frame: dynamic source inspection and metadata",
+      "network-related: dynamic source inspection and metadata",
+      "poster-modern: dynamic source inspection and metadata",
+      "frame-redirect: dynamic source inspection and metadata",
+      "poster-visual: dynamic source inspection and metadata",
+      "watch-cover: dynamic source inspection and metadata",
+      "artplayer: dynamic source inspection and metadata",
+      "preroll: dynamic source inspection and metadata",
+      "opaque-manifest: dynamic source inspection and metadata",
+      "playerjs: dynamic source inspection and metadata",
+      "selected: 180p HLS download with audio",
+      "maximum: 360p HLS download with audio",
+      "browser retained through first segment request and released after media bytes",
+      "metadata preview browser handed to cached download and released after first bytes",
+      "helper windows cleaned up"
+    ],
+    "status": "passed"
+  },
+  "local_hls_cases": [
+    "Separate typed video/audio renditions merged and FFprobe verified",
+    "Master with external audio + WebVTT subtitle embedded in MP4",
+    "Publisher-provided standard AES-128 HLS downloaded to video+audio",
+    "DRM-tagged fixture stopped after manifest; no key/license/media URI requested"
+  ],
+  "extension_master_selection": {
+    "status": "passed",
+    "browser": "isolated Brave",
+    "extension_version": "0.3.0",
+    "observed_lists": 3,
+    "automatic_verified_master": "passed",
+    "native_bridge_and_generic_resolver": "passed",
+    "human_source_selection": false,
+    "scope": "Synthetic blob playback and real HTTP manifest correlation; not a movie download. Local address allowance restricted to this fixture in test process."
+  },
+  "ui": "All JS UI suites passed; EME event, attached MediaKeys false-positive, canonical root/ad/cycle ambiguity and encryption labels covered.",
+  "output_checks": "Expected media stream presence verified before completion; album artwork is not video; failure preserves files.",
+  "production_changed": false,
+  "published": false,
+  "limits": [
+    "No DRM decryption or provider offline-license integration",
+    "No full public-film download or new immutable site matrix",
+    "Multi-source HLS acceptance uses explicit rendition declarations",
+    "Master/live duration can remain unknown",
+    "No finalize-only recovery for locked files",
+    "Embedded fragment concurrency policy unchanged"
+  ]
+}

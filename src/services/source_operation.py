@@ -5,7 +5,7 @@ import hashlib
 import threading
 import time
 
-PHASES={'finding_player','starting_player','validating_source','waiting_server','refreshing_source','downloading','postprocess','ready','error'}
+PHASES={'searching_regions','browser_extension','finding_player','starting_player','validating_source','waiting_server','refreshing_source','downloading','postprocess','ready','error'}
 _current=ContextVar('source_operation',default=None)
 _browser_slots=threading.BoundedSemaphore(2)
 
