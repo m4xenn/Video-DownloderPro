@@ -27,6 +27,14 @@ class LiveLocalTests(unittest.TestCase):
   cls.server=http.server.ThreadingHTTPServer(('127.0.0.1',0),functools.partial(Handler,directory=str(cls.base)))
   cls.worker=threading.Thread(target=cls.server.serve_forever,daemon=True);cls.worker.start()
   cls.url=f'http://127.0.0.1:{cls.server.server_port}/live.m3u8'
+  split=cls.base/'split';split.mkdir()
+  subprocess.run([str(cls.bin/'ffmpeg.exe'),'-hide_banner','-loglevel','error','-f','lavfi','-i','testsrc2=s=320x180:r=10',
+      '-f','lavfi','-i','sine=frequency=440','-map','0:v','-t','8','-c:v','libx264','-preset','ultrafast','-g','10','-an',
+      '-hls_time','1','-hls_list_size','0',str(split/'video.m3u8'),'-map','1:a','-t','8','-c:a','aac','-vn',
+      '-hls_time','1','-hls_list_size','0',str(split/'audio.m3u8')],check=True,timeout=30)
+  for name in ('video.m3u8','audio.m3u8'):
+   manifest=split/name;manifest.write_text(manifest.read_text().replace('#EXT-X-ENDLIST',''))
+
  @classmethod
  def tearDownClass(cls):cls.server.shutdown();cls.server.server_close();cls.worker.join(3);cls.temp.cleanup()
  def verify(self,name,until=None):
@@ -61,6 +69,27 @@ class LiveLocalTests(unittest.TestCase):
   finally:
    if producer.poll() is None:producer.terminate()
    producer.wait(timeout=5);producer.stderr.close()
+ def split_info(self,audio_name='audio.m3u8'):
+  prefix=self.url.rsplit('/',1)[0]+'/split/'
+  return {'is_live':True,'requested_formats':[
+    {'url':prefix+'video.m3u8','vcodec':'h264','acodec':'none','protocol':'m3u8_native'},
+    {'url':prefix+audio_name,'vcodec':'none','acodec':None,'protocol':'m3u8_native'}]}
+ def test_split_hls_unknown_audio_codec_is_recorded_and_audible(self):
+  target=self.base/'unknown-audio.mp4';start=time.monotonic();events=[]
+  with patch('services.media_discovery.public_url',return_value=True):
+   record_live(self.split_info(),target,str(self.bin),dict(format='video',live_record_minutes=1),lambda:False,lambda:time.monotonic()-start>2,events.append)
+  streams=json.loads(subprocess.check_output([str(self.bin/'ffprobe.exe'),'-v','error','-show_streams','-of','json',str(target)]))['streams']
+  self.assertEqual({s['codec_type'] for s in streams},{'video','audio'})
+  measured=subprocess.run([str(self.bin/'ffmpeg.exe'),'-hide_banner','-i',str(target),'-vn','-af','volumedetect','-f','null','-'],capture_output=True,text=True,check=True,timeout=15)
+  import re
+  mean=re.search(r'mean_volume: (-?[0-9.]+) dB',measured.stderr)
+  self.assertIsNotNone(mean);self.assertGreater(float(mean[1]),-60)
+  self.assertTrue(any('recording_speed_bps' in e for e in events if e['status']=='downloading'))
+ def test_declared_audio_without_audio_stream_does_not_publish_silent_file(self):
+  target=self.base/'missing-audio.mp4'
+  with patch('services.media_discovery.public_url',return_value=True),self.assertRaises(ValueError):
+   record_live(self.split_info('video.m3u8'),target,str(self.bin),dict(format='video',live_record_minutes=1),lambda:False,lambda:False)
+  self.assertFalse(target.exists())
  def test_exhausted_segment_retries_do_not_publish_a_successful_recording(self):
   handler=self.server.RequestHandlerClass.func;handler.seen={};handler.retry_once=True;handler.fail_forever=True;handler.failed_segment=None
   target=self.base/'missing-segment.mp4'

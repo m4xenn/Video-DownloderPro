@@ -79,6 +79,9 @@ with sync_playwright() as p:
  pending.clear();page.locator('#companionContinue').wait_for(state='hidden')
 
  page.evaluate("setWorkspaceView('queue');renderQueueItem('https://example.com/active-recording','Live recording','');decorateLiveQueue(document.getElementById('queue-'+btoa(encodeURIComponent('https://example.com/active-recording')).replace(/=/g,'')),{url:'https://example.com/active-recording',is_live:true,status:'downloading',recorded_seconds:42,recording_limit:900})")
+ page.evaluate("localizeProgress({items:[{url:'https://example.com/active-recording',is_live:true,status:'downloading',recorded_seconds:42,recording_limit:900,recording_speed_bps:60000,downloaded_bytes:2500000,percent:5}],concurrency_limit:2,active_count:1,total_speed_bps:60000})")
+ assert '00:00:42 / 00:15:00' in page.locator('#queueContainer .q-estimate').last.inner_text()
+ assert 'Real time' in page.locator('#queueContainer .q-speed').last.inner_text()
  button=page.locator('.queue-finish-recording');assert button.is_visible();assert button.bounding_box()['width']>200
  page.screenshot(path=str(folder/'recording-queue-en.png'),full_page=True)
  button.click();page.wait_for_timeout(200);assert finished and finished[0]['url']=='https://example.com/active-recording'

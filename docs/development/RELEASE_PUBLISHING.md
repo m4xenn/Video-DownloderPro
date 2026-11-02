@@ -55,3 +55,7 @@ See [RELEASE_ACCEPTANCE_1.3.0.md](../releases/RELEASE_ACCEPTANCE_1.3.0.md) for t
 ## 1.4.0 acceptance
 
 See [RELEASE_ACCEPTANCE_1.4.0.md](../releases/RELEASE_ACCEPTANCE_1.4.0.md) for browser companion/language synchronization, recovery/lifecycle, streaming/live controls, complete regression and isolated 1.3.0 upgrade evidence.
+
+## 1.4.1 acceptance
+
+See [RELEASE_ACCEPTANCE_1.4.1.md](../releases/RELEASE_ACCEPTANCE_1.4.1.md) for the live audio and telemetry correction, fresh regression, packaged runtime and isolated 1.4.0 upgrade checks.

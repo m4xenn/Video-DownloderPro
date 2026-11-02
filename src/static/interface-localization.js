@@ -61,6 +61,8 @@ function localizeProgress(data) {
   const seconds=Number.isFinite(item.eta)?Math.ceil(item.eta):null;
   const eta=item.status==='downloading' && seconds!==null?' · '+interfaceText('remaining')+': '+Math.floor(seconds/60)+':'+String(seconds%60).padStart(2,'0'):'';
   row.querySelector('.q-estimate').textContent=size+eta;
+  // Keep live duration/status instead of overwriting it with the VOD size/ETA.
+  if(item.is_live && typeof decorateLiveQueue==='function')decorateLiveQueue(row,item);
  }
  const mode=interfaceText(data.concurrency_mode==='auto'?'autoMode':'manualMode');
  const cap=data.speed_limit_bps?' · '+interfaceText('speedLimit')+': '+(data.speed_limit_bps*8/1000000).toLocaleString(currentLang,{maximumFractionDigits:1})+' Mbps':'';

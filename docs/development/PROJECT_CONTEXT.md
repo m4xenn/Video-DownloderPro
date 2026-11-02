@@ -22,7 +22,7 @@ navigation and handoff note, not a new test run or release acceptance report.
 
 ## Current version and evidence boundaries
 
-- `version.json` is `1.4.0`; bundled/development requirement is
+- `version.json` is `1.4.1`; bundled/development requirement is
   `yt-dlp==2026.8.19`. Verified component updates can supersede the bundled engine
   at the next process startup (`component_runtime.py`).
 - The supplied history records publication of 1.2.14 and then 1.3.0. The 1.4.0 release preparation subsequently confirmed the live stable baseline
@@ -201,3 +201,5 @@ before release; do not assume a local edit is committed, mirrored or published.
 - [StreamRecorder verification](../testing/STREAMRECORDER_FULL_VERIFICATION_2026-10-30.md).
 - [YouTube investigation and dynamic search](../testing/YOUTUBE_AVAILABILITY_2026-11-01.md).
 - [1.3.0 acceptance](../releases/RELEASE_ACCEPTANCE_1.3.0.md).
+
+Live-recording follow-up (2026-11-02): 1.4.1 retains selected audio-only HLS inputs when their codec name is unknown, requires their audio in validation, and fixes live clock/rate display. See [audio fix evidence](../testing/LIVE_AUDIO_AND_RATE_FIX_2026-11-02.md) and [1.4.1 acceptance](../releases/RELEASE_ACCEPTANCE_1.4.1.md).

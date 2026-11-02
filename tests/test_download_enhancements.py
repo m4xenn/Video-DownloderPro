@@ -9,6 +9,24 @@ from services.hls_metadata import ProtectedMediaError
 from utils.download_settings import normalize_settings
 
 class EnhancementTests(unittest.TestCase):
+ def test_live_rate_is_included_in_total_without_native_reader(self):
+  from core.queue_manager import DownloadManager,Job
+  from concurrent.futures import Future
+  from state.app_state import state
+  import copy
+  previous=copy.deepcopy(state)
+  manager=DownloadManager(clock=lambda:100)
+  try:
+   job=Job('https://example.com/live',{'format':'video','quality':'max'},str(ROOT),'',is_live=True,status='downloading',recording_speed_bps=64000,future=Future())
+   manager.jobs=[job]
+   self.assertEqual(manager._throughput(100),64000)
+   manager.record(100000)
+   self.assertEqual(manager._throughput(100),164000)
+   job.status='paused'
+   self.assertEqual(manager._throughput(100),100000)
+   manager.jobs=[]
+  finally:
+   manager.close();state.clear();state.update(previous)
  def test_live_gap_error_survives_queue_serialization(self):
   from services.diagnostics import error_code
   self.assertEqual(error_code(str(LiveRecordingGapError())),'recording_gap')

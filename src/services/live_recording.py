@@ -78,9 +78,19 @@ def record_live(info, target, bin_dir, options, cancelled, stop_requested, progr
             args+=hls_retry_arguments(str(ffmpeg),ffmpeg.stat().st_mtime_ns)
         if headers:args+=['-headers',''.join(f'{k}: {v}\r\n' for k,v in headers.items())]
         args+=['-i',url]
-    video=next((i for i,f in enumerate(formats) if f.get('vcodec')!='none'),None)
+    video=next((i for i,f in enumerate(formats) if f.get('vcodec') not in (None,'none')),None)
+    if video is None:
+        video=next((i for i,f in enumerate(formats) if f.get('vcodec')!='none'),None)
     audio=next((i for i,f in enumerate(formats) if f.get('acodec') not in (None,'none')),None)
+    if audio is None:
+        # HLS external AUDIO renditions (notably YouTube live) may omit CODECS.
+        # vcodec=none still identifies the selected audio-only input. None means
+        # unknown codec, not absent audio; require and validate that track.
+        audio=next((i for i,f in enumerate(formats)
+                    if f.get('vcodec')=='none' and f.get('acodec')!='none'),None)
     if video is None:raise ValueError('Live source has no video stream.')
+    if audio is None and formats[video].get('acodec') is None:
+        audio=video  # Unknown multiplexed audio must not silently disappear.
     def stream_spec(index,kind):
         fmt=formats[index]
         number=fmt.get('manifest_stream_number')
@@ -104,6 +114,7 @@ def record_live(info, target, bin_dir, options, cancelled, stop_requested, progr
     workers=[threading.Thread(target=read_output,daemon=True),threading.Thread(target=read_errors,daemon=True)]
     for worker in workers:worker.start()
     start=time.monotonic();finishing=None;paused=False;forced_stop=False;gap=False;elapsed=0.;size=0
+    samples=deque([(start,0)])
     try:
         while process.poll() is None:
             if cancelled():paused=True
@@ -127,8 +138,12 @@ def record_live(info, target, bin_dir, options, cancelled, stop_requested, progr
                 try:size=int(value)
                 except ValueError:pass
             elif key=='progress' and progress:
+                now=time.monotonic();samples.append((now,size))
+                while len(samples)>2 and samples[1][0]<now-5:samples.popleft()
+                speed=max(0,size-samples[0][1])/max(.1,now-samples[0][0])
                 progress({'status':'downloading','downloaded_bytes':size,'recorded_seconds':elapsed,
-                          'recording_limit':limit,'info_dict':info,'_speed_str':f'{int(elapsed)} s'})
+                          'recording_limit':limit,'recording_speed_bps':speed,
+                          'info_dict':info,'_speed_str':f'{speed/1_000_000:.2f} MB/s'})
         process.wait(timeout=5)
         for worker in workers:worker.join(timeout=2)
         if paused:raise DownloadPaused('DOWNLOAD_PAUSED')

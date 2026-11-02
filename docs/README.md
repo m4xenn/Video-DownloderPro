@@ -24,6 +24,7 @@ The application code lives in `src/`, automated checks in `tests/`, and develope
 
 ## Testing
 
+- [Live audio and rate correction, 2026-11-02](testing/LIVE_AUDIO_AND_RATE_FIX_2026-11-02.md)
 - [Companion language synchronization, 2026-11-01](testing/COMPANION_LANGUAGE_SYNC_2026-11-01.md)
 - [Recovery and desktop lifecycle, 2026-11-01](testing/RECOVERY_AND_SHUTDOWN_2026-11-01.md)
 - [Remaining embedded sources, 2026-10-22](testing/REMAINING_EMBEDDED_2026-10-22.md)
@@ -40,6 +41,9 @@ The application code lives in `src/`, automated checks in `tests/`, and develope
 - [Test report](testing/TEST_REPORT.md)
 
 ## Release reports
+
+- [1.4.1 release acceptance](releases/RELEASE_ACCEPTANCE_1.4.1.md)
+- [1.4.1 release notes](releases/RELEASE_NOTES_1.4.1.md)
 
 - [1.4.0 release acceptance](releases/RELEASE_ACCEPTANCE_1.4.0.md)
 - [1.4.0 release notes](releases/RELEASE_NOTES_1.4.0.md)
