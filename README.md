@@ -8,7 +8,7 @@ A Windows video and audio downloader with a redesigned blue-and-navy workspace, 
 
 - 🧩 **Optional browser companion** — guided Chrome/Edge/Brave setup, clearer embedded-source labels and automatic synchronization with the app's ten languages. See the [setup guide](docs/BROWSER_EXTENSION.md). Loading the unpacked extension still requires browser approval.
 - 🛟 **Recovery center and safe closure** — restore unfinished jobs, refresh expired sources, preserve partial files, confirm closure during downloads and prevent duplicate app instances. Resume depends on source support.
-- 📡 **Bounded live recording** — single-video MP4 capture with duration/stop-time controls and a finish/save action. Live subtitles, audio-only live export and a positive shared speed cap are not supported.
+- 📡 **Live recording with catch-up** — download safely aligned, available HLS history quickly, then keep recording the live edge in the same MP4. The queue shows the catch-up stage and approximate delay. Duration limits include history. Live subtitles, audio-only live export and a positive shared speed cap are not supported.
 - 🎚️ **Track selection and stronger output checks** — choose offered audio/subtitle languages for one inspected video; identify known truncated sources and verify downloaded streams, duration and file tails.
 - 🌐 **YouTube player-country discovery** — try a limited sequence of country preferences on eligible availability errors. This does not change your IP or guarantee every regional restriction can be resolved.
 
@@ -79,7 +79,7 @@ Found a problem? [Open an issue](https://github.com/m4xenn/Video-DownloderPro/is
 
 ## 🧑‍💻 Source Code
 
-The `v1.4.1` tag contains the matching release source. Browse the [documentation index](docs/README.md), [development guide](docs/development/DEVELOPMENT.md), [publishing guide](docs/development/RELEASE_PUBLISHING.md), or [1.4.1 acceptance report](docs/releases/RELEASE_ACCEPTANCE_1.4.1.md). For normal installation, use [Releases](https://github.com/m4xenn/Video-DownloderPro/releases/latest).
+The `v1.4.2` tag contains the matching release source. Browse the [documentation index](docs/README.md), [development guide](docs/development/DEVELOPMENT.md), [publishing guide](docs/development/RELEASE_PUBLISHING.md), or [1.4.2 acceptance report](docs/releases/RELEASE_ACCEPTANCE_1.4.2.md). For normal installation, use [Releases](https://github.com/m4xenn/Video-DownloderPro/releases/latest).
 
 ## 📄 License
 

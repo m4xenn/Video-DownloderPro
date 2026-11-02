@@ -82,8 +82,17 @@ with sync_playwright() as p:
  page.evaluate("localizeProgress({items:[{url:'https://example.com/active-recording',is_live:true,status:'downloading',recorded_seconds:42,recording_limit:900,recording_speed_bps:60000,downloaded_bytes:2500000,percent:5}],concurrency_limit:2,active_count:1,total_speed_bps:60000})")
  assert '00:00:42 / 00:15:00' in page.locator('#queueContainer .q-estimate').last.inner_text()
  assert 'Real time' in page.locator('#queueContainer .q-speed').last.inner_text()
+ assert page.locator('.queue-live-state').last.is_visible()
+ assert 'Real time' in page.locator('.queue-live-state').last.inner_text()
+ page.locator('#queueContainer .queue-progress-wrapper').last.evaluate("node=>node.style.display='block'")
  button=page.locator('.queue-finish-recording');assert button.is_visible();assert button.bounding_box()['width']>200
  page.screenshot(path=str(folder/'recording-queue-en.png'),full_page=True)
+ page.evaluate("localizeProgress({items:[{url:'https://example.com/active-recording',is_live:true,status:'downloading',recording_phase:'catchup',recording_pace:12.4,catchup_remaining_seconds:3590,recorded_seconds:42,recording_limit:36000,recording_speed_bps:6000000,downloaded_bytes:2500000,percent:5}],concurrency_limit:2,active_count:1,total_speed_bps:6000000})")
+ assert 'Catching up' in page.locator('#queueContainer .q-speed').last.inner_text()
+ assert '00:59:50' in page.locator('#queueContainer .q-estimate').last.inner_text()
+ assert page.locator('.queue-live-state').last.is_visible()
+ assert '12.4×' in page.locator('.queue-live-state').last.inner_text()
+ page.screenshot(path=str(folder/'recording-catchup-en.png'),full_page=True)
  button.click();page.wait_for_timeout(200);assert finished and finished[0]['url']=='https://example.com/active-recording'
  assert not errors,errors
  browser.close()

@@ -290,3 +290,5 @@ body {--workspace-inset:28px;height:100dvh;min-height:0;overflow:hidden;box-sizi
 .shutdown-overlay {position:fixed;inset:0;z-index:10000;display:grid;place-items:center;background:rgba(5,12,26,.94);color:#fff;padding:32px;text-align:center;font-size:17px;line-height:1.8;}
 .shutdown-overlay p {max-width:600px;}
 .shutdown-overlay.shutdown-error {inset:auto 16px 16px;border-radius:12px;font-size:13px;padding:12px;pointer-events:none;}
+.queue-live-state {margin:8px 0;padding:9px 12px;border:1px solid var(--primary);border-radius:9px;background:var(--q-bg);color:var(--text-main);font-size:12px;font-weight:600;line-height:1.6;overflow-wrap:anywhere;}
+.queue-live-state[hidden] {display:none;}

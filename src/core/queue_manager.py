@@ -55,6 +55,9 @@ class Job:
     is_live: bool = False
     recorded_seconds: float = 0
     recording_speed_bps: float = 0
+    recording_pace: float = 0
+    recording_phase: str = 'live'
+    catchup_remaining_seconds: float = 0
     recording_limit: float = 0
     stop_requested: bool = False
     recovery_reason: str = ''
@@ -254,7 +257,7 @@ class DownloadManager:
             previous = copy.deepcopy({name: getattr(job, name) for name in (
                 'status', 'error', 'speed', 'retry_count', 'retry_at', 'restored',
                 'stop_requested', 'recovery_reason', 'recorded_seconds',
-                'recording_limit', 'recording_speed_bps', 'percent', 'duration', 'downloaded_bytes', 'total_bytes')})
+                  'recording_limit', 'recording_speed_bps', 'recording_pace', 'recording_phase', 'catchup_remaining_seconds', 'percent', 'duration', 'downloaded_bytes', 'total_bytes')})
             previous_cancel = state['cancel_flags'].get(url, False)
             state_actions.set_cancel_flag(url, False)
             job.status, job.error, job.speed = 'queued', '', 'Sırada...'
@@ -262,7 +265,8 @@ class DownloadManager:
             job.stop_requested=False
             job.recovery_reason=''
             if job.is_live:
-                job.recording_speed_bps=0
+                job.recording_speed_bps=0;job.recording_pace=0
+                job.recording_phase='live';job.catchup_remaining_seconds=0
                 job.recorded_seconds=0;job.recording_limit=0;job.percent=0;job.duration=None;job.downloaded_bytes=0;job.total_bytes=None
             self.notified = False
             try:
@@ -356,7 +360,7 @@ class DownloadManager:
                 {'id': j.id, 'url': j.url, 'title': j.title, 'thumbnail': j.thumbnail,
                  'percent': j.percent, 'speed': j.speed, 'status': j.status, 'error': j.error,'error_code':j.error_code,'error_phase':j.error_phase,'phase':j.phase,
                  'total_bytes': j.total_bytes, 'downloaded_bytes': j.downloaded_bytes, 'eta': j.eta,
-                 'is_live':j.is_live,'recorded_seconds':j.recorded_seconds,'recording_speed_bps':j.recording_speed_bps,'recording_limit':j.recording_limit,'stop_requested':j.stop_requested,
+                 'is_live':j.is_live,'recorded_seconds':j.recorded_seconds,'recording_speed_bps':j.recording_speed_bps,'recording_pace':j.recording_pace,'recording_phase':j.recording_phase,'catchup_remaining_seconds':j.catchup_remaining_seconds,'recording_limit':j.recording_limit,'stop_requested':j.stop_requested,
                  'format': j.options.get('format'), 'quality': j.options.get('quality'),
                  'size_estimated': j.size_estimated, 'retry_count': j.retry_count,
                  'retry_in': max(0, round(j.retry_at - self.clock())) if j.status == 'retry_wait' else None}
@@ -490,6 +494,9 @@ class DownloadManager:
                 if job.is_live and 'recorded_seconds' in data:
                     job.recorded_seconds=data['recorded_seconds'];job.recording_limit=data['recording_limit']
                     job.recording_speed_bps=data.get('recording_speed_bps',0)
+                    job.recording_pace=data.get('recording_pace',0)
+                    job.recording_phase=data.get('recording_phase','live')
+                    job.catchup_remaining_seconds=data.get('catchup_remaining_seconds',0)
                     job.duration=job.recorded_seconds
                     job.percent=min(99,round(job.recorded_seconds/max(1,job.recording_limit)*100,1))
                 job.downloaded_bytes = data.get('downloaded_bytes', job.downloaded_bytes)

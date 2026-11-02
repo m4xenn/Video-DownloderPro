@@ -6,6 +6,10 @@ The application code lives in `src/`, automated checks in `tests/`, and develope
 
 ## Development
 
+- [Unpublished live history catch-up validation](testing/LIVE_CATCHUP_2026-11-02.md)
+- [Live rate and visible progress recheck](testing/LIVE_RATE_RECHECK_2026-11-03.md)
+- [1.4.2 release acceptance](releases/RELEASE_ACCEPTANCE_1.4.2.md)
+
 - [Project context and implementation map](development/PROJECT_CONTEXT.md)
 - [Development guide](development/DEVELOPMENT.md)
 - [Publishing guide](development/RELEASE_PUBLISHING.md)

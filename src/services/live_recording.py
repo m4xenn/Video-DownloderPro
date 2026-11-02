@@ -17,6 +17,20 @@ class LiveRecordingGapError(ValueError):
     def __init__(self):super().__init__('[recording_gap] Live segments are missing; recording stopped and any temporary data preserved.')
 
 
+class LiveTelemetry:
+    """Rolling output rate and media-time pace, including intervals with no data."""
+    def __init__(self, started):
+        self.samples=deque([(started,0,0.)])
+
+    def sample(self, now, size, elapsed):
+        self.samples.append((now,size,elapsed))
+        while len(self.samples)>2 and self.samples[1][0]<now-5:
+            self.samples.popleft()
+        first=self.samples[0];duration=max(.1,now-first[0])
+        return (max(0,size-first[1])/duration,
+                max(0,elapsed-first[2])/duration if duration>=1 else 0.)
+
+
 @lru_cache(maxsize=4)
 def hls_retry_arguments(binary,modified):
     try:
@@ -66,9 +80,16 @@ def record_live(info, target, bin_dir, options, cancelled, stop_requested, progr
     if target.exists() or temporary.exists():raise ValueError('Live recording target already exists; files preserved.')
     formats=info.get('requested_formats') or [info]
     if not 1 <= len(formats) <= 2:raise ValueError('Unsupported live source layout.')
+    contexts=[{k:v for k,v in (fmt.get('http_headers') or info.get('http_headers') or {}).items()
+               if k in ('User-Agent','Referer','Origin')} for fmt in formats]
+    if any('\r' in str(v) or '\n' in str(v) for headers in contexts for v in headers.values()):
+        raise ValueError('Invalid live source headers.')
+    from services.live_catchup import plan_catchup
+    catchup=plan_catchup(formats,contexts,cancelled)
+    if cancelled():raise DownloadPaused('DOWNLOAD_PAUSED')
     args=[str(ffmpeg),'-hide_banner','-loglevel','warning','-nostats','-progress','pipe:1']
     from services.media_discovery import public_url
-    for fmt in formats:
+    for input_index,fmt in enumerate(formats):
         url=fmt.get('url')
         if not public_url(url,resolve=True):raise ValueError('Non-public live source.')
         headers={k:v for k,v in (fmt.get('http_headers') or info.get('http_headers') or {}).items() if k in ('User-Agent','Referer','Origin')}
@@ -76,6 +97,7 @@ def record_live(info, target, bin_dir, options, cancelled, stop_requested, progr
         args+=reconnect_arguments(str(ffmpeg),ffmpeg.stat().st_mtime_ns)
         if 'm3u8' in fmt.get('protocol','') or '.m3u8' in url.split('?',1)[0]:
             args+=hls_retry_arguments(str(ffmpeg),ffmpeg.stat().st_mtime_ns)
+            args+=['-live_start_index',str(catchup.indices[input_index]),'-prefer_x_start','0']
         if headers:args+=['-headers',''.join(f'{k}: {v}\r\n' for k,v in headers.items())]
         args+=['-i',url]
     video=next((i for i,f in enumerate(formats) if f.get('vcodec') not in (None,'none')),None)
@@ -100,9 +122,24 @@ def record_live(info, target, bin_dir, options, cancelled, stop_requested, progr
     if audio is not None:args+=['-map',stream_spec(audio,'a')]
     else:args+=['-map',f'{video}:a:0?']
     args+=['-t',str(limit),'-c','copy','-flush_packets','1','-cluster_time_limit','1000','-f','matroska',str(temporary)]
+    if progress and catchup.seconds>catchup.threshold:
+        progress({'status':'downloading','downloaded_bytes':0,'recorded_seconds':0,
+                  'recording_limit':limit,'recording_speed_bps':0,'recording_phase':'catchup',
+                  'catchup_remaining_seconds':catchup.seconds,'catchup_available_seconds':catchup.seconds,
+                  'info_dict':info,'_speed_str':'0.00 MB/s'})
     messages=queue.Queue(maxsize=256);errors=deque(maxlen=16);gap_event=threading.Event()
-    process=subprocess.Popen(args,stdin=subprocess.PIPE,stdout=subprocess.PIPE,stderr=subprocess.PIPE,text=True,
-                             encoding='utf-8',errors='replace',creationflags=getattr(subprocess,'CREATE_NO_WINDOW',0))
+    from services.live_catchup import HLSHistoryProxy
+    router=HLSHistoryProxy(catchup,formats,contexts) if catchup.windows else None
+    try:
+        if router:
+            inputs=router.start()
+            positions=[i+1 for i,value in enumerate(args) if value=='-i']
+            for position,url in zip(positions,inputs):args[position]=url
+        process=subprocess.Popen(args,stdin=subprocess.PIPE,stdout=subprocess.PIPE,stderr=subprocess.PIPE,text=True,
+                                 encoding='utf-8',errors='replace',creationflags=getattr(subprocess,'CREATE_NO_WINDOW',0))
+    except BaseException:
+        if router:router.close()
+        raise
     def read_output():
         for line in process.stdout:
             try:messages.put_nowait(line.strip())
@@ -114,7 +151,18 @@ def record_live(info, target, bin_dir, options, cancelled, stop_requested, progr
     workers=[threading.Thread(target=read_output,daemon=True),threading.Thread(target=read_errors,daemon=True)]
     for worker in workers:worker.start()
     start=time.monotonic();finishing=None;paused=False;forced_stop=False;gap=False;elapsed=0.;size=0
-    samples=deque([(start,0)])
+    telemetry=LiveTelemetry(start);last_progress=start
+    def emit_progress(now):
+        nonlocal last_progress
+        last_progress=now
+        speed,pace=telemetry.sample(now,size,elapsed)
+        lag=max(0,catchup.seconds+(now-catchup.observed_at)-elapsed) if catchup.seconds else 0
+        if progress:
+            progress({'status':'downloading','downloaded_bytes':size,'recorded_seconds':elapsed,
+                      'recording_limit':limit,'recording_speed_bps':speed,'recording_pace':pace,
+                      'recording_phase':'catchup' if lag>catchup.threshold else 'live',
+                      'catchup_remaining_seconds':lag,'catchup_available_seconds':catchup.seconds,
+                      'info_dict':info,'_speed_str':f'{speed/1_000_000:.2f} MB/s'})
     try:
         while process.poll() is None:
             if cancelled():paused=True
@@ -129,7 +177,12 @@ def record_live(info, target, bin_dir, options, cancelled, stop_requested, progr
                 # during capture, so stop the reader and validate/remux locally.
                 forced_stop=True;process.kill();break
             try:line=messages.get(timeout=.1)
-            except queue.Empty:continue
+            except queue.Empty:
+                # FFmpeg can be blocked waiting for a segment. Refresh telemetry
+                # rather than leaving its previous fast/slow rate frozen onscreen.
+                now=time.monotonic()
+                if finishing is None and now-last_progress>=1:emit_progress(now)
+                continue
             key,_,value=line.partition('=')
             if key=='out_time_us':
                 try:elapsed=max(0,float(value)/1_000_000)
@@ -138,12 +191,7 @@ def record_live(info, target, bin_dir, options, cancelled, stop_requested, progr
                 try:size=int(value)
                 except ValueError:pass
             elif key=='progress' and progress:
-                now=time.monotonic();samples.append((now,size))
-                while len(samples)>2 and samples[1][0]<now-5:samples.popleft()
-                speed=max(0,size-samples[0][1])/max(.1,now-samples[0][0])
-                progress({'status':'downloading','downloaded_bytes':size,'recorded_seconds':elapsed,
-                          'recording_limit':limit,'recording_speed_bps':speed,
-                          'info_dict':info,'_speed_str':f'{speed/1_000_000:.2f} MB/s'})
+                emit_progress(time.monotonic())
         process.wait(timeout=5)
         for worker in workers:worker.join(timeout=2)
         if paused:raise DownloadPaused('DOWNLOAD_PAUSED')
@@ -170,3 +218,4 @@ def record_live(info, target, bin_dir, options, cancelled, stop_requested, progr
         for worker in workers:worker.join(timeout=2)
         for pipe in (process.stdin,process.stdout,process.stderr):
             if pipe:pipe.close()
+        if router:router.close()

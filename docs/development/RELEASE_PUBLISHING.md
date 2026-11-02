@@ -59,3 +59,7 @@ See [RELEASE_ACCEPTANCE_1.4.0.md](../releases/RELEASE_ACCEPTANCE_1.4.0.md) for b
 ## 1.4.1 acceptance
 
 See [RELEASE_ACCEPTANCE_1.4.1.md](../releases/RELEASE_ACCEPTANCE_1.4.1.md) for the live audio and telemetry correction, fresh regression, packaged runtime and isolated 1.4.0 upgrade checks.
+
+## 1.4.2 acceptance
+
+See [RELEASE_ACCEPTANCE_1.4.2.md](../releases/RELEASE_ACCEPTANCE_1.4.2.md) for history-to-live recording, rate/status visibility, bounded real-source measurements, final regression, frozen runtime and isolated 1.4.1 upgrade checks.
