@@ -1,5 +1,8 @@
 # Video Downloader Pro 1.4.3 candidate acceptance
 
+**Published 5 November 2026:** [stable/latest 1.4.3](https://github.com/m4xenn/Video-DownloderPro/releases/tag/v1.4.3).
+[Publication verification](PUBLISHED_1.4.3.md) supersedes unpublished flags below.
+
 **5 November: local candidate acceptance passed; unpublished.** See the
 [final evidence](../testing/ENDURANCE_CANDIDATE_2026-11-05.md): corrected four-hour
 recording with full decode, 607 Python tests, matching source/PYZ/assets, actual

@@ -1,5 +1,9 @@
 # 1.4.3 son kurulum adayı — 5 Kasım 2026
 
+**Yayın güncellemesi:** Doğrulanan aynı dosya 5 Kasım 2026'da kararlı/en güncel
+1.4.3 olarak yayımlandı. [Yayın doğrulaması](../releases/PUBLISHED_1.4.3.md),
+bu adayın hazırlanma zamanına ait “yayımlanmadı” ifadelerinin yerini alır.
+
 **Yerel kabul kontrolleri geçti. Aday hazırlandı; yayımlanmadı.** Bu rapor önceki
 kararlılık adaylarının ve uzun kayıt için açık bırakılan kabul durumunun yerini alır.
 

@@ -1,5 +1,10 @@
 # Stability release work — 4 November 2026
 
+**Final state, 5 November: user authorized publication; 1.4.3 PUBLISHED stable/latest.**
+See docs/releases/PUBLISHED_1.4.3.md for the unchanged tested installer hash,
+release source commit and public download/updater verification. Unpublished or
+running-test statements below are historical.
+
 User approved implementing all six roadmap stages, preserving quality/performance.
 No publication is authorized yet. Existing 1.4.3 candidates are superseded until
 this work is finished and accepted. Root is not a Git checkout; `source-sync` is
