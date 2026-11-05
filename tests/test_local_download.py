@@ -23,6 +23,10 @@ from yt_dlp import YoutubeDL
 
 
 class LocalDownloadTests(unittest.TestCase):
+    def setUp(self):
+        # Real media fixtures are deliberately served on owned loopback sockets.
+        guard=patch('services.secure_transport.attach_network_guard')
+        guard.start();self.addCleanup(guard.stop)
     def test_video_then_audio_preserves_each_completed_output(self):
         from services.diagnostics import Diagnostics
         binary = Path(os.environ['APPDATA']) / 'YoutubePro/bin'

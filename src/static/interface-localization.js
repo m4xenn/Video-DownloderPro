@@ -1,5 +1,5 @@
 /* Localize the actual controls, not screenshot pixels. */
-let interfaceUpdateState=null, interfaceHistoryState=null;
+let interfaceUpdateState=null, interfaceHistoryState=null, interfaceProgressState=null;
 function interfaceText(key,values={}) {
  const locale=interfaceLocales[currentLang] || interfaceLocales.en;
  return (locale[key] || interfaceLocales.en[key] || key).replace(/\{(\w+)\}/g,(match,name)=>String(values[name] ?? match));
@@ -20,10 +20,13 @@ function localizeHistory(data) {
  const rows=[...document.querySelectorAll('#historyEntries .feature-row')];
  rows.forEach((row,index)=>{
   const entry=data.items[index];if(!entry)return;
-  row.querySelectorAll('.feature-actions button').forEach((button,i)=>button.textContent=interfaceText(['openFile','showFolder','downloadAgain'][i]));
+  row.querySelectorAll('.feature-actions button').forEach((button,i)=>{
+   if(i<3)button.textContent=interfaceText(['openFile','showFolder','downloadAgain'][i]);
+   else if(button.dataset.message)button.textContent=appMessage(button.dataset.message);
+  });
   if(typeof localizeHistoryPreview==='function')localizeHistoryPreview(row);
-  const format=entry.format==='video'?translations[currentLang].video:(entry.quality || translations[currentLang].audio).toUpperCase();
-  row.querySelector('.feature-muted').textContent=`${format} · ${entry.size?formatBytes(entry.size):interfaceText('unknownSize')} · ${new Date(entry.completed_at).toLocaleString(currentLang)}\n${entry.file_exists?entry.path:interfaceText('missingFile')}`;
+  const format=entry.format==='video'?translations[currentLang].video.replace('MP4',(entry.video_container || 'mp4').toUpperCase()):(entry.quality || translations[currentLang].audio).toUpperCase();
+  row.querySelector('.feature-muted').textContent=`${format} · ${entry.size?formatBytes(entry.size):interfaceText('unknownSize')} · ${new Date(entry.completed_at).toLocaleString(currentLang)}\n${entry.recording_archive?appMessage('recovery.parts'):entry.file_exists?entry.path:interfaceText('missingFile')}`;
  });
  document.getElementById('historyStatus').textContent=interfaceText('historyCount',{total:data.total || 0,shown:rows.length});
  const searching=Boolean(document.getElementById('historySearch').value.trim());
@@ -47,15 +50,22 @@ function localizeQueueRow(row) {
  Object.entries(labels).forEach(([selector,key])=>{const button=row.querySelector(selector);button.title=interfaceText(key);button.setAttribute('aria-label',button.title);});
 }
 function localizeProgress(data) {
+ interfaceProgressState=data;
  for(const item of data.items || []) {
   const row=document.getElementById('queue-'+btoa(encodeURIComponent(item.url)).replace(/=/g,''));if(!row)continue;
+  const snapshot=typeof queueSnapshotKey==='function'?queueSnapshotKey(item,currentLang):'';
+  if(snapshot && row.dataset.localeSnapshot===snapshot)continue;
+  if(snapshot)row.dataset.localeSnapshot=snapshot;
   localizeQueueRow(row);
   const key={queued:'queued',starting:'starting',paused:'paused',pausing:'pausing',converting:'converting',finished:'finished',error:'error'}[item.status];
   if(key)row.querySelector('.q-speed').textContent=interfaceText(key);
+  if(['starting','downloading','converting'].includes(item.status) && ['security_check','security_scan','saving_file'].includes(item.phase))row.querySelector('.q-speed').textContent=appMessage('phase.'+item.phase);
+  if(item.status==='finished' && item.security_status==='unavailable')row.querySelector('.q-speed').textContent=interfaceText('finished')+' · '+appMessage('security.unavailable');
+  if(['blocked','review'].includes(item.security_status))row.querySelector('.queue-resume').style.display='none';
   row.querySelector('.q-percent').textContent=new Intl.NumberFormat(currentLang,{style:'percent',maximumFractionDigits:0}).format((item.percent || 0)/100);
-  if(item.error_code==='network_error') {
+  if(item.error_code) {
    const stage=typeof sourceErrorStage==='function'?sourceErrorStage(item.error_phase):'';
-   row.querySelector('.q-error').textContent=interfaceText('networkError')+(stage?' · '+stage:'');
+   row.querySelector('.q-error').textContent=queueErrorLabel(item.error_code)+(stage?' · '+stage:'');
   }
   const size=item.total_bytes?`${item.size_estimated?'≈ ':''}${formatBytes(item.total_bytes)}`:interfaceText('unknownSize');
   const seconds=Number.isFinite(item.eta)?Math.ceil(item.eta):null;
@@ -63,16 +73,21 @@ function localizeProgress(data) {
   row.querySelector('.q-estimate').textContent=size+eta;
   // Keep live duration/status instead of overwriting it with the VOD size/ETA.
   if(item.is_live && typeof decorateLiveQueue==='function')decorateLiveQueue(row,item);
+  if(typeof decorateStabilityQueue==='function')decorateStabilityQueue(row,item);
  }
  const mode=interfaceText(data.concurrency_mode==='auto'?'autoMode':'manualMode');
  const cap=data.speed_limit_bps?' · '+interfaceText('speedLimit')+': '+(data.speed_limit_bps*8/1000000).toLocaleString(currentLang,{maximumFractionDigits:1})+' Mbps':'';
  document.getElementById('downloadSummary').textContent=`${mode} · ${data.active_count || 0}/${data.concurrency_limit || 2} ${interfaceText('active')} · ${((data.total_speed_bps || 0)/1000000).toLocaleString(currentLang,{minimumFractionDigits:2,maximumFractionDigits:2})} MB/s${cap}`;
+ if(typeof renderRecordingOperations==='function')renderRecordingOperations(data.recording_operations || []);
 }
 function updateInterfaceTexts() {
+ if(typeof updateNotificationTexts==='function')updateNotificationTexts();
+ if(typeof updateSiteInspectionTexts==='function')updateSiteInspectionTexts();
  if(typeof updateRecoveryTexts==='function')updateRecoveryTexts();
  if(typeof updateTrackTexts==='function')updateTrackTexts();
  if(typeof updateDownloadToolTexts==='function')updateDownloadToolTexts();
  if(typeof updateCompanionTexts==='function')updateCompanionTexts();
+ if(typeof updateStabilityTexts==='function')updateStabilityTexts();
  const labels={
  '#settingsTitle':'settings','label[for=settingMode]':'management','#settingMode option[value=auto]':'auto','#settingMode option[value=manual]':'manual',
  '#settingMode + p':'managementHint','.advanced-download-settings summary':'advanced','label[for=settingConcurrent]':'concurrency','.advanced-download-settings p':'manualHint',
@@ -88,6 +103,7 @@ function updateInterfaceTexts() {
  if(interfaceHistoryState)localizeHistory(interfaceHistoryState);
  localizePlaylist();
  document.querySelectorAll('#queueContainer > .queue-item').forEach(localizeQueueRow);
+ if(interfaceProgressState)localizeProgress(interfaceProgressState);
 }
 document.addEventListener('DOMContentLoaded',()=>{
  updateInterfaceTexts();

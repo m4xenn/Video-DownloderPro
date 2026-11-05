@@ -4,7 +4,7 @@ import json
 import os
 import re
 from pathlib import Path
-import subprocess
+from services import media_process as subprocess
 import time
 from PIL import Image, ImageOps, ImageStat
 
@@ -22,7 +22,7 @@ def cover_urls(info):
 def useful_image(data):
     """Reject empty/dark frames, but allow portrait covers and letterboxing."""
     try:
-        with Image.open(io.BytesIO(data)) as source:
+        with Image.open(io.BytesIO(data),formats=['JPEG','PNG','WEBP','GIF','AVIF','BMP']) as source:
             if source.width * source.height > 20_000_000:
                 return None
             image = ImageOps.exif_transpose(source).convert('RGB')

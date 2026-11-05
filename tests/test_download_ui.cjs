@@ -22,7 +22,8 @@ function environment(responses) {
         closeSettings(){closed++;}, showToast(message){errors.push(message);}, console,
         Set,
     });
-    vm.runInContext(code,context);
+    require('./message_ui_helper.cjs')(context);
+vm.runInContext(code,context);
     return {context,nodes,calls,errors,get closed(){return closed;}};
 }
 (async()=>{

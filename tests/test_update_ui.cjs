@@ -23,7 +23,8 @@ function environment(responses) {
         setTimeout: () => 1,
         clearTimeout: () => {},
     });
-    vm.runInContext(fs.readFileSync(path.join(__dirname, '../src/static/release-notes.js'),'utf8'),context);
+    require('./message_ui_helper.cjs')(context);
+vm.runInContext(fs.readFileSync(path.join(__dirname, '../src/static/release-notes.js'),'utf8'),context);
     vm.runInContext(code, context);
     return {context, nodes, calls};
 }
@@ -42,7 +43,7 @@ function environment(responses) {
 
     e = environment([{status: 'error', message: 'offline'}]);
     await vm.runInContext('checkAppUpdate(true)', e.context);
-    assert.equal(e.nodes.get('appUpdateCheckStatus').textContent, 'offline');
+    assert.equal(e.nodes.get('appUpdateCheckStatus').textContent, e.context.appMessageLocales.en['component.failed']);
     assert.equal(e.nodes.has('appUpdateModal'), false);
 
     e = environment([{status: 'success'}, {status: 'downloading', percent: 42}]);
@@ -53,7 +54,7 @@ function environment(responses) {
 
     e = environment([{status: 'ready', latest_version: 'v1.2.0', percent: 100}, {ok: false, message: 'Aktif indirmeyi bekleyin.'}]);
     await vm.runInContext('refreshAppUpdate()', e.context);
-    assert.equal(e.nodes.get('appUpdateAction').textContent, 'Kurulumu başlat');
+    assert.equal(e.nodes.get('appUpdateAction').textContent, e.context.appMessageLocales.en['update.install']);
     await vm.runInContext('installAppUpdate()', e.context);
     assert.equal(e.nodes.get('appUpdateAction').disabled, false);
     assert.equal(e.nodes.get('appUpdateStatus').textContent, 'Aktif indirmeyi bekleyin.');

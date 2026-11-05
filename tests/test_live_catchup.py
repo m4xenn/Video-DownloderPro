@@ -77,4 +77,19 @@ class CatchupTests(unittest.TestCase):
   for now in range(2,9):speed,pace=telemetry.sample(now,500000,10)
   self.assertEqual(speed,0);self.assertEqual(pace,0)
 
+ def test_native_source_origin_is_allowed_but_browser_fetch_is_rejected(self):
+  import urllib.request,urllib.error
+  from dataclasses import replace
+  from services.live_catchup import CatchupPlan,HLSHistoryProxy
+  base='https://cdn.example/list.m3u8'
+  original=replace(parse_window(playlist()),url=base)
+  router=HLSHistoryProxy(CatchupPlan((0,),4,2,0,(original,)),[{'url':base}],[{'Origin':'https://source.example'}])
+  try:
+   with patch('services.media_discovery.public_url',return_value=True):
+    url=router.start()[0]
+    with urllib.request.urlopen(urllib.request.Request(url,headers={'Origin':'https://source.example'}),timeout=2) as r:self.assertEqual(r.status,200)
+    for headers in ({'Origin':'https://evil.example'},{'Origin':'https://source.example','Sec-Fetch-Site':'cross-site'}):
+     with self.assertRaises(urllib.error.HTTPError):urllib.request.urlopen(urllib.request.Request(url,headers=headers),timeout=2)
+  finally:router.close()
+
 if __name__=='__main__':unittest.main()

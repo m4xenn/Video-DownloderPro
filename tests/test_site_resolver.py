@@ -98,7 +98,8 @@ class BrowserLifecycleTests(unittest.TestCase):
         browser=SiteBrowser();browser.enabled=True
         window=Mock();window.events=SimpleNamespace(loaded=Event(window),closed=Event(window));window.events.loaded.set()
         window.evaluate_js.return_value={'title':'Example','embeds':[EMBED]}
-        with patch('webview.windows',[object()]),patch('webview.create_window',return_value=window) as create,patch('services.site_browser.threading.Timer'):
+        with patch('services.security_policy.require_public_link'),patch('services.webview_frames.NativeFrames') as native,patch('webview.windows',[object()]),patch('webview.create_window',return_value=window) as create,patch('services.site_browser.threading.Timer'):
+            native.return_value.attach.return_value=True
             result=browser.inspect(PAGE)
         self.assertEqual(result['embeds'],[EMBED])
         self.assertTrue(create.call_args.kwargs['hidden']);self.assertIsNone(create.call_args.kwargs['js_api'])
@@ -149,7 +150,8 @@ class GeneralPlayerTests(unittest.TestCase):
         window.evaluate_js.return_value={'sources':[STREAM],'user_agent':'Browser-UA'}
         request=SimpleNamespace(url=EMBED,headers={})
         window.load_url.side_effect=lambda _:window.events.request_sent.set(request)
-        with patch('webview.windows',[object()]),patch('webview.create_window',return_value=window) as create,patch('services.site_browser.threading.Timer'):
+        with patch('services.security_policy.require_public_link'),patch('services.webview_frames.NativeFrames') as native,patch('webview.windows',[object()]),patch('webview.create_window',return_value=window) as create,patch('services.site_browser.threading.Timer'):
+            native.return_value.attach.return_value=True
             result=browser.inspect_player(EMBED,PAGE)
         self.assertEqual(result['sources'],[STREAM]);self.assertTrue(create.call_args.kwargs['hidden'])
         window.load_url.assert_called_once_with(EMBED)

@@ -13,6 +13,9 @@ from core.queue_manager import DownloadManager
 from core.downloader import _download_single
 from services.download_store import DownloadStore
 import core.queue_manager as queue
+# This subprocess owns the synthetic loopback fixture; no production bypass.
+import services.secure_transport
+services.secure_transport.attach_network_guard=lambda _:None
 queue.show_notification=lambda *_:None
 base=Path(sys.argv[2]);url=sys.argv[3];mode=sys.argv[4];tools=sys.argv[5]
 def worker(url,opts,path,request,folder):

@@ -25,6 +25,8 @@ RestartApplications=no
 SetupMutex=VideoDownloaderProSetup
 PrivilegesRequired=admin
 WizardStyle=modern
+MinVersion=10.0
+ArchitecturesAllowed=x64compatible
 
 [Files]
 Source: "{#ProjectRoot}\dist\YoutubePro\*"; DestDir: "{app}"; Flags: ignoreversion recursesubdirs createallsubdirs

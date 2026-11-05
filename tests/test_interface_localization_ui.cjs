@@ -1,9 +1,11 @@
 const assert=require('node:assert/strict'),fs=require('node:fs'),path=require('node:path'),vm=require('node:vm');
 const nodes=new Map();
-const node=()=>({textContent:'',title:'',setAttribute(){}});
+const node=()=>({textContent:'',title:'',style:{},setAttribute(){}});
 const row={dataset:{status:'finished'},querySelector(selector){if(!nodes.has(selector))nodes.set(selector,node());return nodes.get(selector);}};
 const summary=node(),ids=new Map();
 const context=vm.createContext({currentLang:'en',document:{addEventListener(){},getElementById(id){if(id==='downloadSummary')return summary;if(id.startsWith('queue-'))return row;if(!ids.has(id))ids.set(id,node());return ids.get(id);},querySelectorAll(){return [];}},btoa:value=>Buffer.from(value).toString('base64'),encodeURIComponent,Intl,playlistPreview:{entries:[],truncated:true},playlistChosen:new Set(),matchingPlaylistEntries:()=>[],sourceErrorStage:phase=>phase==='download'?'STAGE':''});
+require('./message_ui_helper.cjs')(context);
+context.queueErrorLabel=code=>context.appMessageLocales[context.currentLang || 'en']['error.'+code];
 for(const file of ['interface-locales.js','interface-localization.js'])vm.runInContext(fs.readFileSync(path.join(__dirname,'../src/static',file),'utf8'),context);
 const expected=['tr','en','de','es','fr','pt','ru','zh','ja','hi'].sort();
 assert.deepEqual(Array.from(vm.runInContext('Object.keys(interfaceLocales)',context)).sort(),expected);
@@ -23,5 +25,12 @@ for(const lang of expected){
  vm.runInContext("localizeProgress({items:[{url:'https://example.com/a',status:'error',percent:42,error_code:'network_error',error_phase:'download'}]})",context);
  assert.ok(nodes.get('.q-error').textContent.endsWith(' · STAGE'),'Keep the original error stage');
  row.dataset.status='finished';
+ vm.runInContext("localizeProgress({items:[{url:'https://example.com/a',status:'converting',phase:'security_check',security_status:'checking'}]})",context);
+ assert.equal(nodes.get('.q-speed').textContent,context.appMessageLocales[lang]['phase.security_check']);
+ vm.runInContext("localizeProgress({items:[{url:'https://example.com/a',status:'finished',security_status:'unavailable'}]})",context);
+ assert.ok(nodes.get('.q-speed').textContent.endsWith(context.appMessageLocales[lang]['security.unavailable']));
+ vm.runInContext("localizeProgress({items:[{url:'https://example.com/a',status:'error',security_status:'review',error_code:'security_review'}]})",context);
+ assert.equal(nodes.get('.queue-resume').style.display,'none');
+ assert.equal(nodes.get('.q-error').textContent,context.appMessageLocales[lang]['error.security_review']);
 }
 console.log('10 locale schemas, substitutions and speed-limit UI checks passed');

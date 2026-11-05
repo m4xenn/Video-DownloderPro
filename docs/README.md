@@ -6,6 +6,14 @@ The application code lives in `src/`, automated checks in `tests/`, and develope
 
 ## Development
 
+- [Startup optimization and entrance animation preview](testing/STARTUP_POLISH_2026-11-03.md)
+
+- [1.4.3 DVR release-readiness and complete-history tests](testing/DVR_RELEASE_READINESS_2026-11-03.md)
+- [1.4.3 candidate acceptance](releases/RELEASE_ACCEPTANCE_1.4.3.md)
+
+- [YouTube DVR from-start preview and validation](testing/YOUTUBE_DVR_FROM_START_2026-11-03.md)
+- [Active live-edge verification and percentage clarity](testing/LIVE_EDGE_VERIFICATION_2026-11-03.md)
+
 - [Unpublished live history catch-up validation](testing/LIVE_CATCHUP_2026-11-02.md)
 - [Live rate and visible progress recheck](testing/LIVE_RATE_RECHECK_2026-11-03.md)
 - [1.4.2 release acceptance](releases/RELEASE_ACCEPTANCE_1.4.2.md)
@@ -45,6 +53,10 @@ The application code lives in `src/`, automated checks in `tests/`, and develope
 - [Test report](testing/TEST_REPORT.md)
 
 ## Release reports
+
+- [1.4.3 release acceptance](releases/RELEASE_ACCEPTANCE_1.4.3.md)
+- [1.4.3 release notes](releases/RELEASE_NOTES_1.4.3.md)
+- [1.4.3 final four-hour test and package evidence](testing/ENDURANCE_CANDIDATE_2026-11-05.md)
 
 - [1.4.1 release acceptance](releases/RELEASE_ACCEPTANCE_1.4.1.md)
 - [1.4.1 release notes](releases/RELEASE_NOTES_1.4.1.md)

@@ -46,7 +46,8 @@ def progress_hook(d):
 
 def _download_single(url, ydl_opts, save_path, req_opts, folder_id=None):
     from services.source_operation import source_operation
-    with source_operation(req_opts.get('_stage'),retain=True,cancelled=lambda:bool(state['cancel_flags'].get(url))):
+    from services.output_validation import validation_session
+    with validation_session(),source_operation(req_opts.get('_stage'),retain=True,cancelled=lambda:bool(state['cancel_flags'].get(url))):
         return _download_single_impl(url,ydl_opts,save_path,req_opts,folder_id)
 
 
@@ -98,7 +99,11 @@ def _download_single_impl(url, ydl_opts, save_path, req_opts, folder_id=None):
     diagnostics.record('download', url, 'started')
     try:
         from yt_dlp import YoutubeDL
+        from services.media_process import install_yt_dlp_guard
+        install_yt_dlp_guard()
         with YoutubeDL(ydl_opts) as ydl:
+            from services.secure_transport import attach_network_guard
+            attach_network_guard(ydl)
             from services.merge_recovery import attach_merge_recovery
             attach_merge_recovery(ydl, lambda: bool(state['cancel_flags'].get(url)), report_stage)
             budget = req_opts.get('_budget')
@@ -124,6 +129,8 @@ def _download_single_impl(url, ydl_opts, save_path, req_opts, folder_id=None):
                 raise Exception("Video bilgisi alınamadı (Gizli veya kullanılamıyor olabilir).")
             from services.track_selection import validate_subtitle_choice
             validate_subtitle_choice(info, req_opts)
+            from services.media_quality import validate_container
+            validate_container(info,req_opts)
             if info.get('is_live') and 'live_record_minutes' not in req_opts:
                 raise ValueError('Inspect one live source and choose a recording duration before starting.')
             if req_opts.get('live_record_minutes') and not info.get('is_live'):
@@ -160,7 +167,8 @@ def _download_single_impl(url, ydl_opts, save_path, req_opts, folder_id=None):
                 if final_ext not in ['mp3', 'm4a', 'wav', 'opus']:
                     final_ext = "mp3"
             else:
-                final_ext = "mp4"
+                final_ext = req_opts.get('video_container','mp4')
+                if final_ext not in ('mp4','mkv'):raise ValueError('Invalid video container.')
 
             base_name = os.path.splitext(filename)[0]
             final_filename = f"{base_name}.{final_ext}"
@@ -193,10 +201,30 @@ def _download_single_impl(url, ydl_opts, save_path, req_opts, folder_id=None):
                 diagnostics.record('download',url,'browser_transport_retry')
             if info.get('is_live'):
                 from services.live_recording import record_live
-                recorded=record_live(info,final_filename,ydl_opts.get('ffmpeg_location') or '',req_opts,
-                            lambda:bool(state['cancel_flags'].get(url)),req_opts.get('_stop_recording',lambda:False),
-                            lambda data:[hook(data) for hook in ydl_opts.get('progress_hooks',[])])
+                from services.youtube_dvr import prepare_youtube_dvr
+                cancelled=lambda:bool(state['cancel_flags'].get(url))
+                live_info,dvr_router=prepare_youtube_dvr(ydl,info,url,cancelled)
+                from services.live_quality_policy import choose_recording_source
+                live_info,dvr_router=choose_recording_source(info,live_info,dvr_router)
+                try:
+                    if req_opts.get('_live_part'):req_opts['_live_part']('started',final_filename,live_info)
+                    def live_progress(data):
+                        for hook in ydl_opts.get('progress_hooks',[]):hook(data)
+                        if data.get('status')=='finished':report_stage('recording_finalize')
+                    recorded=record_live(live_info,final_filename,ydl_opts.get('ffmpeg_location') or '',req_opts,
+                                cancelled,req_opts.get('_stop_recording',lambda:False),
+                                live_progress,
+                                dvr_router=dvr_router)
+                except BaseException as error:
+                    if req_opts.get('_live_part'):
+                        from services.diagnostics import error_code
+                        req_opts['_live_part']('interrupted',final_filename,live_info,error_code(error))
+                    raise
+                finally:
+                    if dvr_router:dvr_router.close()
+                info=live_info
                 info['duration']=recorded['recorded_seconds']
+                if req_opts.get('_live_part'):req_opts['_live_part']('captured',final_filename,info)
                 if req_opts.get('_metadata'):req_opts['_metadata'](info)
                 result=info
             else:
@@ -229,14 +257,21 @@ def _download_single_impl(url, ydl_opts, save_path, req_opts, folder_id=None):
                 if req_opts.get('_metadata'):req_opts['_metadata'](info)
                 result=ydl.process_ie_result(renewed,download=True)
             if result and os.path.isfile(final_filename):
-                if info.get('extractor_key') in EMBEDDED:
+                verified=None
+                if req_opts.get('_verify'):
+                    verified=req_opts['_verify'](final_filename,info)
+                if info.get('extractor_key') in EMBEDDED and not req_opts.get('_verify'):
                     from services.output_validation import validate_output
                     validate_output(final_filename,ydl_opts.get('ffmpeg_location') or '',req_opts.get('format')!='audio',
                                     expected_duration=info.get('duration') if not info.get('is_live') else None,
                                     expect_audio=any(f.get('acodec') not in (None,'none') for f in (info.get('requested_formats') or [info])))
                 if req_opts.get('_preview_dir'):
+                    report_stage('preview')
                     from services.preview_service import create_preview
-                    preview=create_preview(ydl,info,final_filename,ydl_opts.get('ffmpeg_location') or '',
+                    preview_info=dict(info)
+                    if isinstance(verified,dict) and verified.get('duration'):
+                        preview_info['duration']=verified['duration']
+                    preview=create_preview(ydl,preview_info,final_filename,ydl_opts.get('ffmpeg_location') or '',
                         req_opts['_preview_dir'],req_opts['_preview_id'],req_opts.get('format')!='audio')
                     if req_opts.get('_thumbnail'):
                         req_opts['_thumbnail'](preview)

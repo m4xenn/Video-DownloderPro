@@ -14,6 +14,9 @@ STREAM='https://cdn.example/master.m3u8'
 
 
 class FrameMergeTests(unittest.TestCase):
+    def setUp(self):
+        guard=patch('services.security_policy.require_public_link')
+        guard.start();self.addCleanup(guard.stop)
     def root(self):return {'url':ROOT,'media':[],'embeds':[{'url':OUTER,'area':300000}],'drm':False,'interaction':False}
     def frames(self):
         return [{'key':1,'parent':None,'snapshot':{'url':OUTER,'media':[],'embeds':[{'url':PLAYER,'area':400000}]}},

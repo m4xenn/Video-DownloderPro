@@ -5,9 +5,11 @@ const c=vm.createContext({currentLang:'tr',setTimeout:fn=>{timers.set(++next,fn)
  singleQualityURL:()=>current,updateQualityHint:text=>hint=text,document:{getElementById:node},openSettings:()=>fallback=true,showToast:()=>{},
  navigator:{clipboard:{writeText:async text=>{copied=text;}}},
  fetch:async(url,options)=>{requests.push({url,body:JSON.parse(options.body)});return {ok:true,json:async()=>url==='/diagnostics'?{status:'success',text:'sanitized report'}:{phase:'waiting_server'}}}});
+c.appMessageLocales=JSON.parse(fs.readFileSync('src/static/message-locales.json','utf8'));c.appMessageAliases={};
+vm.runInContext(fs.readFileSync('src/static/messages.js','utf8'),c);
 vm.runInContext(fs.readFileSync('src/static/source-progress.js','utf8'),c);
 (async()=>{
- assert.equal(vm.runInContext("sourcePhaseLabel('validating_source')",c),'Kaynak doğrulanıyor…');
+ assert.equal(vm.runInContext("sourcePhaseLabel('validating_source')",c),c.appMessageLocales.tr['phase.validating_source']);
  assert.match(vm.runInContext("queueErrorLabel('access_denied')",c),/403/);
  const stop=vm.runInContext("watchSourceProgress('https://example.com/video')",c);
  const [id,fn]=[...timers.entries()][0];timers.delete(id);await fn();

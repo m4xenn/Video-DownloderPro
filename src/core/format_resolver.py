@@ -18,7 +18,7 @@ except ImportError:
     AUDIO_PREFERRED_QUALITY = "192"
 
 
-def get_ydl_opts(format_type, quality, save_path, speed_limit, embed_subs, progress_hook, bin_dir):
+def get_ydl_opts(format_type, quality, save_path, speed_limit, embed_subs, progress_hook, bin_dir, *, video_container='mp4'):
     """
     Kullanıcının seçtiği ayarlara göre yt-dlp parametrelerini (ydl_opts) oluşturur.
 
@@ -46,6 +46,8 @@ def get_ydl_opts(format_type, quality, save_path, speed_limit, embed_subs, progr
         'noplaylist': True,
         'restrictfilenames': True
     }
+    # Restrict only remote FFmpeg inputs; local conversion/merge still uses files.
+    ydl_opts['external_downloader_args']={'ffmpeg_i':['-protocol_whitelist','http,https,tcp,tls,crypto,data']}
 
     if speed_limit and str(speed_limit) != "0":
         try:
@@ -76,28 +78,29 @@ def get_ydl_opts(format_type, quality, save_path, speed_limit, embed_subs, progr
         else:
             ydl_opts['writethumbnail'] = False
     else:
+        if video_container not in ('mp4','mkv'):raise ValueError('Invalid video container.')
         source = parse_source_quality(quality)
         if source:
             height, fps = source
             # Extractors may report 30000/1001 as 29.97002997 while the UI rounds it.
             filters = f'[height={height}]' + (f'[fps<={fps + .001:g}]' if fps else '')
             ydl_opts['format'] = f'bestvideo{filters}+bestaudio/best{filters}'
-        elif quality == '8k': ydl_opts['format'] = 'bestvideo[height<=4320]+bestaudio/best / best[height<=4320] / best'
-        elif quality == '4k': ydl_opts['format'] = 'bestvideo[height<=2160]+bestaudio/best / best[height<=2160] / best'
-        elif quality == '1080p': ydl_opts['format'] = 'bestvideo[height<=1080]+bestaudio/best / best[height<=1080] / best'
-        elif quality == '720p': ydl_opts['format'] = 'bestvideo[height<=720]+bestaudio/best / best[height<=720] / best'
+        elif quality == '8k': ydl_opts['format'] = 'bestvideo[height<=?4320]+bestaudio/best[height<=?4320]'
+        elif quality == '4k': ydl_opts['format'] = 'bestvideo[height<=?2160]+bestaudio/best[height<=?2160]'
+        elif quality == '1080p': ydl_opts['format'] = 'bestvideo[height<=?1080]+bestaudio/best[height<=?1080]'
+        elif quality == '720p': ydl_opts['format'] = 'bestvideo[height<=?720]+bestaudio/best[height<=?720]'
         else:
             ydl_opts['format'] = 'bestvideo+bestaudio/best / best'
             ydl_opts['format_sort'] = ['res', 'fps']
         
-        ydl_opts['merge_output_format'] = 'mp4'
+        ydl_opts['merge_output_format'] = video_container
         
         if 'postprocessors' not in ydl_opts:
             ydl_opts['postprocessors'] = []
             
         ydl_opts['postprocessors'].append({
-            'key': 'FFmpegVideoConvertor',
-            'preferedformat': 'mp4',
+            'key': 'FFmpegVideoRemuxer',
+            'preferedformat': video_container,
         })
         
         if embed_subs:

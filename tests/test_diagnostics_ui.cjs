@@ -5,6 +5,7 @@ let fail=false,clipboardFail=false,copied='',request;
 const context=vm.createContext({currentLang:'tr',document:{getElementById:el,addEventListener:(_,fn)=>ready.push(fn)},
  fetch:async(url,options)=>{request={url,options};if(fail)throw new Error();return {ok:true,json:async()=>({status:'success',text:'<script>plain text</script>',count:1,available:true})};},
  navigator:{clipboard:{writeText:async text=>{if(clipboardFail)throw new Error();copied=text;}}}});
+require('./message_ui_helper.cjs')(context);
 vm.runInContext(fs.readFileSync('src/static/diagnostics.js','utf8'),context);ready[0]();
 (async()=>{
  assert.equal(el('diagnosticsTitle').textContent,'Sorun giderme kayıtları');

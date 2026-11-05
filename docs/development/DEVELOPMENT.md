@@ -5,12 +5,12 @@ Run the commands in this guide from the repository root. See the
 
 ## Windows setup
 
-Use Python 3.12 with Tkinter, Microsoft Edge WebView2 Runtime, and a virtual environment. Node.js is needed for the JavaScript regression checks. The requirements record direct dependency versions from the 1.2.5 build environment; transitive dependencies are not fully locked.
+Use a security-patched Python runtime (the audited Windows build uses Python **3.14.10**), Microsoft Edge WebView2 Runtime, and a virtual environment. `vdp_build_runtime.py` enforces supported security floors for packaging. Node.js is needed for JavaScript checks. Runtime transitive versions are constrained by `requirements-runtime-lock.txt`; see the latest vulnerability and performance reports under `docs/testing`.
 
 ```powershell
 python -m venv .venv
 .\.venv\Scripts\Activate.ps1
-python -m pip install -r requirements.txt
+python -m pip install -r requirements.txt -c requirements-runtime-lock.txt
 python src/main.py
 ```
 
@@ -63,6 +63,15 @@ The existing v1.2.5 release tag predates this source synchronization; its automa
 - `docs/releases/`: historical release and acceptance reports.
 
 Local state, downloaded media, credentials and generated installers are intentionally excluded from the repository.
+
+## Performance checks
+
+`scripts/benchmark_performance.py --label NAME --runs 3 --exe PATH` measures
+fresh-process imports, frozen API readiness and isolated synthetic MP4/MP3
+pipelines. Preserve each label; compare the same media with `--source PATH`.
+The pipeline's network-policy bypass is limited to this developer fixture's
+owned loopback server, never the distributable. `scripts/check_sustained_recording.py`
+checks one minute of real-time HLS, resource growth and locked validation reuse.
 
 ## Site adapter tests (1.2.9 preview)
 

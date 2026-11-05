@@ -21,18 +21,18 @@ document.addEventListener('DOMContentLoaded',()=>{
             el('diagnosticsText').value=data.text;el('diagnosticsText').hidden=false;
             el('diagnosticsCopy').disabled=false;
             el('diagnosticsStatus').textContent=data.available
-                ? (tr()?`${data.count} kayıt. Rapor dili İngilizcedir.`:`${data.count} records.`)
-                : (tr()?'Kayıt dosyasına erişilemiyor; rapor eksik olabilir.':'Records unavailable; the report may be incomplete.');
-        } catch(_) {el('diagnosticsStatus').textContent=tr()?'Kayıtlar okunamadı.':'Could not read records.';}
+                ? appMessage('records_count',{count:data.count})
+                : (appMessage('records_unavailable'));
+        } catch(_) {el('diagnosticsStatus').textContent=appMessage('records_failed');}
         finally {el('diagnosticsLoad').disabled=false;}
     });
     el('diagnosticsCopy').addEventListener('click',async()=>{
         try {
             await navigator.clipboard.writeText(el('diagnosticsText').value);
-            el('diagnosticsStatus').textContent=tr()?'Rapor kopyalandı.':'Report copied.';
+            el('diagnosticsStatus').textContent=appMessage('diagnostic_copied');
         } catch(_) {
             el('diagnosticsText').focus();el('diagnosticsText').select();
-            el('diagnosticsStatus').textContent=tr()?'Ctrl+C ile seçili raporu kopyalayabilirsin.':'Press Ctrl+C to copy the selected report.';
+            el('diagnosticsStatus').textContent=appMessage('copy_manually');
         }
     });
 });

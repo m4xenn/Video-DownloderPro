@@ -13,6 +13,8 @@ class TransportLocalTests(unittest.TestCase):
   if not ffmpeg.exists():self.skipTest('Local FFmpeg component required')
   with tempfile.TemporaryDirectory(dir=ROOT/'build',prefix='transport-local-') as folder:
    base=Path(folder);media=base/'media';media.mkdir()
+   from services.windows_sandbox import protect_workspace
+   protect_workspace(base)
    subprocess.run([str(ffmpeg),'-hide_banner','-loglevel','error','-f','lavfi','-i','testsrc2=s=320x180:r=10','-f','lavfi','-i','sine=frequency=440','-t','2','-c:v','libx264','-preset','ultrafast','-g','10','-c:a','aac','-hls_time','1','-hls_playlist_type','vod',str(media/'master.m3u8')],check=True,timeout=30)
    seen=[];master_attempts=[0]
    class Handler(http.server.SimpleHTTPRequestHandler):
@@ -47,6 +49,8 @@ class TransportLocalTests(unittest.TestCase):
   if not ffmpeg.exists():self.skipTest('Local FFmpeg component required')
   with tempfile.TemporaryDirectory(dir=ROOT/'build',prefix='fragment-transport-') as folder:
    base=Path(folder)
+   from services.windows_sandbox import protect_workspace
+   protect_workspace(base)
    subprocess.run([str(ffmpeg),'-hide_banner','-loglevel','error','-f','lavfi','-i','testsrc2=s=320x180:r=10','-f','lavfi','-i','sine=frequency=440','-t','2','-c:v','libx264','-preset','ultrafast','-g','10','-c:a','aac','-hls_time','1','-hls_playlist_type','vod',str(base/'master.m3u8')],check=True,timeout=30)
    attempts=[0]
    class Handler(http.server.SimpleHTTPRequestHandler):

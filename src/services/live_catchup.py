@@ -57,7 +57,8 @@ def read_window(url,headers,allow_discontinuity=False):
     from services.media_discovery import public_url
     # Explicit redirects prevent the manifest probe from following private URLs.
     deadline=time.monotonic()+6
-    with requests.Session() as session:
+    from services.secure_transport import pin_requests_session
+    with pin_requests_session(requests.Session()) as session:
         for _ in range(4):
             if time.monotonic()>deadline:raise ValueError('Manifest inspection deadline')
             if not public_url(url,resolve=True):raise ValueError('Non-public manifest')
@@ -122,7 +123,9 @@ class HLSHistoryProxy:
             def log_message(self,*args):pass
             def do_GET(self):
                 index=routes.get(self.path)
-                if index is None or self.headers.get('Origin'):
+                origin=self.headers.get('Origin')
+                expected=owner.headers[index].get('Origin') if index is not None else None
+                if index is None or self.headers.get('Sec-Fetch-Site') is not None or origin and origin!=expected:
                     self.send_error(404);return
                 try:
                     with owner.lock:

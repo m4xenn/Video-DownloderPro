@@ -4,6 +4,29 @@ from pathlib import Path
 import sys
 import threading
 import uuid
+import os
+
+
+def is_app_foreground():
+    try:
+        import ctypes
+        from ctypes import wintypes
+        api=ctypes.WinDLL('user32',use_last_error=True)
+        api.GetForegroundWindow.restype=wintypes.HWND
+        api.GetAncestor.argtypes=(wintypes.HWND,wintypes.UINT)
+        api.GetAncestor.restype=wintypes.HWND
+        api.GetWindowThreadProcessId.argtypes=(wintypes.HWND,ctypes.POINTER(wintypes.DWORD))
+        api.GetWindowThreadProcessId.restype=wintypes.DWORD
+        window=api.GetForegroundWindow()
+        if not window:return False
+        for handle in (window,api.GetAncestor(window,3)):
+            if not handle:continue
+            pid=wintypes.DWORD()
+            api.GetWindowThreadProcessId(handle,ctypes.byref(pid))
+            if pid.value==os.getpid():return True
+    except (OSError,AttributeError):
+        pass
+    return False
 
 
 def notification_icon_path():
@@ -81,5 +104,10 @@ def _notify(title, message):
 
 def show_notification(title, message):
     if platform.system() != 'Windows':
-        return
+        return False
+    from utils.file_helpers import load_settings
+    mode=load_settings().get('notification_mode','always')
+    if mode=='never' or mode=='background' and is_app_foreground():
+        return False
     threading.Thread(target=_notify, args=(title, message), daemon=True).start()
+    return True

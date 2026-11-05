@@ -1,0 +1,11 @@
+.container-policy { display:flex;align-items:center;gap:12px;margin:8px 0;font-size:12px; }
+.container-policy select { margin-left:auto;min-width:110px;background:var(--input-bg);color:var(--text-main);border:1px solid var(--glass-border);border-radius:10px;padding:9px 12px; }
+.container-policy[hidden],.recording-join-dialog[hidden] { display:none; }
+#qualityPolicyNote { font-size:11px;line-height:1.6; }
+.q-quality { font-size:10px;margin:5px 0 0; }
+.queue-item[data-progress-kind="stage"] .q-fill { width:100% !important;opacity:.4; }
+.queue-item[data-progress-kind="unknown"] .q-fill { width:28% !important;opacity:.45; }
+.recording-join-dialog { position:fixed;inset:0;z-index:10000;background:#0009;display:grid;place-items:center;padding:24px; }
+.recording-join-dialog > div { max-width:520px;background:var(--glass-bg);color:var(--text-main);border-radius:18px;padding:24px;box-shadow:0 20px 80px #0008; }
+.recording-join-dialog p { line-height:1.7; }
+#recordingOperations p { overflow-wrap:anywhere; }

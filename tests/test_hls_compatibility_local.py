@@ -12,6 +12,8 @@ class HlsCompatibilityTests(unittest.TestCase):
   cls.ffmpeg=pathlib.Path(os.environ['APPDATA'])/'YoutubePro/bin/ffmpeg.exe'
   if not cls.ffmpeg.is_file():raise unittest.SkipTest('Local FFmpeg component required')
   cls.temp=tempfile.TemporaryDirectory(dir=ROOT/'build',prefix='hls-compat-');cls.base=pathlib.Path(cls.temp.name)
+  from services.windows_sandbox import protect_workspace
+  protect_workspace(cls.base)
   for name in ('v','a','tr','s','enc','fmp4','dash','rotate'): (cls.base/name).mkdir()
   def ff(args):
    args=list(args);cwd=None

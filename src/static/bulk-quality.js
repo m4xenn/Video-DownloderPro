@@ -12,7 +12,7 @@ function showLinkPreview(data, message) {
     const panel=document.getElementById("linkPreview");
     if(!panel) return;
     panel.hidden=!data && !message;
-    document.getElementById("linkPreviewTitle").textContent=data?.title || message || "";
+    document.getElementById("linkPreviewTitle").textContent=data?.title || (message ? localizeUserMessage(message) : "");
     const details=[];
     if(data) {
         if(typeof sourceCertaintyText==='function')details.push(sourceCertaintyText(data));
@@ -78,7 +78,7 @@ async function addLinksToQueue() {
                     const response=cached && Date.now()-cached.at<600000 ? null : await fetch('/get-info',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({url})});
                     const data=response ? await response.json() : cached.data;
                     if(data.status==='interaction_required' && typeof showSiteInspection==='function') showSiteInspection(data,url);
-                    if((response && !response.ok) || data.status!=='success') throw new Error(data.message);
+                    if((response && !response.ok) || data.status!=='success') throw new Error(serverMessage(data));
                     if(downloadQueue.includes(data.url)||activeQueueURLs.has(data.url)) skipped++;
                     else {
                         downloadQueue.push(data.url); draftItems.set(data.url,data);
@@ -120,7 +120,7 @@ function updateQualityHint(message) {
         hint.textContent=interfaceText(document.getElementById('formatValue').value==='audio'?'qualityAudio':!single?'qualityVideo':inspectedQualities.length?'qualitySource':'qualityFallback');
         return;
     }
-    hint.textContent=message || (document.getElementById('formatValue').value==='audio'
+    hint.textContent=(message ? localizeUserMessage(message) : '') || (document.getElementById('formatValue').value==='audio'
         ? 'Ses, seçtiğin çıktı formatına dönüştürülür.'
         : !single ? 'Her video kendi kaynağındaki en yüksek kalitede indirilir.'
         : inspectedQualities.length ? 'Bu videonun sunduğu çözünürlük ve FPS seçenekleri.'
@@ -151,7 +151,7 @@ async function refreshSourceQuality(force=false) {
             return;
         }
         if(data.status==='interaction_required' && typeof showSiteInspection==='function') showSiteInspection(data,url);
-        if(!response.ok || data.status!=='success') throw new Error(data.message || 'Kalite bilgisi alınamadı. Yenile düğmesiyle tekrar deneyebilirsin.');
+        if(!response.ok || data.status!=='success') throw new Error(serverMessage(data) || 'Kalite bilgisi alınamadı. Yenile düğmesiyle tekrar deneyebilirsin.');
         if(typeof clearSiteInspection==='function') clearSiteInspection();
         pastedMetadata.set(url,{data,at:Date.now()});
         if(pastedMetadata.size>20) pastedMetadata.delete(pastedMetadata.keys().next().value);

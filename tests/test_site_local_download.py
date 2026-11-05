@@ -19,6 +19,9 @@ class QuietHandler(http.server.SimpleHTTPRequestHandler):
     def log_message(self,*args):pass
 
 class SiteLocalDownloadTests(unittest.TestCase):
+    def setUp(self):
+        guard=patch('services.secure_transport.attach_network_guard')
+        guard.start();self.addCleanup(guard.stop)
     def test_selected_quality_reaches_real_output(self):
         bin_dir=Path(os.environ['APPDATA'])/'YoutubePro/bin'
         if not (bin_dir/'ffmpeg.exe').is_file():self.skipTest('FFmpeg required')

@@ -9,10 +9,14 @@ let writes=0;const image={dataset:{},set src(value){this.value=value;writes++;},
 context.image=image;
 vm.runInContext("updateQueueThumbnail(image,'https://example.com/old-cover.jpg')",context);
 assert.equal(writes,1);
+assert.equal(image.src,'/static/media-placeholder.svg');
 vm.runInContext("updateQueueThumbnail(image,'https://example.com/old-cover.jpg')",context);
 assert.equal(writes,1);
 image.onerror();assert.equal(image.src,'/static/media-placeholder.svg');
 context.cached='/previews/'+'a'.repeat(32)+'.jpg';
+vm.runInContext('updateQueueThumbnail(image,cached)',context);
+assert.equal(image.src,context.cached);
+context.cached='/safe-thumbnails/'+'b'.repeat(32)+'.jpg';
 vm.runInContext('updateQueueThumbnail(image,cached)',context);
 assert.equal(image.src,context.cached);
 vm.runInContext("updateQueueThumbnail(image,'file:///C:/private.png')",context);

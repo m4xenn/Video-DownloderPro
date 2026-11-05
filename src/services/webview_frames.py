@@ -37,6 +37,11 @@ class NativeFrames:
             self.scheduler=self.window.native.browser.syncContextTaskScheduler
             def install():
                 core=self.control.CoreWebView2
+                from services.browser_security import install_browser_security
+                self.security_handlers=install_browser_security(core,self.control)
+                # pywebview's first popup delegate launches the system browser
+                # before later handlers can mark the event handled. Remove it.
+                core.NewWindowRequested -= self.window.native.browser.on_new_window_request
                 def prevent_popup(sender,args):args.Handled=True
                 self.popup_handler=prevent_popup
                 core.NewWindowRequested += prevent_popup
@@ -45,7 +50,8 @@ class NativeFrames:
                     from Microsoft.Web.WebView2.Core import CoreWebView2WebResourceContext,CoreWebView2WebResourceRequestSourceKinds
                     core.AddWebResourceRequestedFilter('*',CoreWebView2WebResourceContext.All,CoreWebView2WebResourceRequestSourceKinds.All)
                 except (ImportError,AttributeError,TypeError):
-                    pass
+                    from Microsoft.Web.WebView2.Core import CoreWebView2WebResourceContext
+                    core.AddWebResourceRequestedFilter('*',CoreWebView2WebResourceContext.All)
                 # OOPIF/worker requests may be absent from pywebview's legacy
                 # resource events. Observe them through the host's in-process
                 # protocol API; no remote debugging port is opened.
@@ -212,6 +218,10 @@ class NativeFrames:
             self.frames[key]=entry
         def navigating(sender,args):
             uri=str(args.Uri)
+            from services.browser_security import navigation_allowed
+            if not navigation_allowed(uri):
+                args.Cancel=True
+                return
             with self.lock:
                 if not getattr(args,'IsRedirected',False):entry['navigation_urls']=[]
                 if len(entry['navigation_urls'])<12:entry['navigation_urls'].append(uri)

@@ -177,7 +177,8 @@ class FeatureTests(unittest.TestCase):
                 manager.tick()
                 manager.snapshot()
             self.until(lambda: notify.call_count == 1)
-            notify.assert_called_once_with('Video Downloader Pro', 'Tüm indirmeler tamamlandı.')
+            from services.ui_messages import message
+            notify.assert_called_once_with('Video Downloader Pro', message('downloads_complete'))
 
     def test_success_writes_one_history_record(self):
         def worker(url,opts,path,request,*_):
@@ -310,10 +311,19 @@ class FeatureTests(unittest.TestCase):
 
     def test_history_open_uses_stored_path_not_client_input(self):
         record=self.record()
+        Path(record['path']).write_bytes(b'\0\0\0\x18ftypisom')
         with patch.object(app,'download_store',self.store),patch.object(app,'ensure_download_state'),patch.object(app.os,'startfile') as open_file:
             response=app.app.test_client().post('/history/action',json={'id':record['id'],'action':'open','path':'evil.exe'})
             self.assertEqual(response.status_code,200)
             open_file.assert_called_once_with(record['path'])
+
+    def test_history_refuses_executable_replacing_a_saved_video(self):
+        record=self.record()
+        Path(record['path']).write_bytes(b'MZexecutable-fixture')
+        with patch.object(app,'download_store',self.store),patch.object(app,'ensure_download_state'),patch.object(app.os,'startfile') as open_file:
+            response=app.app.test_client().post('/history/action',json={'id':record['id'],'action':'open'})
+            self.assertEqual(response.status_code,409)
+            open_file.assert_not_called()
 
 
 if __name__=='__main__': unittest.main()

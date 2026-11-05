@@ -10,6 +10,9 @@ from services.source_recovery import source_checkpoint
 from core.downloader import _download_single
 
 class SignedResumeTests(unittest.TestCase):
+ def setUp(self):
+  guard=patch('services.secure_transport.attach_network_guard')
+  guard.start();self.addCleanup(guard.stop)
  @classmethod
  def setUpClass(cls):
   cls.temp=tempfile.TemporaryDirectory(dir=ROOT/'build',prefix='signed-resume-');cls.base=Path(cls.temp.name)

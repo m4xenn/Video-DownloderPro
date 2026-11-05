@@ -7,7 +7,7 @@ A Windows video and audio downloader with a redesigned blue-and-navy workspace, 
 ## ✨ Features
 
 - 🧩 **Optional browser companion** — guided Chrome/Edge/Brave setup, clearer embedded-source labels and automatic synchronization with the app's ten languages. See the [setup guide](docs/BROWSER_EXTENSION.md). Loading the unpacked extension still requires browser approval.
-- 🛟 **Recovery center and safe closure** — restore unfinished jobs, refresh expired sources, preserve partial files, confirm closure during downloads and prevent duplicate app instances. Resume depends on source support.
+- 🛟 **Recovery center and safe closure** — restore unfinished jobs, refresh expired sources, recover files saved before an interruption and export interrupted live parts. Compatible parts can be joined after acknowledging possible gaps. Confirm closure during downloads and prevent duplicate app instances. Resume depends on source support.
 - 📡 **Live recording with catch-up** — download safely aligned, available HLS history quickly, then keep recording the live edge in the same MP4. The queue shows the catch-up stage and approximate delay. Duration limits include history. Live subtitles, audio-only live export and a positive shared speed cap are not supported.
 - 🎚️ **Track selection and stronger output checks** — choose offered audio/subtitle languages for one inspected video; identify known truncated sources and verify downloaded streams, duration and file tails.
 - 🌐 **YouTube player-country discovery** — try a limited sequence of country preferences on eligible availability errors. This does not change your IP or guarantee every regional restriction can be resolved.
@@ -20,7 +20,8 @@ A Windows video and audio downloader with a redesigned blue-and-navy workspace, 
 - 📖 **Welcome tour and offline guide** — a swipeable first-run introduction and an illustrated feature guide, with screenshots localized for all 10 interface languages.
 - 🔎 **Inspect before downloading** — paste a single video link to see its title, duration, and available resolution/FPS choices before adding it to the queue. Estimated size is shown when supplied by the source.
 - 🎬 **Source-based video quality** — select a resolution the video actually offers, or use **Auto · Highest quality**. Batch downloads choose the highest available quality for each video, without a fixed 1080p cap.
-- 🎵 **Video and audio output** — MP4 video and MP3, M4A, WAV, or Opus audio, with metadata and supported cover-art embedding.
+- 🎵 **Video and audio output** — MP4/MKV video without automatic video re-encoding, and MP3, M4A, WAV, or Opus audio, with metadata and supported cover-art embedding. Known source resolution, frame rate, codec and HDR expectations are checked before completion.
+- 🛡️ **Protected media handling** — guarded links and redirects, restricted media processes, output validation and local Defender scanning when available. Warnings and notification preferences follow the selected language.
 - 🛡️ **Preserve existing outputs** — audio conversions use a free filename stem so their temporary video files cannot reuse an existing completed video. Concurrent downloads reserve distinct stems.
 - 📋 **Single, batch, and playlist downloads** — paste several links at once, or choose individual entries from a playlist before downloading.
 - 💾 **Persistent queue** — pending work is saved between sessions, with pause/resume controls and automatic retries for temporary failures.
@@ -79,7 +80,7 @@ Found a problem? [Open an issue](https://github.com/m4xenn/Video-DownloderPro/is
 
 ## 🧑‍💻 Source Code
 
-The `v1.4.2` tag contains the matching release source. Browse the [documentation index](docs/README.md), [development guide](docs/development/DEVELOPMENT.md), [publishing guide](docs/development/RELEASE_PUBLISHING.md), or [1.4.2 acceptance report](docs/releases/RELEASE_ACCEPTANCE_1.4.2.md). For normal installation, use [Releases](https://github.com/m4xenn/Video-DownloderPro/releases/latest).
+The `v1.4.3` tag contains the matching release source. Browse the [documentation index](docs/README.md), [development guide](docs/development/DEVELOPMENT.md), [publishing guide](docs/development/RELEASE_PUBLISHING.md), or [1.4.3 acceptance report](docs/releases/RELEASE_ACCEPTANCE_1.4.3.md). For normal installation, use [Releases](https://github.com/m4xenn/Video-DownloderPro/releases/latest).
 
 ## 📄 License
 

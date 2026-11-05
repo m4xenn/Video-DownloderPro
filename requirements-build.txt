@@ -1,2 +1,3 @@
 -r requirements.txt
+-c requirements-runtime-lock.txt
 pyinstaller==6.19.0

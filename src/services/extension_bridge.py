@@ -1,5 +1,5 @@
 """Opt-in native messaging bridge. Ephemeral media data stays in memory."""
-import json, secrets, threading, time, os, re
+import json, secrets, threading, time, os, re, hmac
 from pathlib import Path
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from services.media_discovery import public_url
@@ -77,6 +77,12 @@ class ExtensionBridge:
         class Handler(BaseHTTPRequestHandler):
             def log_message(self,*args):pass
             def do_POST(self):
+                # Authenticate before reading an attacker-controlled request body.
+                authorization=self.headers.get('Authorization','')
+                if (self.path!='/exchange' or not hmac.compare_digest(authorization.encode('utf-8'),('Bearer '+bridge.secret).encode('ascii'))
+                        or 'Origin' in self.headers or self.headers.get('Sec-Fetch-Site') is not None
+                        or self.headers.get('Transfer-Encoding') is not None):
+                    self.close_connection=True;self.send_error(403);return
                 try:
                     n=int(self.headers.get('Content-Length','0'))
                     if not 0<n<=65536:raise ValueError()
@@ -85,8 +91,6 @@ class ExtensionBridge:
                     if len(body)!=n:raise ValueError()
                 except (ValueError,OSError):
                     self.send_error(400);return
-                if self.path!='/exchange' or self.headers.get('Authorization')!='Bearer '+bridge.secret or self.headers.get('Origin'):
-                    self.send_error(403);return
                 try:
                     result=bridge.exchange(json.loads(body))
                     data=json.dumps(result).encode();self.send_response(200);self.send_header('Content-Length',str(len(data)));self.end_headers();self.wfile.write(data)

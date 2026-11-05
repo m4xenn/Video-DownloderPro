@@ -8,7 +8,6 @@ import time
 from urllib.parse import urlsplit, urljoin
 
 import requests
-from bs4 import BeautifulSoup
 from services.site_browser import site_browser
 
 PAGE_HOSTS = {'fullhdfilmizlesene.now', 'www.fullhdfilmizlesene.now'}
@@ -48,6 +47,7 @@ def valid_stream(url):
 
 
 def page_details(html, url):
+    from bs4 import BeautifulSoup
     soup = BeautifulSoup(html, 'html.parser')
     title = soup.find('h1') or soup.title
     poster = soup.find('meta',property='og:image')
@@ -94,21 +94,29 @@ class SiteResolver:
     def _html(self, url, referer=None):
         # Never follow redirects to arbitrary hosts or read an unbounded response.
         headers={'User-Agent':requests.utils.default_user_agent()}
+        headers['Accept-Encoding']='identity'
         if referer: headers['Referer']=referer
-        for _ in range(4):
-            if not (supported_page(url) or valid_embed(url)):
-                raise ValueError('Desteklenmeyen sayfa yönlendirmesi.')
-            with requests.get(url,headers=headers,timeout=(5,12),stream=True,allow_redirects=False) as response:
-                if response.is_redirect:
-                    url=urljoin(url,response.headers.get('Location',''))
-                    continue
-                response.raise_for_status()
-                chunks=[];total=0
-                for chunk in response.iter_content(65536):
-                    total+=len(chunk)
-                    if total>MAX_HTML:raise ValueError('Oynatıcı sayfası çok büyük.')
-                    chunks.append(chunk)
-                return b''.join(chunks).decode('utf-8',errors='replace')
+        from services.secure_transport import pin_requests_session
+        deadline=time.monotonic()+15
+        with pin_requests_session(requests.Session()) as session:
+            for _ in range(4):
+                if not (supported_page(url) or valid_embed(url)):
+                    raise ValueError('Desteklenmeyen sayfa yönlendirmesi.')
+                with session.get(url,headers=headers,timeout=(5,8),stream=True,allow_redirects=False) as response:
+                    if response.is_redirect:
+                        url=urljoin(url,response.headers.get('Location',''))
+                        continue
+                    response.raise_for_status()
+                    if response.headers.get('Content-Encoding','identity').lower()!='identity':
+                        raise ValueError('Unexpected page encoding')
+                    chunks=[];total=0
+                    while time.monotonic()<deadline:
+                        chunk=response.raw.read1(32768,decode_content=False)
+                        if not chunk:return b''.join(chunks).decode('utf-8',errors='replace')
+                        total+=len(chunk)
+                        if total>MAX_HTML:raise ValueError('Oynatıcı sayfası çok büyük.')
+                        chunks.append(chunk)
+                    raise ValueError('Page inspection deadline')
         raise ValueError('Çok fazla sayfa yönlendirmesi.')
 
     def details(self, url, fresh=False):

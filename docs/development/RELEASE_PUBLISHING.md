@@ -63,3 +63,12 @@ See [RELEASE_ACCEPTANCE_1.4.1.md](../releases/RELEASE_ACCEPTANCE_1.4.1.md) for t
 ## 1.4.2 acceptance
 
 See [RELEASE_ACCEPTANCE_1.4.2.md](../releases/RELEASE_ACCEPTANCE_1.4.2.md) for history-to-live recording, rate/status visibility, bounded real-source measurements, final regression, frozen runtime and isolated 1.4.1 upgrade checks.
+
+## 1.4.3 acceptance
+
+See [RELEASE_ACCEPTANCE_1.4.3.md](../releases/RELEASE_ACCEPTANCE_1.4.3.md) and the
+[final package report](../testing/ENDURANCE_CANDIDATE_2026-11-05.md) for recovery,
+quality preservation, security, the corrected four-hour recording/full decode,
+607 Python tests and isolated clean install/upgrade acceptance. Publish the exact
+verified `build/endurance-release/candidate` installer; earlier local v1.4.3 files
+are superseded. Preserve their local backup when promoting the verified bytes.

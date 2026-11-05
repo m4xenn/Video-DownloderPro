@@ -1,5 +1,5 @@
 """Bounded DASH manifest parsing and protection classification before transfer."""
-import xml.etree.ElementTree as ET
+from services.safe_xml import parse_manifest
 from urllib.parse import urljoin
 from yt_dlp.networking import Request
 from yt_dlp.extractor.generic import GenericIE
@@ -11,7 +11,7 @@ def inspect_dash(body):
         raise ValueError('DASH manifest exceeds metadata budget')
     if b'<!DOCTYPE' in body.upper() or b'<!ENTITY' in body.upper():
         raise ValueError('DASH document declarations are not supported')
-    root = ET.fromstring(body)
+    root = parse_manifest(body)
     if root.tag.split('}')[-1] != 'MPD': raise ValueError('Invalid DASH manifest')
     systems = set(); unknown = False
     for item in root.iter():

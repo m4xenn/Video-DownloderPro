@@ -1,5 +1,10 @@
 # -*- mode: python ; coding: utf-8 -*-
 from PyInstaller.utils.hooks import copy_metadata, collect_all
+import sys
+sys.path.insert(0,SPECPATH)
+from vdp_build_runtime import require_secure_python
+
+require_secure_python()
 
 transport_datas, transport_binaries, transport_imports = collect_all("curl_cffi")
 

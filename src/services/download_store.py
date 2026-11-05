@@ -114,13 +114,32 @@ class DownloadStore:
             row = connection.execute('SELECT * FROM history WHERE id=?', (identity,)).fetchone()
             return self._public(row) if row else None
 
+    def history_track_state(self, identity):
+        if not self.path.exists():return {}
+        with self.connection() as connection:
+            row=connection.execute('SELECT track_options FROM history WHERE id=?',(identity,)).fetchone()
+            return json.loads(row[0]) if row else {}
+
+    def update_history_track_state(self, identity, fields):
+        if set(fields)-{'recording_parts','session_exports'}:raise ValueError('Invalid recording metadata.')
+        with self.connection(True) as connection:
+            row=connection.execute('SELECT track_options FROM history WHERE id=?',(identity,)).fetchone()
+            if not row:raise ValueError('History entry missing.')
+            data=json.loads(row[0]);data.update(fields)
+            connection.execute('UPDATE history SET track_options=? WHERE id=?',(json.dumps(data),identity))
+
     @staticmethod
     def _public(row):
         record = dict(row)
         tracks = json.loads(record.pop('track_options', '{}'))
         record['live_record_minutes']=tracks.get('live_record_minutes')
+        record['video_container']=tracks.get('video_container','mp4')
+        record['quality_summary']=tracks.get('quality_summary',{})
+        record['workflow_summary']=tracks.get('workflow_summary',{})
+        record['recording_parts_count']=sum(1 for p in tracks.get('recording_parts',[]) if isinstance(p,dict) and p.get('state') in ('recording','interrupted','captured') and isinstance(p.get('bytes'),(int,float)) and p['bytes']>0)
+        record['recording_archive']=bool(tracks.get('recording_archive'))
         record.update(audio_language=tracks.get('audio_language', 'auto'), subtitle_language=tracks.get('subtitle_language', 'all'))
-        record['file_exists'] = Path(record['path']).is_file()
+        record['file_exists'] = not record['recording_archive'] and Path(record['path']).is_file()
         record['embed_subs'] = bool(record['embed_subs'])
         return record
 
@@ -132,9 +151,9 @@ class DownloadStore:
             rows = connection.execute('''SELECT * FROM history WHERE (media_key=? OR url=?)
                 AND format=? AND quality=? AND embed_subs=? ORDER BY completed_at DESC''',
                 (key, url, options['format'], options['quality'], bool(options.get('embed_subs')))).fetchall()
-            return [self._public(row) for row in rows if Path(row['path']).is_file()
+            return [self._public(row) for row in rows if Path(row['path']).is_file() and not self._public(row)['recording_archive']
                     and all(self._public(row)[key] == options.get(key, default)
-                            for key, default in [('audio_language', 'auto'), ('subtitle_language', 'all')])]
+                            for key, default in [('audio_language', 'auto'), ('subtitle_language', 'all'),('video_container','mp4')])]
 
 
 def completion_record(job):
@@ -143,5 +162,18 @@ def completion_record(job):
             'title': job.title, 'thumbnail': job.thumbnail, 'format': job.options['format'],
             'quality': job.options['quality'], 'embed_subs': bool(job.options.get('embed_subs')),
             'path': str(path.resolve()), 'size': path.stat().st_size,
-            'track_options': json.dumps(dict({key: job.options.get(key, default) for key, default in [('audio_language', 'auto'), ('subtitle_language', 'all')]},live_record_minutes=job.options.get('live_record_minutes') if getattr(job,'is_live',False) else None)),
+            'track_options': json.dumps(dict({key: job.options.get(key, default) for key, default in [('audio_language', 'auto'), ('subtitle_language', 'all'),('video_container','mp4')]},live_record_minutes=job.options.get('live_record_minutes') if getattr(job,'is_live',False) else None,quality_summary=getattr(job,'quality_summary',{}),workflow_summary=getattr(job,'workflow',{}),recording_parts=getattr(job,'recording_parts',[]),session_exports=getattr(job,'session_exports',{}))),
             'completed_at': datetime.now(timezone.utc).isoformat()}
+
+
+def recording_archive_record(job):
+    from services.recording_sessions import recoverable_parts
+    from services.ui_messages import message
+    parts=recoverable_parts(job)
+    return {'id':job.id,'media_key':job.media_key or media_key(job.url),'url':job.url,
+        'title':job.title+' ['+message('session.parts',count=len(parts))+']','thumbnail':job.thumbnail,
+        'format':'video','quality':job.options.get('quality','max'),'embed_subs':False,
+        'path':str((Path(job.path)/('recording-archive-'+job.id+'.mkv')).resolve()),'size':sum(p.get('bytes',0) for p in parts),
+        'completed_at':datetime.now(timezone.utc).isoformat(),
+        'track_options':json.dumps({'recording_archive':True,'recording_parts':job.recording_parts,'session_exports':job.session_exports,'video_container':'mkv',
+                                   'live_record_minutes':job.options.get('live_record_minutes'),'quality_summary':job.quality_summary})}

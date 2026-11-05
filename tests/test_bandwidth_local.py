@@ -23,6 +23,10 @@ class QuietHandler(http.server.SimpleHTTPRequestHandler):
 
 
 class LocalBandwidthTests(unittest.TestCase):
+    def setUp(self):
+        # Synthetic fixtures deliberately use localhost; production rejects it.
+        guard=patch('services.secure_transport.attach_network_guard')
+        guard.start();self.addCleanup(guard.stop)
     def test_native_hls_parallel_fragments_share_budget(self):
         bin_dir = Path(os.environ['APPDATA']) / 'YoutubePro' / 'bin'
         if not (bin_dir / 'ffmpeg.exe').is_file():

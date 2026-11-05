@@ -12,7 +12,8 @@ function environment(text='',failURL='') {
             const target=JSON.parse(options.body).url;
             return {ok:target!==failURL,json:async()=>target===failURL?{status:'error'}:{status:'success',url:target,title:'Video',video_qualities:[]}};
         }});
-    vm.runInContext(code,context);
+    require('./message_ui_helper.cjs')(context);
+vm.runInContext(code,context);
     return {get,context,calls,messages,run:source=>vm.runInContext(source,context),get peak(){return peak;},get saved(){return saved;}};
 }
 (async()=>{

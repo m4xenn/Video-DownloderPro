@@ -247,6 +247,7 @@
     </style>
     <link rel="stylesheet" href="{{ url_for('static', filename='studio.css') }}">
     <link rel="stylesheet" href="{{ url_for('static', filename='workspace.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='stability.css') }}">
     <link rel="stylesheet" href="{{ url_for('static', filename='help.css') }}">
 <style>.companion-setup summary{display:flex;align-items:center;gap:12px;cursor:pointer;flex-wrap:wrap}.companion-steps{padding-left:24px;display:grid;gap:16px}.companion-steps li{padding:6px 0 12px 6px;border-bottom:1px solid var(--border-color,rgba(128,148,188,.22))}.companion-consent{display:flex;align-items:flex-start;gap:10px;margin:12px 0;line-height:1.5}.companion-consent input{flex:0 0 18px;width:18px!important;height:18px;margin:2px 0!important;padding:0;accent-color:var(--primary)}.companion-consent span{flex:1;text-align:left}#companionBadge{font-size:12px;font-weight:400;color:var(--text-muted,#9caccc);margin-left:auto}#companionFolderPath{width:100%;box-sizing:border-box}#companionSetupStatus{white-space:pre-line}</style></head>
 <body data-welcome-seen="{{ 'true' if welcome_seen else 'false' }}">
@@ -370,6 +371,11 @@
         </div>
 
         <div class="quality-feedback"><span id="qualityHint" class="feature-muted"></span><button id="refreshQuality" type="button" onclick="refreshSourceQuality(true)" title="Kaynak kalitelerini yenile" aria-label="Kaynak kalitelerini yenile"><i class="fa-solid fa-rotate-right"></i></button></div>
+        <div id="videoContainerPanel" class="container-policy">
+            <label for="videoContainer" data-message="quality.container">Video kapsayıcısı</label>
+            <select id="videoContainer"><option value="mp4">MP4</option><option value="mkv">MKV</option></select>
+        </div>
+        <p id="qualityPolicyNote" class="feature-muted"></p>
         <div id="formatInfoLinkContainer" style="display: none; justify-content: flex-end; margin-top: -5px; margin-bottom: 5px;">
              <button type="button" class="format-info-link" onclick="openFormatInfo()" style="font-size: 12px; color: var(--primary); cursor: pointer; transition: 0.3s;" onmouseover="this.style.opacity='0.8'" onmouseout="this.style.opacity='1'"><i class="fa-solid fa-circle-info" style="margin-right: 4px;"></i>Ses Formatları Özellikleri</button>
         </div>
@@ -420,6 +426,7 @@
                 <h3 id="recoveryTitle"></h3><p id="recoveryIntro" class="feature-muted"></p>
                 <div id="recoveryItems"></div>
             </section>
+            <section id="recordingOperations" class="recovery-center" hidden aria-live="polite"></section>
             <div id="restoredQueueNotice" class="restore-notice" style="display:none"><span id="restoredQueueText"></span><button class="settings-action" onclick="resumeRestoredQueue()">Tümüne devam et</button></div>
             <p id="storageWarning" class="storage-warning" role="alert" style="display:none"></p>
             <p id="downloadSummary" class="download-summary" role="status" style="display:none"></p>
@@ -456,6 +463,15 @@
                     <label for="settingTransfer" id="transferModeLabel" class="setting-label"></label>
                     <select id="settingTransfer" class="settings-select"><option value="stable"></option><option value="auto"></option></select>
                     <p id="transferModeHint" class="app-update-status"></p>
+                </div>
+                <div class="app-update-card" style="margin-top:0">
+                    <label for="settingNotifications" class="setting-label" data-message="notifications_label"></label>
+                    <select id="settingNotifications" class="settings-select">
+                        <option value="always" data-message="notifications_always"></option>
+                        <option value="background" data-message="notifications_background"></option>
+                        <option value="never" data-message="notifications_never"></option>
+                    </select>
+                    <p class="app-update-status" data-message="notifications_hint"></p>
                 </div>
                 <input type="hidden" id="settingCompressMode" value="false">
             </div>
@@ -583,6 +599,8 @@
         </div>
     </div>
 
+    <script>const appMessageLocales={{ message_locales|tojson }}; const appMessageAliases={{ message_aliases|tojson }};</script>
+    <script src="{{ url_for('static', filename='messages.js') }}"></script>
     <script src="{{ url_for('static', filename='release-notes.js') }}"></script>
     <script>
         // --- i18n LOGIC ---
@@ -869,14 +887,14 @@
             const checkButton = document.getElementById('checkAppUpdateBtn');
             if (checkButton.disabled) return;
             checkButton.disabled = true;
-            if (manual) label.textContent = 'Kontrol ediliyor...';
+            if (manual) label.textContent = appMessage('component.checking');
             try {
                 const response = await fetch('/check-app-update');
                 if (!response.ok) throw new Error('Güncelleme kontrol edilemedi.');
                 const data = await response.json();
-                if (data.status === 'error') throw new Error(data.message);
+                if (data.status === 'error') throw new Error(serverMessage(data));
                 if (data.update_available) {
-                    label.textContent = 'Yeni sürüm: ' + data.latest_version;
+                    label.textContent = appMessage('component.available')+': '+data.latest_version;
                     document.getElementById('appUpdateVersion').textContent = data.latest_version;
                     renderReleaseNotes(document.getElementById('appUpdateNotes'), data.release_notes);
                     const modal = document.getElementById('appUpdateModal');
@@ -888,7 +906,7 @@
                     if (typeof localizeUpdateStatus === 'function') localizeUpdateStatus(data);
                 }
             } catch (error) {
-                label.textContent = error.message || 'Güncelleme kontrol edilemedi.';
+                label.textContent = appMessage('component.failed');
                 if(typeof interfaceUpdateState !== 'undefined') interfaceUpdateState=null;
             } finally {
                 checkButton.disabled = false;
@@ -908,18 +926,18 @@
             progress.value = data.percent || 0;
             if (data.status === 'ready') {
                 document.getElementById('appUpdateVersion').textContent = data.latest_version;
-                label.textContent = 'Dosya doğrulandı. Kurulum başlatılınca uygulama kapanacak. Kurulum sihirbazını tamamlayın.';
-                button.textContent = 'Kurulumu başlat';
+                label.textContent = appMessage('update.ready');
+                button.textContent = appMessage('update.install');
                 button.onclick = installAppUpdate;
             } else {
-                button.textContent = 'Güncellemeyi indir';
+                button.textContent = appMessage('component.download');
                 button.onclick = downloadAppUpdate;
-                const messages = {checking: 'Sürüm doğrulanıyor...', downloading: 'İndiriliyor: %' + data.percent, installing: 'Kurulum başlatıldı. Uygulama kapanıyor...'};
-                label.textContent = data.message || messages[data.status] || '';
+                const messages = {checking:appMessage('component.checking'),downloading:appMessage('update.downloading',{percent:data.percent}),installing:appMessage('update.installing')};
+                label.textContent = data.message ? serverMessage(data) : (messages[data.status] || '');
             }
             clearTimeout(appUpdatePoll);
             if (appUpdateBusy) appUpdatePoll = setTimeout(() => refreshAppUpdate().catch(error => {
-                label.textContent = error.message;
+                label.textContent = localizeUserMessage(error.message);
                 appUpdateBusy = false;
                 button.disabled = false;
             }), 750);
@@ -931,10 +949,10 @@
             try {
                 const response = await fetch('/app-update/download', {method: 'POST', headers: {'Content-Type': 'application/json'}, body: '{}'});
                 const data = await response.json();
-                if (!response.ok) throw new Error(data.message);
+                if (!response.ok) throw new Error(serverMessage(data));
                 await refreshAppUpdate();
             } catch (error) {
-                document.getElementById('appUpdateStatus').textContent = error.message;
+                document.getElementById('appUpdateStatus').textContent = localizeUserMessage(error.message);
                 button.disabled = false;
             }
         }
@@ -945,10 +963,10 @@
             try {
                 const response = await fetch('/app-update/install', {method: 'POST', headers: {'Content-Type': 'application/json'}, body: '{}'});
                 const data = await response.json();
-                if (!response.ok) throw new Error(data.message);
+                if (!response.ok) throw new Error(serverMessage(data));
                 await refreshAppUpdate();
             } catch (error) {
-                document.getElementById('appUpdateStatus').textContent = error.message;
+                document.getElementById('appUpdateStatus').textContent = localizeUserMessage(error.message);
                 button.disabled = false;
             }
         }
@@ -999,30 +1017,18 @@
         })();
 
         document.addEventListener("DOMContentLoaded", () => {
-            checkComponentsStatus();
             updateTexts();
-            checkAppUpdate();
             initializeDownloads();
+            // Let the localized workspace paint before optional update checks.
+            requestAnimationFrame(() => requestAnimationFrame(() => {
+                const check = () => { checkComponentsStatus(); checkAppUpdate(); };
+                if (typeof requestIdleCallback === 'function') requestIdleCallback(check, {timeout:1500});
+                else setTimeout(check, 0);
+            }));
         });
 
         let componentPoll = null;
-        const componentText = () => currentLang === 'tr' ? {
-            title: 'Bileşen güncellemeleri', checking: 'Sürümler kontrol ediliyor...',
-            download: 'Güncellemeleri indir', retry: 'Tekrar kontrol et',
-            installed: 'Kullanılan', latest: 'Son yayın', available: 'Güncelleme mevcut',
-            current: 'Güncel', pending: 'Yeniden başlatınca etkinleşecek',
-            untracked: 'Aynı derleme yeniden indirilebilir. Doğrulanmış paketi yeniden kurmak isteğe bağlıdır.',
-            verify: 'Kurulum doğrulanamadı', verifyAction: 'Doğrulanmış paketi yeniden kur',
-            failed: 'Bileşen sunucusuna ulaşılamadı. Tekrar deneyin.'
-        } : {
-            title: 'Component updates', checking: 'Checking versions...',
-            download: 'Download updates', retry: 'Check again', installed: 'In use',
-            latest: 'Latest release', available: 'Update available', current: 'Up to date',
-            pending: 'Will activate after restarting',
-            untracked: 'This may download the same build. Reinstalling the verified package is optional.',
-            verify: 'Installation not verified', verifyAction: 'Reinstall verified package',
-            failed: 'Could not reach the component server. Try again.'
-        };
+        const componentText = () => Object.fromEntries(['title', 'checking', 'download', 'retry', 'installed', 'latest', 'available', 'current', 'pending', 'untracked', 'verify', 'verifyAction', 'failed'].map(key=>[key,appMessage('component.'+key)]));
 
         async function checkComponentsStatus() {
             try {
@@ -1054,7 +1060,7 @@
                 if (!['checking', 'downloading'].includes(state.status)) {
                     const response = await fetch('/components/check', {method: 'POST', headers: {'Content-Type': 'application/json'}, body: '{}'});
                     const data = await response.json();
-                    if (!response.ok) throw new Error(data.message || t.failed);
+                    if (!response.ok) throw new Error(serverMessage(data) || t.failed);
                 }
                 await pollComponentUpdate();
             } catch (error) { componentUpdateError(error.message || t.failed); }
@@ -1077,7 +1083,7 @@
             const data = await response.json();
             const t = componentText();
             const busy = ['checking', 'downloading'].includes(data.status);
-            document.getElementById('updateDesc').textContent = data.message || t.checking;
+            document.getElementById('updateDesc').textContent = data.message ? serverMessage(data) : t.checking;
             const container = document.getElementById('componentVersions');
             container.replaceChildren();
             (data.components || []).forEach(item => {
@@ -1115,7 +1121,7 @@
             try {
                 const response = await fetch('/update-components', {method: 'POST', headers: {'Content-Type': 'application/json'}, body: '{}'});
                 const data = await response.json();
-                if (!response.ok) throw new Error(data.message || componentText().failed);
+                if (!response.ok) throw new Error(serverMessage(data) || componentText().failed);
                 await pollComponentUpdate();
             } catch (error) { componentUpdateError(error.message || componentText().failed); }
         }
@@ -1144,7 +1150,7 @@
             } catch (_) { return 'Video'; }
         }
         function updateQueueThumbnail(image, value) {
-            const source = /^https?:\/\//i.test(value || '') || /^\/previews\/[a-f0-9]{32}\.jpg$/.test(value || '') ? value : '/static/media-placeholder.svg';
+            const source = /^\/(?:previews|safe-thumbnails)\/[a-f0-9]{32}\.jpg$/.test(value || '') ? value : '/static/media-placeholder.svg';
             if (image.dataset.previewSource === source) return;
             image.dataset.previewSource = source;
             image.onerror = () => { image.onerror = null; image.src = '/static/media-placeholder.svg'; };
@@ -1208,7 +1214,7 @@
                 try {
                     const response = await fetch('/queue/remove', {method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify({url})});
                     const data = await response.json();
-                    if (!response.ok) throw new Error(data.message);
+                    if (!response.ok) throw new Error(serverMessage(data));
                     managedQueueURLs.delete(url);
                 } catch (error) { showToast(error.message, true); return; }
             }
@@ -1282,8 +1288,10 @@
                     document.getElementById('pathDisplay').innerText = data.path;
                     document.getElementById('pathDisplay').style.color = "var(--text-main)";
                     showToast(translations[currentLang].tSuccess);
+                    return true;
                 }
             } catch (error) { console.error(error); }
+            return false;
         }
 
         document.querySelectorAll('.custom-select-wrapper').forEach(wrapper => {
@@ -1344,7 +1352,7 @@
             const x = document.getElementById("snackbar");
             const iconClass = isError ? "fa-solid fa-circle-exclamation error-icon" : "fa-solid fa-circle-check success-icon";
             const icon = document.createElement('i'); icon.className = iconClass;
-            const label = document.createElement('span'); label.textContent = msg;
+            const label = document.createElement('span'); label.textContent = typeof localizeUserMessage==='function'?localizeUserMessage(msg):msg;
             x.replaceChildren(icon, label);
             x.className = "show";
             setTimeout(() => x.className = x.className.replace("show", ""), 3000);
@@ -1399,6 +1407,9 @@
                         renderQueueItem(item.url, item.title || 'Video', item.thumbnail || '');
                         row = document.getElementById('queue-' + btoa(encodeURIComponent(item.url)).replace(/=/g, ''));
                     }
+                    const snapshot=typeof queueSnapshotKey==='function'?queueSnapshotKey(item,currentLang):'';
+                    if(snapshot && row.dataset.queueSnapshot===snapshot)return;
+                    if(snapshot)row.dataset.queueSnapshot=snapshot;
                     row.querySelector('.queue-progress-wrapper').style.display = 'block';
                     row.querySelector('.q-fill').style.width = item.percent + '%';
                     row.querySelector('.q-percent').textContent = '%' + item.percent;
@@ -1453,7 +1464,7 @@
             try {
                 const response = await fetch(endpoint, {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({url})});
                 const data = await response.json();
-                if (!response.ok) throw new Error(data.message);
+                if (!response.ok) throw new Error(serverMessage(data));
                 await pollDownloadProgress();
                 return true;
             } catch (error) { showToast(error.message, true); return false; }
@@ -1472,6 +1483,7 @@
                 document.getElementById('settingConcurrent').value = data.concurrent_downloads || 3;
                 document.getElementById('settingSpeed').value = data.speed_limit_mbps || '0';
                 document.getElementById('settingTransfer').value = data.transfer_mode || 'stable';
+                document.getElementById('settingNotifications').value = data.notification_mode || 'always';
                 setCompressModeUI(data.auto_compress ? 'true' : 'false');
                 updateConcurrencyUI();
             } catch (error) { showToast(error.message, true); }
@@ -1495,12 +1507,13 @@
                 concurrent_downloads: document.getElementById('settingConcurrent').value,
                 speed_limit_mbps: document.getElementById('settingSpeed').value || '0',
                 transfer_mode:document.getElementById('settingTransfer').value,
+                notification_mode:document.getElementById('settingNotifications').value,
                 auto_compress: document.getElementById('settingCompressMode').value === 'true'
             };
             try {
                 const response = await fetch('/save-settings', {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(payload)});
                 const data = await response.json();
-                if (!response.ok) throw new Error(data.message || 'Ayarlar kaydedilemedi.');
+                if (!response.ok) throw new Error(serverMessage(data) || 'Ayarlar kaydedilemedi.');
                 showToast(translations[currentLang].tSuccess);
             } catch (error) { showToast(error.message, true); }
         }
@@ -1533,7 +1546,7 @@
             return Math.floor(seconds / 3600) + ' sa ' + Math.floor(seconds % 3600 / 60) + ' dk';
         }
         function mediaDescription(entry) {
-            const format = entry.format === 'video' ? 'Video (MP4)' : 'Ses';
+            const format = entry.format === 'video' ? 'Video ('+(entry.video_container || 'mp4').toUpperCase()+')' : 'Ses';
             const quality = ['best','max'].includes(entry.quality) ? 'Otomatik · En yüksek kalite' : String(entry.quality || '').startsWith('source:') ? entry.quality.split(':')[1] + 'p' + (Number(entry.quality.split(':')[2]) ? ' · ' + entry.quality.split(':')[2] + ' FPS' : '') : String(entry.quality || '').toUpperCase();
             return `${format} · ${quality}${entry.embed_subs ? ' · Altyazılı' : ''}`;
         }
@@ -1542,12 +1555,12 @@
         async function postJSON(url, payload) {
             const response = await fetch(url, {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload)});
             const data = await response.json();
-            if (!response.ok && data.status !== 'duplicate') throw new Error(data.message || 'İşlem tamamlanamadı.');
+            if (!response.ok && data.status !== 'duplicate') throw new Error(serverMessage(data) || 'İşlem tamamlanamadı.');
             return data;
         }
         function saveDraftQueue() {
             const entries = downloadQueue.map(url => ({url, title:draftItems.get(url)?.title || 'Video', thumbnail:draftItems.get(url)?.thumbnail || ''}));
-            draftSavePromise = draftSavePromise.catch(() => {}).then(() => postJSON('/queue/drafts',{items:entries})).catch(error => showToast('Bağlantı kuyruğu kaydedilemedi: ' + error.message,true));
+            draftSavePromise = draftSavePromise.catch(() => {}).then(() => postJSON('/queue/drafts',{items:entries})).catch(error => showToast(appMessage('drafts_failed'),true));
             return draftSavePromise;
         }
         async function initializeDownloads() {
@@ -1600,7 +1613,7 @@
                 openFeature('duplicateModal');
                 return;
             }
-            if (!['success','skipped'].includes(data.status)) throw new Error(data.message || 'İşlem tamamlanamadı.');
+            if (!['success','skipped'].includes(data.status)) throw new Error(serverMessage(data) || 'İşlem tamamlanamadı.');
             const accepted = new Set(pendingSubmissionURLs);
             if (data.status === 'success') managedQueueURLs = new Set([...managedQueueURLs,...accepted]);
             downloadQueue = downloadQueue.filter(url => !accepted.has(url));
@@ -1616,7 +1629,7 @@
             if (typeof refreshSourceQuality === 'function') await refreshSourceQuality();
             duplicateToken = null;
             pendingSubmissionURLs = [];
-            if (data.status === 'skipped') { showToast(data.message); resetUI(); }
+            if (data.status === 'skipped') { showToast(serverMessage(data)); resetUI(); }
             else {
                 if (typeof setWorkspaceView === 'function') setWorkspaceView('queue',true);
                 startProgressPolling();
@@ -1665,7 +1678,7 @@
         async function pollPlaylistPreview() {
             const response = await fetch('/playlist/preview/' + playlistPreview.token);
             const data = await response.json();
-            if (!response.ok || data.status === 'error') throw new Error(data.message || 'Liste taranamadı.');
+            if (!response.ok || data.status === 'error') throw new Error(serverMessage(data) || 'Liste taranamadı.');
             if (data.status === 'checking') {
                 playlistPoll = setTimeout(() => pollPlaylistPreview().catch(error => playlistError(error.message)),750);
                 return;
@@ -1730,7 +1743,7 @@
                 const query = document.getElementById('historySearch').value;
                 const response = await fetch('/history?q=' + encodeURIComponent(query) + '&offset=' + historyOffset);
                 const data = await response.json();
-                if (!response.ok) throw new Error(data.message || 'Geçmiş okunamadı.');
+                if (!response.ok) throw new Error(serverMessage(data) || 'Geçmiş okunamadı.');
                 if (requestId !== historyRequest) return;
                 if (!more) { if(typeof stopHistoryPreview==='function') stopHistoryPreview(); container.replaceChildren(); }
                 for (const entry of data.items || []) {
@@ -1744,6 +1757,7 @@
                         button.disabled = action !== 'repeat' && !entry.file_exists;
                         button.onclick = () => historyAction(entry.id,action); actions.append(button);
                     }
+                    if(typeof decorateRecordingHistory==='function')decorateRecordingHistory(actions,entry);
                     row.append(title,details,actions); if(typeof decorateHistoryPreview==='function') decorateHistoryPreview(row,entry); container.append(row);
                 }
                 historyOffset += (data.items || []).length;
@@ -1751,7 +1765,7 @@
                 document.getElementById('historyMore').style.display = historyOffset < data.total ? 'flex' : 'none';
                 if(typeof localizeHistory === 'function') localizeHistory({...data,items:more && typeof interfaceHistoryState!=='undefined'?[...(interfaceHistoryState?.items || []),...(data.items || [])]:(data.items || [])});
             } catch(error) {
-                if (requestId === historyRequest) document.getElementById('historyStatus').textContent = error.message;
+                if (requestId === historyRequest) document.getElementById('historyStatus').textContent = localizeUserMessage(error.message);
             } finally {
                 if (requestId === historyRequest) { historyLoading = false; moreButton.disabled = false; }
             }
@@ -1765,13 +1779,14 @@
         }
 
         async function startDownload() {
-            if (typeof addingLinks !== 'undefined' && addingLinks) { showToast('Bağlantıların incelenmesini bekleyin.',true); return; }
+            if (typeof addingLinks !== 'undefined' && addingLinks) { showToast(appMessage('inspection_wait'),true); return; }
             if (!downloadQueue.length && document.getElementById('urlInput').value.trim()) await addToQueue();
             if (!downloadQueue.length) { showToast(translations[currentLang].tErrQueue, true); return; }
             let tools={};
             try{if(typeof selectedDownloadTools==='function')tools=selectedDownloadTools();}catch(error){showToast(error.message,true);return;}
             const payload = {
                 ...tools,
+                ...(typeof selectedContainer==='function'?selectedContainer():{}),
                 urls: downloadQueue.slice(), format: document.getElementById('formatValue').value,
                 quality: document.getElementById('qualityValue').value,
                 is_playlist: document.getElementById('playlistCheck').checked,
@@ -1798,5 +1813,11 @@
     <script src="{{ url_for('static', filename='history-preview.js') }}"></script>
     <script src="{{ url_for('static', filename='workspace.js') }}"></script>
     <script src="{{ url_for('static', filename='help.js') }}"></script>
+    <script src="{{ url_for('static', filename='stability.js') }}"></script>
+    <div id="recordingJoinDialog" class="recording-join-dialog" hidden role="dialog" aria-modal="true" aria-labelledby="recordingJoinTitle">
+        <div><h3 id="recordingJoinTitle" data-message="session.join"></h3><p data-message="session.join_warning"></p>
+        <button type="button" id="recordingJoinAccept" class="settings-action" data-message="session.join_accept"></button>
+        <button type="button" id="recordingJoinCancel" class="settings-action" data-message="session.cancel"></button></div>
+    </div>
 </body>
 </html>

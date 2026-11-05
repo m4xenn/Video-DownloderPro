@@ -87,12 +87,18 @@ with sync_playwright() as p:
  page.locator('#queueContainer .queue-progress-wrapper').last.evaluate("node=>node.style.display='block'")
  button=page.locator('.queue-finish-recording');assert button.is_visible();assert button.bounding_box()['width']>200
  page.screenshot(path=str(folder/'recording-queue-en.png'),full_page=True)
- page.evaluate("localizeProgress({items:[{url:'https://example.com/active-recording',is_live:true,status:'downloading',recording_phase:'catchup',recording_pace:12.4,catchup_remaining_seconds:3590,recorded_seconds:42,recording_limit:36000,recording_speed_bps:6000000,downloaded_bytes:2500000,percent:5}],concurrency_limit:2,active_count:1,total_speed_bps:6000000})")
+ page.evaluate("localizeProgress({items:[{url:'https://example.com/active-recording',is_live:true,status:'downloading',recording_phase:'catchup',recording_pace:12.4,catchup_available_seconds:3600,catchup_remaining_seconds:3590,recorded_seconds:42,recording_limit:36000,recording_speed_bps:6000000,downloaded_bytes:2500000,percent:5}],concurrency_limit:2,active_count:1,total_speed_bps:6000000})")
  assert 'Catching up' in page.locator('#queueContainer .q-speed').last.inner_text()
  assert '00:59:50' in page.locator('#queueContainer .q-estimate').last.inner_text()
  assert page.locator('.queue-live-state').last.is_visible()
  assert '12.4×' in page.locator('.queue-live-state').last.inner_text()
+ assert 'History offered at start: 01:00:00' in page.locator('.queue-live-state').last.inner_text()
+ assert 'Recording limit:' in page.locator('#queueContainer .q-percent').last.inner_text()
  page.screenshot(path=str(folder/'recording-catchup-en.png'),full_page=True)
+ page.evaluate("setLanguage('tr');localizeProgress({items:[{url:'https://example.com/active-recording',is_live:true,status:'downloading',recording_phase:'catchup',recording_pace:35.4,catchup_from_start:true,catchup_available_seconds:23535,catchup_remaining_seconds:23000,recorded_seconds:600,recording_limit:36000,recording_speed_bps:3000000,downloaded_bytes:53000000,percent:1.67}],concurrency_limit:2,active_count:1,total_speed_bps:3000000})")
+ assert 'Başlangıçtan DVR: 06:32:15' in page.locator('.queue-live-state').last.inner_text()
+ assert 'Kayıt sınırı:' in page.locator('#queueContainer .q-percent').last.inner_text()
+ page.screenshot(path=str(folder/'recording-dvr-tr.png'),full_page=True)
  button.click();page.wait_for_timeout(200);assert finished and finished[0]['url']=='https://example.com/active-recording'
  assert not errors,errors
  browser.close()

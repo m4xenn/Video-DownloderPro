@@ -3,6 +3,7 @@ const nodes=new Map(),calls=[],ready=[];
 const node=id=>{if(!nodes.has(id))nodes.set(id,{hidden:true,textContent:'',events:{},addEventListener(event,fn){this.events[event]=fn;}});return nodes.get(id);};
 let retries=0; const timers=new Map(); let nextTimer=0;
 const c=vm.createContext({setTimeout:fn=>{timers.set(++nextTimer,fn);return nextTimer;},clearTimeout:id=>timers.delete(id),document:{getElementById:node,addEventListener:(event,fn)=>ready.push(fn)},fetch:async(url,options)=>{calls.push({url,body:JSON.parse(options.body)});return {ok:true,json:async()=>({status:'success'})};},refreshSourceQuality:()=>retries++});
+require('./message_ui_helper.cjs')(c);
 vm.runInContext(fs.readFileSync('src/static/site-inspection.js','utf8'),c);ready.forEach(fn=>fn());
 (async()=>{
 vm.runInContext("showSiteInspection({inspection_id:'token',message:'<script>not HTML</script>'},'https://example.com')",c);

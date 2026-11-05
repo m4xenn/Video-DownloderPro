@@ -21,6 +21,14 @@ body::after { background:radial-gradient(ellipse at 70% 0%,#c8ddff,transparent 7
 .glass-card { display:grid; grid-template-columns:76px minmax(0,1fr); width:min(1200px,100%); margin:0 auto; border-radius:28px; background:var(--surface); border:1px solid var(--glass-border); box-shadow:0 28px 90px var(--shadow); overflow:visible; backdrop-filter:none; }
 .glass-card::before,.app-toolbar::before { display:none; }
 .workspace-content { min-width:0; }
+/* First appearance only; controls stay interactive throughout the transition. */
+@media (prefers-reduced-motion: no-preference) {
+ .glass-card {animation:workspace-enter 380ms cubic-bezier(.22,1,.36,1) backwards;}
+ @keyframes workspace-enter {
+  from {opacity:0;transform:translateY(10px) scale(.994);}
+  to {opacity:1;transform:none;}
+ }
+}
 .workspace-nav { display:flex; flex-direction:column; align-items:center; gap:12px; border-right:1px solid var(--glass-border); padding:25px 10px; }
 .nav-emblem { width:42px; height:42px; display:grid; place-items:center; border-radius:15px; color:#091327; background:var(--lime); font-size:21px; margin-bottom:33px; }
 .nav-action { display:flex; flex-direction:column; align-items:center; justify-content:center; gap:7px; width:56px; min-height:60px; padding:9px 2px; border:0; border-radius:15px; color:var(--text-sub); background:transparent; cursor:pointer; font:inherit; }

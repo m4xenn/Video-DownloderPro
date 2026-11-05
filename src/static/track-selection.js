@@ -16,6 +16,7 @@ function setTrackChoices(data) {
  const changed=inspectedTracks?.url!==data?.url;
  inspectedTracks=data;
  updateTrackTexts(changed);
+ if(typeof updateStabilityTexts==='function')updateStabilityTexts();
 }
 function updateTrackTexts(reset=false) {
  const labels=trackLabels[currentLang] || trackLabels.en;

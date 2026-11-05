@@ -5,11 +5,17 @@ from unittest.mock import patch
 ROOT=Path(__file__).resolve().parents[1];sys.path.insert(0,str(ROOT/'src'))
 from services.live_recording import record_live
 class CatchupLocalTests(unittest.TestCase):
- def run_case(self,split=False):
+ def setUp(self):
+  for target in ('services.live_network.require_public_link','services.live_network.pin_requests_session','services.secure_transport.pin_requests_session'):
+   fixture=patch(target,side_effect=lambda value:value)
+   fixture.start();self.addCleanup(fixture.stop)
+ def run_case(self,split=False,origin=False):
   tools=Path(os.environ['APPDATA'])/'YoutubePro/bin'
   if not (tools/'ffmpeg.exe').is_file():self.skipTest('FFmpeg required')
   with tempfile.TemporaryDirectory(dir=ROOT/'build',prefix='catchup-local-') as folder:
    base=Path(folder);source=base/'source';source.mkdir()
+   from services.windows_sandbox import protect_workspace
+   protect_workspace(base)
    subprocess.run([str(tools/'ffmpeg.exe'),'-hide_banner','-loglevel','error','-f','lavfi','-i','testsrc2=s=320x180:r=10','-f','lavfi','-i','sine=frequency=440','-t','32','-c:v','libx264','-preset','ultrafast','-g','10','-c:a','aac','-hls_time','1','-hls_list_size','0',str(source/'stream.m3u8')],check=True,timeout=30)
    text=(source/'stream.m3u8').read_text();segments=[];duration=None
    for line in text.splitlines():
@@ -20,6 +26,7 @@ class CatchupLocalTests(unittest.TestCase):
    class Handler(http.server.SimpleHTTPRequestHandler):
     def log_message(self,*args):pass
     def do_GET(self):
+     if origin and self.headers.get('Origin')!='https://source.example':self.send_error(403);return
      if self.path in ('/history.m3u8','/history-audio.m3u8'):
       count=min(len(segments),20+int(time.monotonic()-started))
       rows=['#EXTM3U','#EXT-X-VERSION:3','#EXT-X-TARGETDURATION:1','#EXT-X-MEDIA-SEQUENCE:0','#EXT-X-PROGRAM-DATE-TIME:2026-11-02T12:00:00Z']
@@ -33,6 +40,7 @@ class CatchupLocalTests(unittest.TestCase):
    thread=threading.Thread(target=server.serve_forever,daemon=True);thread.start()
    target=base/'recorded.mp4';url=f'http://127.0.0.1:{server.server_port}/history.m3u8'
    info=dict(url=url,is_live=True,vcodec='h264',acodec='aac',protocol='m3u8_native')
+   if origin:info['http_headers']={'Origin':'https://source.example'}
    if split:info['requested_formats']=[dict(url=url,vcodec='h264',acodec='none',protocol='m3u8_native'),dict(url=url.replace('history.m3u8','history-audio.m3u8'),vcodec='none',acodec=None,protocol='m3u8_native')]
    def progress(event):
     if event['status']=='downloading':events.append((time.monotonic()-started,event['recorded_seconds'],event['recording_phase']))
@@ -53,4 +61,5 @@ class CatchupLocalTests(unittest.TestCase):
    finally:server.shutdown();server.server_close();thread.join(3)
  def test_fast_history_then_new_live_segments_in_same_audio_video_file(self):self.run_case()
  def test_separate_inputs_with_unknown_audio_follow_common_timeline(self):self.run_case(True)
+ def test_origin_header_reaches_source_through_native_manifest_proxy(self):self.run_case(origin=True)
 if __name__=='__main__':unittest.main()

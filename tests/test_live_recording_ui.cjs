@@ -1,18 +1,23 @@
 const fs=require('fs'),vm=require('vm'),assert=require('node:assert/strict');
 const context=vm.createContext({currentLang:'tr',document:{addEventListener(){}},formatBytes:n=>n+' bytes'});
 vm.runInContext(fs.readFileSync('src/static/download-tools.js','utf8'),context);
-const nodes={};for(const name of ['.queue-live-state','.queue-finish-recording','.q-estimate','.q-speed','.queue-pause','.queue-resume'])nodes[name]={dataset:{},setAttribute(){}};
+const nodes={};for(const name of ['.q-percent','.queue-live-state','.queue-finish-recording','.q-estimate','.q-speed','.queue-pause','.queue-resume'])nodes[name]={dataset:{},setAttribute(){}};
 const row={querySelector:name=>nodes[name]};
 context.row=row;
-context.item={is_live:true,status:'downloading',recorded_seconds:194,recording_limit:14400,recording_speed_bps:60000,downloaded_bytes:12000000};
+context.item={is_live:true,status:'downloading',recorded_seconds:194,recording_limit:14400,recording_speed_bps:60000,downloaded_bytes:12000000,percent:11,catchup_available_seconds:3600};
 vm.runInContext('decorateLiveQueue(row,item)',context);
 assert.match(nodes['.q-estimate'].textContent,/00:03:14 \/ 04:00:00/);
 assert.match(nodes['.q-speed'].textContent,/Gerçek zamanlı/);assert.match(nodes['.q-speed'].textContent,/0,06 MB\/s/);
 assert.equal(nodes['.queue-live-state'].hidden,false);assert.match(nodes['.queue-live-state'].textContent,/Gerçek zamanlı/);
+assert.match(nodes['.queue-live-state'].textContent,/Başlangıçta sunulan geçmiş: 01:00:00/);
+assert.match(nodes['.q-percent'].textContent,/Kayıt sınırı:.*11/);
 context.item.recording_phase='catchup';context.item.catchup_remaining_seconds=3590;context.item.recording_pace=12.4;
 vm.runInContext('decorateLiveQueue(row,item)',context);
 assert.match(nodes['.q-speed'].textContent,/Geçmiş indiriliyor/);assert.match(nodes['.q-estimate'].textContent,/≈00:59:50/);
 assert.match(nodes['.queue-live-state'].textContent,/Geçmiş indiriliyor.*12,4×.*00:59:50/);
+context.item.catchup_from_start=true;context.item.catchup_available_seconds=23535;
+vm.runInContext('decorateLiveQueue(row,item)',context);
+assert.match(nodes['.queue-live-state'].textContent,/Başlangıçtan DVR: 06:32:15/);
 for(const lang of ['tr','en','de','es','fr','pt','ru','zh','ja','hi']){
  vm.runInContext(`currentLang='${lang}';decorateLiveQueue(row,item)`,context);
  assert.ok(nodes['.q-speed'].textContent.endsWith(' MB/s'));

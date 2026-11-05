@@ -7,6 +7,7 @@ import re
 import threading
 import time
 import uuid
+from collections import deque
 
 import psutil
 from core.adaptive import AdaptiveConcurrency
@@ -58,9 +59,19 @@ class Job:
     recording_pace: float = 0
     recording_phase: str = 'live'
     catchup_remaining_seconds: float = 0
+    catchup_available_seconds: float = 0
+    catchup_from_start: bool = False
     recording_limit: float = 0
     stop_requested: bool = False
     recovery_reason: str = ''
+    security_status: str = ''
+    work_path: str = ''
+    workflow: dict = field(default_factory=dict)
+    publication_intent: dict = field(default_factory=dict)
+    quality_summary: dict = field(default_factory=dict)
+    recording_parts: list = field(default_factory=list)
+    session_exports: dict = field(default_factory=dict)
+    recording_action: dict = field(default_factory=dict)
 
 
 class DownloadManager:
@@ -72,9 +83,10 @@ class DownloadManager:
         self.mode, self.manual = 'auto', 3
         self.controller = AdaptiveConcurrency(clock())
         self.budget = BandwidthBudget()
-        self.samples = []
+        self.samples = deque()
         self.speed = 0
         self.executor = ThreadPoolExecutor(max_workers=10, thread_name_prefix='media')
+        self.recording_executor = ThreadPoolExecutor(max_workers=2,thread_name_prefix='recording-recovery')
         self.thread = None
         self.closed = threading.Event()
         self.conversion_slot = threading.Semaphore(1)
@@ -84,6 +96,8 @@ class DownloadManager:
         self.storage_error = ''
         self.pending_history = []
         self.last_checkpoint = 0
+        self.traces = {}
+        self.recording_operations = {}
 
     def restore(self):
         with self.lock:
@@ -98,11 +112,20 @@ class DownloadManager:
                 if not isinstance(record, dict) or not isinstance(record.get('url'), str):
                     continue
                 job = Job(**{key: value for key, value in record.items() if key in allowed})
+                for name in ('workflow','publication_intent','quality_summary','session_exports'):
+                    if not isinstance(getattr(job,name),dict):setattr(job,name,{})
+                if not isinstance(job.recording_parts,list):job.recording_parts=[]
+                job.recording_action={}
                 if job.status in ('finished','expanded'):
-                    continue
+                    from services.recording_sessions import recoverable_parts
+                    if job.status!='finished' or not recoverable_parts(job):continue
                 if job.status in ('queued', 'starting', 'downloading', 'converting', 'pausing', 'retry_wait', 'paused'):
                     job.recovery_reason = job.recovery_reason or ('paused' if job.status == 'paused' else 'interrupted')
                     job.status, job.speed, job.restored = 'paused', 'Önceki oturumdan geri yüklendi', True
+                from services.publication_recovery import has_saved_target
+                if job.status!='finished' and has_saved_target(job):
+                    job.recovery_reason='publication'
+                    job.status,job.restored='paused',True
                 job.retry_at = 0
                 job.future = None
                 recovered.append(job)
@@ -183,7 +206,7 @@ class DownloadManager:
 
     def busy(self):
         with self.lock:
-            return any(j.status in ('queued', 'starting', 'downloading', 'converting', 'pausing', 'retry_wait') or j.future is not None for j in self.jobs)
+            return any(j.status in ('queued', 'starting', 'downloading', 'converting', 'pausing', 'retry_wait') or j.future is not None for j in self.jobs) or any(op['data']['status'] in ('queued','running') for op in self.recording_operations.values())
 
     def submit(self, urls, options, path, bin_dir='', playlist=False):
         if not isinstance(urls, list) or not urls:
@@ -199,7 +222,12 @@ class DownloadManager:
             if not specs:
                 raise ValueError('İndirilecek öğe kalmadı.')
             original = self.jobs[:]
+            original_history=self.pending_history[:]
             if not self.busy() and not any(j.status == 'paused' for j in self.jobs):
+                if self.store:
+                    from services.recording_sessions import recoverable_parts
+                    from services.download_store import recording_archive_record
+                    self.pending_history.extend(recording_archive_record(j) for j in self.jobs if recoverable_parts(j))
                 self.jobs = []
                 self.samples.clear()
                 self.controller = AdaptiveConcurrency(self.clock())
@@ -217,6 +245,7 @@ class DownloadManager:
                 self._persist(required=True, clear_drafts=draft_urls or urls)
             except Exception:
                 self.jobs = original
+                self.pending_history=original_history
                 raise
             for url in urls:
                 state_actions.set_cancel_flag(url, False)
@@ -250,6 +279,10 @@ class DownloadManager:
             if self.closed.is_set():
                 raise ValueError('Uygulama kapanıyor. Kaydı tamamlayıp yeniden açın.')
             job = self._find(url)
+            if job.recording_action:raise ValueError('Recording recovery is still running.')
+            if job.security_status in ('blocked', 'review'):
+                from services.media_gate import SecurityReviewError
+                raise SecurityReviewError()
             if job.future is not None:
                 raise ValueError('Önce duraklatma işleminin bitmesini bekleyin.')
             if job.status not in ('paused', 'error'):
@@ -257,16 +290,16 @@ class DownloadManager:
             previous = copy.deepcopy({name: getattr(job, name) for name in (
                 'status', 'error', 'speed', 'retry_count', 'retry_at', 'restored',
                 'stop_requested', 'recovery_reason', 'recorded_seconds',
-                  'recording_limit', 'recording_speed_bps', 'recording_pace', 'recording_phase', 'catchup_remaining_seconds', 'percent', 'duration', 'downloaded_bytes', 'total_bytes')})
+                  'recording_limit', 'recording_speed_bps', 'recording_pace', 'recording_phase', 'catchup_remaining_seconds', 'catchup_available_seconds', 'catchup_from_start', 'percent', 'duration', 'downloaded_bytes', 'total_bytes')})
             previous_cancel = state['cancel_flags'].get(url, False)
             state_actions.set_cancel_flag(url, False)
             job.status, job.error, job.speed = 'queued', '', 'Sırada...'
             job.retry_count, job.retry_at, job.restored = 0, 0, False
             job.stop_requested=False
             job.recovery_reason=''
-            if job.is_live:
+            if job.is_live and not job.publication_intent:
                 job.recording_speed_bps=0;job.recording_pace=0
-                job.recording_phase='live';job.catchup_remaining_seconds=0
+                job.recording_phase='live';job.catchup_remaining_seconds=0;job.catchup_available_seconds=0;job.catchup_from_start=False
                 job.recorded_seconds=0;job.recording_limit=0;job.percent=0;job.duration=None;job.downloaded_bytes=0;job.total_bytes=None
             self.notified = False
             try:
@@ -285,7 +318,7 @@ class DownloadManager:
                 if job.restored and job.status == 'paused' and not job.is_live:
                     self.resume(job.url)
 
-    def recover(self, url, refresh=False):
+    def recover(self, url, refresh=False, action=None, destination=None):
         """Re-resolve the original page; never accept a replacement media URL.
 
         The worker still verifies source identity/validators before appending.
@@ -294,6 +327,14 @@ class DownloadManager:
             job = self._find(url)
             if self.closed.is_set() or job.future is not None or job.status not in ('paused', 'error'):
                 raise ValueError('Öğe henüz kurtarmaya hazır değil.')
+            if job.security_status in ('blocked','review'):
+                from services.media_gate import SecurityReviewError
+                raise SecurityReviewError()
+        action=action or ('refresh' if refresh else 'resume')
+        if action not in ('resume','refresh','finalize','mkv','folder','max_quality'):raise ValueError('Invalid recovery action.')
+        if action=='mkv' and (job.is_live or job.options.get('format')!='video'):raise ValueError('Invalid recovery action.')
+        if action=='folder' and (not isinstance(destination,str) or not Path(destination).is_dir()):raise ValueError('Invalid recovery folder.')
+        refresh=refresh or action in ('refresh','max_quality')
         if refresh:
             # Never hold the manager lock while acquiring resolver locks: another
             # inspection can report progress back into this manager.
@@ -305,16 +346,38 @@ class DownloadManager:
                     resolver.pages.pop(url, None)
                     if hasattr(resolver, 'jobs'):
                         resolver.jobs.pop(url, None)
-        self.resume(url)  # Revalidates state under the manager lock.
+        with self.lock:
+            if job.future is not None or job.status not in ('paused','error'):raise ValueError('Öğe henüz kurtarmaya hazır değil.')
+            previous=copy.deepcopy({name:getattr(job,name) for name in ('options','path','work_path','output_template','publication_intent')})
+            if action=='mkv':job.options['video_container']='mkv'
+            elif action=='folder':
+                job.path=destination;job.work_path='';job.publication_intent={}
+            elif action=='max_quality':
+                job.options['quality']='max';job.output_template='';job.publication_intent={}
+            try:self.resume(url)
+            except BaseException:
+                for name,value in previous.items():setattr(job,name,value)
+                raise
 
     def remove(self, url):
         with self.lock:
             job = self._find(url)
+            if job.recording_action:raise ValueError('Recording recovery is still running.')
             if job.future is not None:
                 raise ValueError('Önce indirmeyi duraklatın.')
+            previous_jobs=self.jobs[:];previous_history=self.pending_history[:]
+            old_cancel=state['cancel_flags'].get(url)
+            from services.recording_sessions import recoverable_parts
+            if self.store and recoverable_parts(job):
+                from services.download_store import recording_archive_record
+                self.pending_history.append(recording_archive_record(job))
             self.jobs.remove(job)
             state['cancel_flags'].pop(url, None)
-            self._persist(required=True)
+            try:self._persist(required=True)
+            except BaseException:
+                self.jobs=previous_jobs;self.pending_history=previous_history
+                if old_cancel is not None:state['cancel_flags'][url]=old_cancel
+                raise
             self._publish()
 
     def _find(self, url):
@@ -323,12 +386,122 @@ class DownloadManager:
                 return job
         raise ValueError('Kuyruk öğesi bulunamadı.')
 
+    def recover_recording(self, identity, action, bin_dir, acknowledge_gaps=False, history=False, destination=None):
+        from services.recording_sessions import recoverable_parts,RecordingPartError
+        if action not in ('export','join') or not isinstance(acknowledge_gaps,bool):raise ValueError('Invalid recording recovery action.')
+        with self.lock:
+            if self.closed.is_set():raise ValueError('Recording recovery is still running.')
+            if any(op['data'].get('parent_id')==identity and op['data']['status'] in ('queued','running') for op in self.recording_operations.values()):
+                raise ValueError('Recording recovery is still running.')
+            if sum(op['data']['status'] in ('queued','running') for op in self.recording_operations.values())>=10:raise ValueError('Recording recovery is still running.')
+            parent=next((j for j in self.jobs if j.id==identity),None) if not history else None
+            if history:
+                if not self.store:raise RecordingPartError()
+                record=self.store.get_history(identity);tracks=self.store.history_track_state(identity)
+                if not record:raise RecordingPartError()
+                parent=Job(record['url'],{k:record[k] for k in ('format','quality','embed_subs','audio_language','subtitle_language','video_container')},str(Path(record['path']).parent),bin_dir,id=identity,title=record['title'],media_key=record['media_key'],status='finished',recording_parts=tracks.get('recording_parts',[]),session_exports=tracks.get('session_exports',{}))
+            if not parent or parent.future is not None or parent.recording_action or not recoverable_parts(parent):raise RecordingPartError()
+            if action=='join' and not acknowledge_gaps:raise RecordingPartError('recording_ack_required')
+            if destination:
+                if not Path(destination).is_dir():raise ValueError('Invalid recovery folder.')
+            parent.bin_dir=bin_dir
+            token=uuid.uuid4().hex
+            data={'id':token,'parent_id':identity,'status':'queued','phase':'session_join' if action=='join' else 'session_export','current':0,'total':len(recoverable_parts(parent)),'error_code':'','saved':0}
+            parent.recording_action={'id':token,'status':'running'}
+            cancel=threading.Event()
+            entry={'data':data,'future':None,'cancel':cancel};self.recording_operations[token]=entry
+            for old in list(self.recording_operations):
+                if len(self.recording_operations)>64 and self.recording_operations[old]['data']['status'] in ('finished','error','cancelled'):self.recording_operations.pop(old)
+            def persist():
+                if history:self.store.update_history_track_state(identity,{'recording_parts':parent.recording_parts,'session_exports':parent.session_exports})
+                self._persist(required=True)
+            try:
+                persist()
+                future=self.recording_executor.submit(self._recover_recording_worker,parent,action,acknowledge_gaps,data,persist,destination,cancel)
+                entry['future']=future
+            except BaseException:
+                parent.recording_action={};self.recording_operations.pop(token,None);raise
+            def completed(future):
+                from services.diagnostics import error_code
+                with self.lock:
+                    try:
+                        result=future.result();data.update(status='finished',saved=len(result))
+                    except DownloadPaused:data.update(status='cancelled',error_code='')
+                    except BaseException as error:data.update(status='error',error_code=error_code(error))
+                    parent.recording_action={}
+                    try:persist()
+                    except ValueError: data.update(status='error',error_code='file_access_denied')
+            future.add_done_callback(completed)
+            self._start_scheduler();self.notified=False
+            return token
+
+    def cancel_recording_recovery(self,token):
+        with self.lock:
+            entry=self.recording_operations.get(token)
+            if not entry:raise ValueError('Invalid recording recovery action.')
+            entry['cancel'].set()
+
+    def _recover_recording_worker(self,parent,action,acknowledge_gaps,data,persist,destination,cancel):
+        from services.recording_sessions import build_exports
+        from services.output_validation import validation_session,validate_output
+        from services.malware_scan import scan_file
+        from services.media_gate import publish,SecurityReviewError
+        from services.job_lifecycle import file_signature
+        export_parent=copy.copy(parent);export_parent.path=destination or parent.path
+        cancelled=lambda:self.closed.is_set() or cancel.is_set()
+        held=False
+        try:
+            if cancelled():raise DownloadPaused('DOWNLOAD_PAUSED')
+            while not self.conversion_slot.acquire(timeout=.1):
+                if cancelled():raise DownloadPaused('DOWNLOAD_PAUSED')
+            held=True
+            def progress(phase,current,total):
+                with self.lock:data.update(status='running',phase=phase,current=current,total=total)
+            def publish_file(output,directory,identity,checked,summary):
+                with self.lock:
+                    journal=parent.session_exports.setdefault(identity,{})
+                if journal.get('target') and Path(journal['target']).is_file():
+                    from services.publication_recovery import recover_saved_file
+                    holder=Job(parent.url,{'format':'video','quality':'max'},export_parent.path,parent.bin_dir,work_path=str(directory),publication_intent=journal)
+                    saved=recover_saved_file(holder,cancelled)
+                    if saved:
+                        checked=validate_output(saved,parent.bin_dir,True,expect_audio=summary.get('expected_audio',True),include_duration=True)
+                        path=saved
+                    else:path=None
+                else:path=None
+                if checked is None and path is None:return None
+                verdict=scan_file(path or output,cancelled)
+                if verdict=='review':raise SecurityReviewError()
+                if path is None:
+                    def prepare(source,target):
+                        with self.lock:
+                            journal.update(schema=1,source=source,target=target,source_signature=file_signature(source),state='prepared')
+                            persist()
+                    def created(source,target):
+                        with self.lock:journal.update(state='created',target_signature=file_signature(target));persist()
+                    path=publish(output,export_parent.path,directory,prepare,created)
+                from services.ui_messages import message
+                title=parent.title+' ['+(message('session.joined_title') if summary['joined'] else str(data['current']+1))+']'
+                child=Job(parent.url,{'format':'video','quality':'max','video_container':'mkv'},export_parent.path,parent.bin_dir,id=identity,title=title,media_key=parent.media_key,output_path=path,
+                    quality_summary={'video_reencoded':False,'container':'mkv','recovered_parts':summary,'verified_fields':['streams'],'audio':checked['audio']})
+                with self.lock:
+                    self.pending_history.append(completion_record(child));journal.update(state='finished',target_signature=file_signature(path));persist()
+                return identity
+            with validation_session():
+                return build_exports(export_parent,parent.bin_dir,action,acknowledge_gaps,progress,cancelled,publish_file)
+        finally:
+            if held:self.conversion_slot.release()
+
     def record(self, count):
         with self.lock:
-            self.samples.append((self.clock(), count))
+            now=self.clock()
+            if self.samples and now-self.samples[-1][0]<.1:
+                stamp,total=self.samples[-1];self.samples[-1]=(stamp,total+count)
+            else:self.samples.append((now,count))
+            while self.samples and self.samples[0][0]<now-10:self.samples.popleft()
 
     def _throughput(self, now):
-        self.samples[:] = [(t, n) for t, n in self.samples if now - t <= 10]
+        while self.samples and self.samples[0][0]<now-10:self.samples.popleft()
         native = sum(n for _, n in self.samples) / max(1, min(10, now - self.samples[0][0])) if self.samples else 0
         # FFmpeg live capture bypasses the native HTTP byte reader. Include its
         # measured output-byte rate instead of showing a misleading zero total.
@@ -338,7 +511,8 @@ class DownloadManager:
     def _publish(self):
         from services.recovery import recovery_items
         visible = [j for j in self.jobs if j.status != 'expanded']
-        running = any(j.future is not None or j.status in ('queued', 'retry_wait') for j in visible)
+        operations=[dict(op['data']) for op in self.recording_operations.values()]
+        running = any(j.future is not None or j.status in ('queued', 'retry_wait') for j in visible) or any(op['status'] in ('queued','running') for op in operations)
         failures = [j for j in visible if j.status == 'error']
         if running:
             status = 'downloading'
@@ -355,13 +529,17 @@ class DownloadManager:
             'restored_count': sum(j.restored and j.status == 'paused' for j in visible),
             'storage_error': self.storage_error,
             'recovery_items': recovery_items(visible),
+            'recording_operations':operations,
             'shutting_down': self.closed.is_set(),
             'total_items': len(visible), 'items': [
                 {'id': j.id, 'url': j.url, 'title': j.title, 'thumbnail': j.thumbnail,
-                 'percent': j.percent, 'speed': j.speed, 'status': j.status, 'error': j.error,'error_code':j.error_code,'error_phase':j.error_phase,'phase':j.phase,
+                 'percent': j.percent, 'speed': j.speed, 'status': j.status, 'error': j.error,'error_code':j.error_code,'error_phase':j.error_phase,'phase':j.phase,'security_status':j.security_status,
+                 'stage_seconds':self.traces[j.id].elapsed() if j.id in self.traces else 0,
+                 'quality_summary':j.quality_summary,'attempts':j.workflow.get('attempts',0),
                  'total_bytes': j.total_bytes, 'downloaded_bytes': j.downloaded_bytes, 'eta': j.eta,
-                 'is_live':j.is_live,'recorded_seconds':j.recorded_seconds,'recording_speed_bps':j.recording_speed_bps,'recording_pace':j.recording_pace,'recording_phase':j.recording_phase,'catchup_remaining_seconds':j.catchup_remaining_seconds,'recording_limit':j.recording_limit,'stop_requested':j.stop_requested,
+                 'is_live':j.is_live,'recorded_seconds':j.recorded_seconds,'recording_speed_bps':j.recording_speed_bps,'recording_pace':j.recording_pace,'recording_phase':j.recording_phase,'catchup_remaining_seconds':j.catchup_remaining_seconds,'catchup_available_seconds':j.catchup_available_seconds,'catchup_from_start':j.catchup_from_start,'recording_limit':j.recording_limit,'stop_requested':j.stop_requested,
                  'format': j.options.get('format'), 'quality': j.options.get('quality'),
+                 'video_container':j.options.get('video_container','mp4'),
                  'size_estimated': j.size_estimated, 'retry_count': j.retry_count,
                  'retry_in': max(0, round(j.retry_at - self.clock())) if j.status == 'retry_wait' else None}
                 for j in visible],
@@ -430,13 +608,16 @@ class DownloadManager:
                 self.notified = True
                 notify = True
         if notify:
-            show_notification('Video Downloader Pro', 'Tüm indirmeler tamamlandı.')
+            from services.ui_messages import message
+            show_notification('Video Downloader Pro', message('downloads_complete'))
 
     def _expand(self, job):
         from yt_dlp import YoutubeDL
         from core.bandwidth import attach_budget
         options = {'extract_flat': 'in_playlist', 'quiet': True, 'noplaylist': False}
         with YoutubeDL(options) as ydl:
+            from services.secure_transport import attach_network_guard
+            attach_network_guard(ydl)
             attach_budget(ydl, self.budget, lambda: bool(state['cancel_flags'].get(job.url)), self.record)
             from services.youtube_region import extract_info
             info = extract_info(ydl, job.url, download=False)
@@ -473,21 +654,70 @@ class DownloadManager:
     def _execute(self, job):
         if job.playlist:
             return self._expand(job)
+        from services.job_lifecycle import JobLifecycle
+        trace=JobLifecycle(job,self.clock)
+        with self.lock:self.traces[job.id]=trace
+        try:return self._execute_download(job,trace)
+        finally:
+            with self.lock:
+                trace.close();self.traces.pop(job.id,None)
+
+    def _execute_download(self, job, trace):
+        if job.publication_intent:
+            from services.publication_recovery import recover_saved_file
+            saved=recover_saved_file(job,lambda:bool(state['cancel_flags'].get(job.url)))
+            if saved:
+                from services.output_validation import validate_output
+                from services.malware_scan import scan_file
+                from services.media_gate import SecurityReviewError
+                trace.stage('recovering_file')
+                job.status='converting'
+                info=copy.deepcopy(job.source_signature)
+                if job.quality_summary.get('expected',{}).get('hdr'):info['dynamic_range']='HDR'
+                validate_output(saved,job.bin_dir,job.options.get('format')!='audio',
+                    expected_duration=info.get('duration') if not job.is_live else None,
+                    expect_audio=any(f.get('acodec') not in (None,'none') for f in info.get('requested_formats',[])))
+                from services.media_quality import verify_quality
+                job.quality_summary=verify_quality(saved,job.bin_dir,info,job.options)
+                job.security_status=scan_file(saved,lambda:bool(state['cancel_flags'].get(job.url)))
+                if job.security_status=='review':raise SecurityReviewError()
+                job.output_path=saved;job.downloaded_bytes=Path(saved).stat().st_size
+                job.total_bytes=job.downloaded_bytes;job.size_estimated=False
+                trace.data.update(validated=True,published=True)
+                with self.lock:self._persist(required=True)
+                return True
+            job.publication_intent={}
         Path(job.path).mkdir(parents=True, exist_ok=True)
+        # Injected test workers retain their contract. New real downloads are
+        # staged on the destination volume. Legacy partials migrate by rename,
+        # without copying a multi-hour download or restarting its byte offset.
+        working_path = job.path
+        if not self.worker:
+            from services.media_gate import staging_directory, migrate_checkpoint
+            work = staging_directory(job.path, job.id, job.work_path)
+            job.work_path = working_path = str(work)
+            if job.output_template:
+                job.output_template = migrate_checkpoint(job.output_template, work)
+            with self.lock:self._persist(required=True)
         conversion_held = [False]
         conversion_depth = [0]
+        approved = {}
+        from services.media_gate import MediaDiskGuard
+        disk_guard = MediaDiskGuard(working_path)
+        disk_guard.check()
         def stage(code):
             from services.source_operation import PHASES
             if code in PHASES:
-                with self.lock:job.phase=code
+                with self.lock:trace.stage(code)
         def hook(data):
+            disk_guard.check()
             if state['cancel_flags'].get(job.url):
                 raise DownloadPaused('DOWNLOAD_PAUSED')
             data.setdefault('info_dict', {})['webpage_url'] = job.url
             with self.lock:
                 if job.status != 'pausing':
                     job.status = 'converting' if data['status'] == 'finished' else 'downloading'
-                    job.phase = 'postprocess' if data['status']=='finished' else 'downloading'
+                    trace.stage('postprocess' if data['status']=='finished' else 'downloading')
                 total = data.get('total_bytes') or data.get('total_bytes_estimate')
                 if total:
                     job.percent = min(100, round(data.get('downloaded_bytes', 0) * 100 / total, 1))
@@ -497,7 +727,11 @@ class DownloadManager:
                     job.recording_pace=data.get('recording_pace',0)
                     job.recording_phase=data.get('recording_phase','live')
                     job.catchup_remaining_seconds=data.get('catchup_remaining_seconds',0)
+                    job.catchup_available_seconds=data.get('catchup_available_seconds',0)
+                    job.catchup_from_start=bool(data.get('catchup_from_start',False))
                     job.duration=job.recorded_seconds
+                    if job.recording_parts and job.recording_parts[-1].get('state')=='recording':
+                        job.recording_parts[-1].update(seconds=job.recorded_seconds,bytes=data.get('downloaded_bytes',0))
                     job.percent=min(99,round(job.recorded_seconds/max(1,job.recording_limit)*100,1))
                 job.downloaded_bytes = data.get('downloaded_bytes', job.downloaded_bytes)
                 job.total_bytes = total or job.total_bytes
@@ -524,10 +758,10 @@ class DownloadManager:
                 if conversion_depth[0] == 0 and conversion_held[0]:
                     self.conversion_slot.release()
                     conversion_held[0] = False
-        opts = get_ydl_opts(job.options['format'], job.options['quality'], job.path, 0,
-                            job.options.get('embed_subs', False), hook, job.bin_dir)
+        opts = get_ydl_opts(job.options['format'], job.options['quality'], working_path, 0,
+                            job.options.get('embed_subs', False), hook, job.bin_dir,video_container=job.options.get('video_container','mp4'))
         # Native fragments use the shared response budget, never independent rate caps.
-        opts.update(outtmpl=job.output_template or str(Path(job.path) / '%(title)s [%(id)s].%(ext)s'),
+        opts.update(outtmpl=job.output_template or str(Path(working_path) / '%(title)s [%(id)s].%(ext)s'),
                     ignoreerrors=False, hls_prefer_native=True, external_downloader=None,
                     concurrent_fragment_downloads=3, postprocessor_hooks=[postprocess],
                     socket_timeout=15, retries=3, fragment_retries=5,
@@ -552,30 +786,104 @@ class DownloadManager:
                 job.media_key = media_key(job.url, info)
                 job.total_bytes = estimate_size(info) or job.total_bytes
                 job.duration = info.get('duration') or job.duration
+        def verify(path, info):
+            from services.media_gate import check_media_header, contained_file, withhold, SecurityReviewError
+            from services.output_validation import validate_output
+            from services.malware_scan import scan_file
+            with self.lock:
+                job.status, job.phase, job.security_status = 'converting', 'security_check', 'checking'
+                trace.stage('security_check')
+            if job.work_path:contained_file(path, job.work_path)
+            before=Path(path).stat()
+            try:
+                check_media_header(path)
+                # No source may bypass the stream validation through a generic
+                # extractor or a forged filename/container extension.
+                verified=validate_output(path, job.bin_dir, job.options.get('format') != 'audio',include_duration=True,reuse_validation=True,
+                    expected_duration=info.get('duration') if not info.get('is_live') and info.get('extractor_key') in ('EmbeddedMedia','FullHDFilmizlesene') else None,
+                    expect_audio=any(f.get('acodec') not in (None, 'none') for f in (info.get('requested_formats') or [info])))
+            except ValueError:
+                job.security_status = 'blocked'
+                if job.work_path:withhold(path, job.work_path)
+                raise
+            stage('quality_check')
+            from services.media_quality import verify_quality,QualityMismatch
+            try:job.quality_summary=verify_quality(path,job.bin_dir,info,job.options)
+            except QualityMismatch as error:
+                job.quality_summary={'expected':error.expected,'actual':error.actual,'mismatch':True}
+                job.security_status='pending'
+                raise
+            stage('security_scan')
+            job.security_status = scan_file(path, lambda:bool(state['cancel_flags'].get(job.url)))
+            if job.security_status == 'review':
+                if job.work_path:withhold(path, job.work_path)
+                raise SecurityReviewError()
+            after=Path(path).stat()
+            signature=lambda details:(details.st_size,details.st_mtime_ns,details.st_ino)
+            if signature(before)!=signature(after):
+                from services.output_validation import OutputValidationError
+                raise OutputValidationError('Media changed during security checks; file withheld.')
+            approved[path]=signature(after)
+            trace.data['validated']=True
+            return verified
         def completed(path):
+            from services.file_security import mark_internet_file
+            if job.work_path:
+                details=Path(path).stat()
+                if approved.get(path)!=(details.st_size,details.st_mtime_ns,details.st_ino):
+                    from services.output_validation import OutputValidationError
+                    raise OutputValidationError('Media has not passed security checks; file withheld.')
+                stage('saving_file')
+                from services.media_gate import publish
+                from services.job_lifecycle import file_signature
+                def prepare(source,target):
+                    job.publication_intent={'schema':1,'source':source,'target':target,'source_signature':file_signature(source),'state':'prepared'}
+                    with self.lock:self._persist(required=True)
+                def created(source,target):
+                    job.publication_intent.update(state='created',target_signature=file_signature(target))
+                    job.recovery_reason='publication'
+                    with self.lock:self._persist(required=True)
+                path = publish(path, job.path, job.work_path,prepare,created)
+            mark_internet_file(path)
             with self.lock:
                 job.output_path = path
                 job.downloaded_bytes = Path(path).stat().st_size
                 job.total_bytes, job.size_estimated, job.eta = job.downloaded_bytes, False, 0
+                trace.data['published']=True
+                if job.recording_parts and job.recording_parts[-1].get('state')=='captured':
+                    job.recording_parts[-1].update(state='published',published_path=path)
+                    from services.recording_sessions import save_manifest
+                    save_manifest(job,job.work_path)
+                self._persist(required=True)
         def thumbnail(path):
             with self.lock:
                 job.thumbnail=path
         def checkpoint_target(template):
             # Persist identity and the exact reserved stem before the first byte,
             # not merely at the scheduler's next periodic checkpoint.
+            if job.work_path and (not isinstance(template,str) or not template.endswith('.%(ext)s') or Path(template.replace('%%','%')).parent.resolve()!=Path(job.work_path).resolve()):
+                from services.output_validation import OutputValidationError
+                raise OutputValidationError('Output target escaped its private workspace.')
             with self.lock:
                 job.output_template = template
+                self._persist(required=True)
+        def live_part(event,target,info,error_code=''):
+            from services.recording_sessions import part_event
+            with self.lock:
+                part_event(job,event,target,info,error_code)
                 self._persist(required=True)
         from utils.file_helpers import load_settings
         request = dict(job.options, _transfer_mode=load_settings().get('transfer_mode','stable'), _stop_recording=lambda:job.stop_requested, _budget=self.budget, _record=self.record,_stage=stage,
                        _error=lambda message: setattr(job, 'error', message),
                        _protocol_support=protocol_support, _metadata=metadata, _completed=completed,
+                       _verify=verify if not self.worker else None,
+                       _live_part=live_part,
                        _thumbnail=thumbnail, _preview_id=job.id,
                        _preview_dir=str(self.store.path.parent/'previews') if self.store else None,
                        _resume_target=bool(job.output_template),_source_signature=copy.deepcopy(job.source_signature),
                        _target=checkpoint_target)
         try:
-            return (self.worker or _download_single)(job.url, opts, job.path, request, None)
+            return (self.worker or _download_single)(job.url, opts, working_path, request, None)
         finally:
             if conversion_held[0]:
                 self.conversion_slot.release()
@@ -603,6 +911,7 @@ class DownloadManager:
                     job.status, job.speed = 'paused', 'Duraklatıldı'
                     job.recovery_reason = 'shutdown'
         self.executor.shutdown(wait=True, cancel_futures=True)
+        self.recording_executor.shutdown(wait=True,cancel_futures=True)
         with self.lock:
             for job in self.jobs:
                 if job.future is not None:

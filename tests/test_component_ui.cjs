@@ -18,7 +18,8 @@ function environment(responses, lang='tr') {
             return {ok: response.ok !== false, json: async () => response};
         }, setTimeout: () => 1, clearTimeout() {}, console,
     });
-    vm.runInContext(code,context);
+    require('./message_ui_helper.cjs')(context);
+vm.runInContext(code,context);
     return {context,nodes,calls};
 }
 (async () => {
@@ -43,7 +44,7 @@ function environment(responses, lang='tr') {
 
     e=environment([{status:'error',message:'Bağlantı kurulamadı'}], 'de');
     await vm.runInContext('pollComponentUpdate()',e.context);
-    assert.equal(e.nodes.get('componentAction').textContent,'Check again');
+    assert.equal(e.nodes.get('componentAction').textContent,e.context.appMessageLocales.de['component.retry']);
     assert.equal(e.nodes.get('componentAction').disabled,false);
 
     e=environment([{status:'finished',message:'Tamamlandı. Yeniden açın.',restart_required:true}]);

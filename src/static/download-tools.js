@@ -61,11 +61,17 @@ function decorateLiveQueue(row,item){
   if(!state){state=document.createElement('div');state.className='queue-live-state';(row.querySelector('.queue-info')||row).insertBefore(state,button);}
   state.hidden=item.status!=='downloading';
   const catchingUp=item.recording_phase==='catchup', copy=liveCatchup[currentLang]||liveCatchup.en;
+  const historyLabels={tr:['Başlangıçta sunulan geçmiş','Kayıt sınırı'],en:['History offered at start','Recording limit'],de:['Anfangs verfügbarer Verlauf','Aufnahmelimit'],es:['Historial disponible al inicio','Límite de grabación'],fr:['Historique disponible au départ','Limite d’enregistrement'],pt:['Histórico disponível no início','Limite de gravação'],ru:['История, доступная в начале','Лимит записи'],zh:['开始时可用的历史','录制上限'],ja:['開始時の取得可能な過去分','録画上限'],hi:['शुरुआत में उपलब्ध पिछला भाग','रिकॉर्डिंग सीमा']}[currentLang]||['History offered at start','Recording limit'];
+  const fromStartLabels={tr:'Başlangıçtan DVR',en:'DVR from the beginning',de:'DVR ab Beginn',es:'DVR desde el inicio',fr:'DVR depuis le début',pt:'DVR desde o início',ru:'DVR с начала',zh:'从头获取 DVR',ja:'最初からDVR取得',hi:'शुरुआत से DVR'};
+  if(item.catchup_from_start)historyLabels[0]=fromStartLabels[currentLang]||fromStartLabels.en;
   const pace=Number(item.recording_pace);
   state.textContent=(catchingUp?copy[0]:(liveRealtime[currentLang]||liveRealtime.en)[0])+
     (catchingUp && Number.isFinite(pace) && pace>0?' · '+pace.toLocaleString(currentLang,{maximumFractionDigits:1})+'×':'')+
-    (catchingUp?' · '+copy[1]+': ≈'+liveClock(item.catchup_remaining_seconds):'');
+    (catchingUp?' · '+copy[1]+': ≈'+liveClock(item.catchup_remaining_seconds):'')+
+    (item.catchup_available_seconds>0?' · '+historyLabels[0]+': '+liveClock(item.catchup_available_seconds):'');
   state.dataset.phase=catchingUp?'catchup':'live';
+  const percent=row.querySelector('.q-percent');
+  if(percent)percent.textContent=historyLabels[1]+': '+new Intl.NumberFormat(currentLang,{style:'percent',maximumFractionDigits:0}).format((item.percent||0)/100);
   const estimate=row.querySelector('.q-estimate');if(estimate)estimate.textContent=downloadToolText(14)+' · '+liveClock(item.recorded_seconds)+' / '+liveClock(item.recording_limit)+(typeof formatBytes==='function'?' · '+formatBytes(item.downloaded_bytes||0):'');
   if(item.status==='downloading'){const copy=liveCatchup[currentLang]||liveCatchup.en;const speed=row.querySelector('.q-speed');if(estimate && item.recording_phase==='catchup')estimate.textContent+=' · '+copy[1]+': ≈'+liveClock(item.catchup_remaining_seconds);const speedLabel=item.recording_phase==='catchup'?copy[0]:(liveRealtime[currentLang]||liveRealtime.en)[0];if(speed)speed.textContent=speedLabel+' · '+((item.recording_speed_bps||0)/1000000).toLocaleString(currentLang,{minimumFractionDigits:2,maximumFractionDigits:2})+' MB/s';}
   const pause=row.querySelector('.queue-pause');if(pause)pause.title=downloadToolText(7);

@@ -73,9 +73,10 @@ class RecoveryTests(unittest.TestCase):
   m=self.manager();job=Job(URL,OPTIONS,str(self.base),'');m.jobs=[job]
   def transfer(url,opts,path,request,*args):
    request['_metadata']({'id':'fixture','title':'fixture','duration':12})
-   request['_target'](str(self.base/'fixture.%(ext)s'))
+   request['_target'](str(Path(path)/'fixture.%(ext)s'))
    record=self.store.load_queue()[0]
-   self.assertEqual(record['output_template'],str(self.base/'fixture.%(ext)s'))
+   self.assertEqual(record['output_template'],str(Path(path)/'fixture.%(ext)s'))
+   self.assertEqual(Path(path),Path(job.work_path))
    self.assertEqual(record['source_signature']['id'],'fixture')
    return False
   with patch('core.queue_manager._download_single',side_effect=transfer):m._execute(job)

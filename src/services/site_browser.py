@@ -108,7 +108,7 @@ class SiteBrowser:
         url=session['url']
         discovery=session.get('discovery',False)
         player_url=session['target'] if discovery or session['target']!=url else None
-        window = webview.create_window('Video Downloader Pro · Kaynak inceleme', html='<html><body></body></html>',
+        window = webview.create_window('Video Downloader Pro · '+(urlsplit(player_url or url).hostname or ''), html='<html><body></body></html>',
             hidden=not visible, focus=visible, width=1000, height=760, js_api=None)
         session['window'] = window
         window.events.loaded += lambda: session['loaded'].set() if session.get('window') is window else None
@@ -118,6 +118,10 @@ class SiteBrowser:
         if window.events.loaded.wait(8):
             probe=NativeFrames(window)
             if probe.attach():session['frame_probe']=probe
+        if not session.get('frame_probe'):
+            # A remote page must never load if its native safety hooks failed.
+            window.destroy()
+            raise ValueError('Source browser security initialization failed.')
         if player_url or discovery:
             from webview.event import Event
             # Apply navigation headers synchronously before WebView2 sends them.
@@ -146,6 +150,9 @@ class SiteBrowser:
         window.load_url(player_url or url)
 
     def inspect(self, url, player_url=None, discovery=False):
+        from services.security_policy import require_public_link
+        require_public_link(url)
+        if player_url:require_public_link(player_url)
         from services.source_operation import report_stage,current_operation
         report_stage('finding_player')
         operation=current_operation()
@@ -158,6 +165,8 @@ class SiteBrowser:
         import webview
         if not self.enabled or not webview.windows:
             raise ValueError('Bu sayfa için masaüstü uygulamasındaki tarayıcı desteği gerekiyor.')
+        require_public_link(url,resolve=True)
+        if player_url:require_public_link(player_url,resolve=True)
         with self.lock:
             session = self.session
             if session and (session['url'] != url or session.get('target') != (player_url or url) or session.get('discovery', False) != discovery):

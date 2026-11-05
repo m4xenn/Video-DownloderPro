@@ -1,9 +1,45 @@
 """Verify expected streams in a completed embedded file before recording success."""
-import json,subprocess,struct,math
+import json,struct,math
+from contextlib import contextmanager
+from contextvars import ContextVar
+import os
+from services import media_process as subprocess
 from pathlib import Path
 class OutputValidationError(ValueError):
  code='invalid_media'
  def __init__(self,message):super().__init__('[invalid_media] '+message)
+
+
+_session=ContextVar('media_validation_session',default=None)
+
+
+@contextmanager
+def validation_session():
+ """Job-scoped reuse only while Windows prevents writes to validated bytes."""
+ if _session.get() is not None:
+  yield
+  return
+ entries={};token=_session.set(entries)
+ try:yield
+ finally:
+  _session.reset(token)
+  for _,handle in entries.values():handle.Close()
+
+
+def _fingerprint(path):
+ details=Path(path).stat()
+ if not details.st_ino or details.st_nlink!=1 or getattr(details,'st_file_attributes',0)&0x400:return None
+ return details.st_dev,details.st_ino,details.st_size,details.st_mtime_ns
+
+
+def _read_lease(path):
+ if os.name!='nt':return None
+ import win32file,pywintypes
+ try:
+  # Deny new data writes, but permit atomic rename/delete. The open file ID
+  # cannot be recycled while held; aliases cannot bypass Windows share checks.
+  return win32file.CreateFile(str(Path(path).absolute()),0x80000000,1|4,None,3,0,None)
+ except (OSError,pywintypes.error):return None
 
 def validate_mp4_extent(path):
  """Check box extents without scanning media; duration alone can describe a truncated VOD."""
@@ -31,14 +67,40 @@ def validate_mp4_extent(path):
   raise OutputValidationError('MP4 box count exceeds validation budget; files preserved.')
 
 
-def validate_output(path,ffmpeg_location,expect_video,expected_duration=None,expect_audio=None,include_duration=False):
+def validate_output(path,ffmpeg_location,expect_video,expected_duration=None,expect_audio=None,include_duration=False,reuse_validation=False):
+ entries=_session.get() if reuse_validation else None
+ if entries is None:
+  return _validate_output(path,ffmpeg_location,expect_video,expected_duration,expect_audio,include_duration)
+ expected=expected_duration if isinstance(expected_duration,(int,float)) and not isinstance(expected_duration,bool) and math.isfinite(expected_duration) and expected_duration>0 else None
+ policy=(str(Path(ffmpeg_location or '').resolve()),bool(expect_video),bool(expect_audio),expected)
+ before=_fingerprint(path)
+ key=(before,policy)
+ if before is not None and key in entries:
+  result=entries[key][0]
+  return dict(result) if include_duration else {k:result[k] for k in ('video','audio')}
+ handle=_read_lease(path)
+ try:
+  before=_fingerprint(path)
+  result=_validate_output(path,ffmpeg_location,expect_video,expected_duration,expect_audio,True)
+  after=_fingerprint(path)
+  if before!=after:raise OutputValidationError('Media changed during validation; files preserved.')
+  if handle and after is not None:
+   if len(entries)>=8:
+    _,old=entries.pop(next(iter(entries)));old.Close()
+   entries[(after,policy)]=(dict(result),handle);handle=None
+  return result if include_duration else {k:result[k] for k in ('video','audio')}
+ finally:
+  if handle:handle.Close()
+
+
+def _validate_output(path,ffmpeg_location,expect_video,expected_duration=None,expect_audio=None,include_duration=False):
  validate_mp4_extent(path)
  location=Path(ffmpeg_location or '')
  folder=location.parent if location.name.lower().startswith('ffmpeg.') else location
  probe=folder/'ffprobe.exe' if (folder/'ffprobe.exe').is_file() else folder/'ffprobe'
  if not probe.is_file():raise OutputValidationError('Downloaded media cannot be validated: FFprobe component missing.')
  try:
-  result=subprocess.run([str(probe),'-v','error','-show_entries','format=duration:stream=codec_type,codec_name,width,height:stream_disposition=attached_pic','-of','json',str(path)],capture_output=True,timeout=15,check=True,creationflags=getattr(subprocess,'CREATE_NO_WINDOW',0))
+  result=subprocess.run([str(probe.absolute()),'-v','error','-protocol_whitelist','file,pipe','-show_entries','format=duration:stream=codec_type,codec_name,width,height:stream_disposition=attached_pic','-of','json',str(Path(path).absolute())],capture_output=True,timeout=15,check=True,creationflags=getattr(subprocess,'CREATE_NO_WINDOW',0))
   if len(result.stdout)>65536:raise ValueError()
   details=json.loads(result.stdout);streams=details.get('streams',[])
  except (subprocess.SubprocessError,OSError,ValueError) as error:raise OutputValidationError('Downloaded file does not contain readable media streams; files preserved.') from error
@@ -55,7 +117,7 @@ def validate_output(path,ffmpeg_location,expect_video,expected_duration=None,exp
    raise OutputValidationError('Output duration does not match the source; files preserved.')
  if math.isfinite(duration) and duration>3:
   try:
-   tail=subprocess.run([str(probe),'-v','error','-read_intervals',f'{max(0,duration-3):.3f}%+3',
+   tail=subprocess.run([str(probe.absolute()),'-v','error','-protocol_whitelist','file,pipe','-read_intervals',f'{max(0,duration-3):.3f}%+3',
       '-select_streams','v:0' if expect_video else 'a:0','-show_entries','packet=pts_time','-of','json',str(path)],
       capture_output=True,timeout=15,check=True,creationflags=getattr(subprocess,'CREATE_NO_WINDOW',0))
    if len(tail.stdout)>262144 or not json.loads(tail.stdout).get('packets') or tail.stderr.strip():raise ValueError()
@@ -63,7 +125,7 @@ def validate_output(path,ffmpeg_location,expect_video,expected_duration=None,exp
   ffmpeg=folder/'ffmpeg.exe' if (folder/'ffmpeg.exe').is_file() else folder/'ffmpeg'
   if ffmpeg.is_file():
    try:
-    decoded=subprocess.run([str(ffmpeg),'-nostdin','-hide_banner','-v','error','-xerror','-ss',f'{max(0,duration-2):.3f}',
+    decoded=subprocess.run([str(ffmpeg.absolute()),'-nostdin','-hide_banner','-v','error','-xerror','-protocol_whitelist','file,pipe','-ss',f'{max(0,duration-2):.3f}',
       '-i',str(path),'-t','2','-map','0:v:0' if expect_video else '0:a:0','-map','0:a:0?',
       '-f','null','-'],stdout=subprocess.DEVNULL,stderr=subprocess.PIPE,timeout=20,check=True,
       creationflags=getattr(subprocess,'CREATE_NO_WINDOW',0))

@@ -12,6 +12,16 @@ from urllib.parse import urlsplit
 
 
 MESSAGES = {
+    'quality_mismatch':'Output differs from selected source quality; media preserved.',
+    'container_incompatible':'Selected streams cannot be copied into this container; try MKV.',
+    'publication_changed':'Saved file changed or destination is occupied; files preserved.',
+    'recording_incompatible':'Recording parts have incompatible stream parameters.',
+    'recording_ack_required':'Recording continuity is unknown; explicit acknowledgement is required.',
+    'recording_part_missing':'A retained recording part is missing or changed.',
+    'recording_part_limit':'Save the recording parts before starting another session.',
+    'processing_timeout':'Media processing timed out; original parts preserved.',
+    'security_review':'File withheld because the local security scan requires attention.',
+    'security_unavailable':'Media process protection could not be initialized.',
     'region_restricted': 'The platform restricts this video in the current country or region.',
     'video_unavailable': 'The platform reports that this video is unavailable. Check playback on the original page.',
     'recording_gap':'Live segments are missing; the captured temporary recording is preserved.',
@@ -43,10 +53,12 @@ def error_code(error):
     explicit=getattr(error,'code',None)
     if isinstance(explicit,str) and explicit in MESSAGES:return explicit
     text = str(error).lower()
-    marker=re.match(r'^\[(encrypted_unsupported|invalid_media|partial_source|recording_gap)\]',text)
+    if 'unsafe link or network destination' in text:return 'unsafe_link'
+    marker=re.match(r'^\[(encrypted_unsupported|invalid_media|partial_source|recording_gap|security_review|security_unavailable|quality_mismatch|container_incompatible|publication_changed|recording_incompatible|recording_ack_required|recording_part_missing|recording_part_limit|processing_timeout)\]',text)
     if marker:return marker[1]
     if isinstance(error,PermissionError) or re.search(r'winerror (?:5|32|33)\b|permission denied|access is denied|erişim engellendi',text):return 'file_access_denied'
     if re.search(r'no space left|disk full|winerror 112\b',text):return 'disk_full'
+    if re.search(r'could not find tag for codec|not (?:currently )?supported in container',text):return 'container_incompatible'
     for pattern, code in [
         (r'legal complaint|not available (?:on this country domain|in your country|in your region)|geo.?restricted', 'region_restricted'),
         (r'video unavailable|video is unavailable|video has been removed|private video', 'video_unavailable'),
@@ -115,7 +127,8 @@ class Diagnostics:
                 if self.path.exists():
                     with closing(sqlite3.connect(self.path.resolve().as_uri() + '?mode=ro', uri=True, timeout=2)) as db:
                         db.row_factory = sqlite3.Row
-                        query='SELECT * FROM events'+(' WHERE source=?' if url is not None else '')+' ORDER BY id DESC LIMIT ?'
+                        query=('SELECT * FROM events ORDER BY id DESC LIMIT ?' if url is None else
+                               'SELECT * FROM events WHERE source=? ORDER BY id DESC LIMIT ?')
                         params=(source_identity(url)[1],self.limit) if url is not None else (self.limit,)
                         events = [dict(row) for row in db.execute(query,params)]
         except (OSError, sqlite3.Error):

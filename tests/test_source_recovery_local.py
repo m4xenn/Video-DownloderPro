@@ -18,6 +18,9 @@ from yt_dlp import YoutubeDL
 
 
 class RecoveryLocalTests(unittest.TestCase):
+    def setUp(self):
+        guard=patch('services.secure_transport.attach_network_guard')
+        guard.start();self.addCleanup(guard.stop)
     def test_transport_headers_updated_after_initial_native_request(self):
         observed=[]
         class Handler(http.server.BaseHTTPRequestHandler):

@@ -67,6 +67,8 @@ class MediaCatalog:
             with YoutubeDL({'quiet': True, 'extract_flat': 'in_playlist', 'noplaylist': False,
                             'lazy_playlist': True, 'playlistend': 2001,
                             'socket_timeout': 15, 'extractor_retries': 2}) as ydl:
+                from services.secure_transport import attach_network_guard
+                attach_network_guard(ydl)
                 for url in urls:
                     from services.youtube_region import extract_info
                     info = extract_info(ydl, url, download=False)

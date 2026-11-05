@@ -22,7 +22,9 @@ navigation and handoff note, not a new test run or release acceptance report.
 
 ## Current version and evidence boundaries
 
-- `version.json` is `1.4.2`; bundled/development requirement is
+- Development `version.json` is `1.4.3` (unpublished YouTube from-start DVR preview);
+  public stable remains `1.4.2`. See [DVR validation](../testing/YOUTUBE_DVR_FROM_START_2026-11-03.md).
+  Bundled/development requirement is
   `yt-dlp==2026.8.19`. Verified component updates can supersede the bundled engine
   at the next process startup (`component_runtime.py`).
 - The supplied history records publication of 1.2.14 and then 1.3.0. The 1.4.0 release preparation subsequently confirmed the live stable baseline

@@ -1,5 +1,6 @@
 import sys
 import os
+import re
 
 # Kök dizini sys.path'e ekle (antigravity_config importu için)
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
@@ -22,12 +23,11 @@ activate_engine()
 BIN_DIR = str(COMPONENT_BIN_DIR)
 
 from flask import Flask, render_template, request, jsonify
+from services.ui_messages import catalog as message_catalog, aliases as message_aliases, identify as identify_message, message as ui_message
 import threading
 import subprocess
 import platform
 import time
-import tkinter as tk
-from tkinter import filedialog
 import json
 from concurrent.futures import ThreadPoolExecutor, as_completed
 import uuid
@@ -45,7 +45,6 @@ from services.app_update_service import AppUpdater
 from services.download_store import DownloadStore
 from services.media_catalog import MediaCatalog
 from services.language_service import SUPPORTED_LANGUAGES, system_language
-from services.site_resolver import extract_media_info
 from services.site_browser import site_browser, BrowserRequired
 from services.diagnostics import diagnostics, DiagnosticLogger
 from services.source_operation import source_operation,source_progress
@@ -62,6 +61,13 @@ operation_lock = threading.RLock()
 download_store = DownloadStore()
 media_catalog = MediaCatalog()
 download_manager = DownloadManager(store=download_store)
+
+
+def extract_media_info(*args, **kwargs):
+    # Source discovery (and requests) is needed when inspecting media, not to
+    # display the window, history or settings. Keep this patchable route seam.
+    from services.site_resolver import extract_media_info as extract
+    return extract(*args, **kwargs)
 
 
 def ensure_download_state():
@@ -90,6 +96,59 @@ else:
 
 
 # --- AUTO UPDATE AYARLARI ---
+app.config['MAX_CONTENT_LENGTH']=2*1024*1024
+
+@app.route('/safe-thumbnails/<identity>.jpg')
+def safe_thumbnail(identity):
+    import re
+    from flask import Response,send_from_directory
+    from services.safe_thumbnails import render
+    image=render(identity) if re.fullmatch(r'[a-f0-9]{32}',identity) else None
+    if image is None:return send_from_directory(app.static_folder,'media-placeholder.svg')
+    return Response(image,mimetype='image/jpeg',headers={'Cache-Control':'private, max-age=300'})
+
+@app.before_request
+def protect_local_api():
+    from services.security_policy import local_request_allowed
+    if not local_request_allowed(request):
+        return jsonify(status='error',code='invalid_origin',message='Geçersiz istek kaynağı.'),403
+    if request.content_length is not None and request.content_length > 2*1024*1024:
+        return jsonify(status='error',message='Geçersiz istek.'),413
+    if request.method=='POST' and request.path in ('/get-info','/download','/playlist/preview','/playlists/preview','/queue/drafts'):
+        from services.security_policy import public_link
+        data=request.get_json(silent=True)
+        if isinstance(data,dict):
+            links=[]
+            if 'url' in data:links.append(data['url'])
+            if isinstance(data.get('urls'),list):links.extend(data['urls'])
+            if isinstance(data.get('items'),list):links.extend(item.get('url') for item in data['items'] if isinstance(item,dict))
+            if any(not public_link(link) for link in links):
+                return jsonify(status='error',message='Unsafe link or network destination.',error_code='unsafe_link'),400
+
+@app.after_request
+def security_headers(response):
+    response.headers['X-Content-Type-Options']='nosniff'
+    response.headers['Referrer-Policy']='no-referrer'
+    response.headers['X-Frame-Options']='DENY'
+    response.headers['Permissions-Policy']='camera=(), microphone=(), geolocation=(), payment=(), usb=()'
+    if request.endpoint=='home':
+        response.headers['Content-Security-Policy']="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; media-src 'self' blob:; connect-src 'self'; font-src 'self'; object-src 'none'; base-uri 'none'; frame-ancestors 'none'; form-action 'none'"
+    return response
+
+@app.after_request
+def localize_response_message(response):
+    if response.is_json and not response.direct_passthrough and request.endpoint != 'static':
+        data = response.get_json(silent=True)
+        from services.safe_thumbnails import sanitize
+        if sanitize(data):response.set_data(app.json.dumps(data))
+        if isinstance(data, dict) and isinstance(data.get('message'), str) and data['message']:
+            key, values = identify_message(data['message'], code=data.get('error_code'), path=request.path,
+                                           status=data.get('status', 'error'), percent=data.get('percent', 0),
+                                           restart_required=data.get('restart_required', False))
+            data.update(message=ui_message(key, **values), message_key=key, message_params=values)
+            response.set_data(app.json.dumps(data))
+    return response
+
 # CURRENT_VERSION ve GITHUB_REPO artık antigravity_config.py'den geliyor
 # ----------------------------
 
@@ -197,6 +256,7 @@ def set_lang():
                 settings['language'] = lang
                 save_settings_to_file(settings)
             state['current_lang'] = lang
+            state['ui_language_selected'] = True
         return jsonify(status='success')
     except OSError:
         return jsonify(status='error', message='Language preference could not be saved.'), 500
@@ -211,7 +271,7 @@ def toggle_fullscreen():
 @app.route('/')
 def home():
     ensure_download_state()
-    return render_template('index.html', default_path=state.get('current_download_path') or "Lütfen Klasör Seçiniz...", current_version=CURRENT_VERSION, system_language=system_language(), saved_language=load_settings().get('language'), welcome_seen=load_settings().get('welcome_seen') is True)
+    return render_template('index.html', message_locales=message_catalog(), message_aliases=message_aliases(), default_path=state.get('current_download_path') or "Lütfen Klasör Seçiniz...", current_version=CURRENT_VERSION, system_language=system_language(), saved_language=load_settings().get('language'), welcome_seen=load_settings().get('welcome_seen') is True)
 
 @app.route('/select-folder', methods=['POST'])
 def select_folder():
@@ -254,6 +314,8 @@ def get_info():
             'extractor_retries': 2
         }
         with YoutubeDL(ydl_opts) as ydl:
+            from services.secure_transport import attach_network_guard
+            attach_network_guard(ydl)
             source_progress.set(url,'finding_player')
             with source_operation(lambda code:source_progress.set(url,code),retain='preview'):
                 info = extract_media_info(ydl, url)
@@ -389,6 +451,9 @@ def download():
     options = {'format': kind, 'quality': quality, 'embed_subs': data.get('embed_subs', False)}
     try:
         from services.track_selection import normalize_tracks
+        from services.media_quality import container_option
+        container=container_option(dict(data,format=kind))
+        if container!='mp4':options['video_container']=container
         tracks = normalize_tracks(dict(data, format=kind))
         cached = media_catalog.lookup(urls[0])
         for field, default, choices in [('audio_language', 'auto', 'audio_languages'), ('subtitle_language', 'all', 'subtitle_languages')]:
@@ -397,7 +462,7 @@ def download():
         options.update(tracks)
         if cached.get('is_live') or 'live_record_minutes' in data or data.get('live_record_until') is not None:
             from services.live_recording import live_options
-            if len(urls)!=1 or data.get('is_playlist') or not cached.get('is_live') or kind!='video':
+            if len(urls)!=1 or data.get('is_playlist') or not cached.get('is_live') or kind!='video' or container!='mp4':
                 raise ValueError('Live recording requires one inspected live video and MP4 output.')
             if data.get('embed_subs'):raise ValueError('Live recording currently supports video and audio; subtitles are available for VOD downloads.')
             options.update(live_options(data))
@@ -498,16 +563,37 @@ def recover_queue_item():
         return jsonify(status='error', message='Geçersiz istek kaynağı.'), 403
     ensure_download_state()
     data = request.get_json(silent=True)
-    if not isinstance(data, dict) or not isinstance(data.get('url'), str) or data.get('action') not in ('resume', 'refresh'):
+    if not isinstance(data, dict) or not isinstance(data.get('url'), str) or data.get('action') not in ('resume', 'refresh','finalize','mkv','folder','max_quality'):
         return jsonify(status='error', message='Geçersiz kurtarma isteği.'), 400
     try:
         with operation_lock:
             if app_updater.snapshot()['status'] == 'installing' or component_updater.snapshot()['status'] == 'downloading':
                 raise ValueError('Güncellemenin bitmesini bekleyin.')
-            download_manager.recover(data['url'], refresh=data['action'] == 'refresh')
+            if data['action'] in ('resume','refresh'):
+                download_manager.recover(data['url'], refresh=data['action'] == 'refresh')
+            else:
+                download_manager.recover(data['url'],action=data['action'],destination=state.get('current_download_path') if data['action']=='folder' else None)
         return jsonify(status='success')
     except ValueError as exc:
         return jsonify(status='error', message=str(exc)), 409
+
+
+@app.route('/recordings/recover',methods=['POST'])
+def recover_recording_parts():
+    ensure_download_state()
+    data=request.get_json(silent=True)
+    if not isinstance(data,dict):return jsonify(status='error',message='Invalid recording recovery action.'),400
+    try:
+        if not isinstance(data.get('id'),str) or not re.fullmatch('[a-f0-9]{32}',data['id']):raise ValueError('Invalid recording recovery action.')
+        if data.get('action')=='cancel':
+            download_manager.cancel_recording_recovery(data.get('id'));return jsonify(status='success')
+        if data.get('action') not in ('export','join') or not isinstance(data.get('id'),str) or not re.fullmatch('[a-f0-9]{32}',data['id']):raise ValueError('Invalid recording recovery action.')
+        if not isinstance(data.get('history',False),bool) or not isinstance(data.get('acknowledge_gaps',False),bool) or not isinstance(data.get('use_selected_folder',False),bool):raise ValueError('Invalid recording recovery action.')
+        with operation_lock:
+            if app_updater.snapshot()['status']=='installing' or component_updater.snapshot()['status']=='downloading':raise ValueError('Güncellemenin bitmesini bekleyin.')
+            token=download_manager.recover_recording(data['id'],data['action'],BIN_DIR,data.get('acknowledge_gaps',False),data.get('history',False),state.get('current_download_path') if data.get('use_selected_folder') else None)
+        return jsonify(status='success',id=token),202
+    except (ValueError,OSError) as error:return jsonify(status='error',message=str(error)),409
 
 
 @app.route('/queue/drafts', methods=['GET','POST'])
@@ -573,6 +659,7 @@ def history():
 def history_media(identity):
     from flask import abort, send_file
     record = download_store.get_history(identity)
+    if record and record.get('recording_archive'):return '',404
     if not record or not record['file_exists']:
         abort(404)
     path = record['path']
@@ -594,8 +681,10 @@ def history_action():
         if not record:
             raise ValueError('Geçmiş kaydı bulunamadı.')
         action = data.get('action')
+        if record.get('recording_archive') and action=='open':raise ValueError('Invalid recording recovery action.')
         if action == 'repeat':
             options = {key: record[key] for key in ('format','quality','embed_subs','audio_language','subtitle_language')}
+            if record.get('video_container','mp4')!='mp4':options['video_container']=record['video_container']
             if record.get('live_record_minutes'):options['live_record_minutes']=record['live_record_minutes']
             entry = {key: record[key] for key in ('url','title','thumbnail','media_key')}
             entry['path'] = os.path.dirname(record['path'])
@@ -607,6 +696,9 @@ def history_action():
             raise ValueError('Geçersiz geçmiş işlemi.')
         if action == 'open' and os.path.splitext(path)[1].lower() not in ('.mp4','.mp3','.m4a','.wav','.opus','.webm','.mkv'):
             raise ValueError('Bu dosya türü açılamaz.')
+        if action == 'open':
+            from services.media_gate import check_media_header
+            check_media_header(path)
         if platform.system() == 'Windows':
             os.startfile(path if action == 'open' else os.path.dirname(path))
         else:
@@ -724,4 +816,4 @@ def browser_companion_action():
     except (OSError,ImportError):return jsonify(status='error',code='setup_failed'),500
 
 if __name__ == '__main__':
-    app.run(debug=True)
+    app.run(host='127.0.0.1', debug=False, use_reloader=False)

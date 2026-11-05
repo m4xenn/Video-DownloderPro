@@ -1,13 +1,18 @@
 """Chrome/Edge stdio native host. Never writes logs to stdout."""
 import json,os,sys,struct
 from pathlib import Path
-from urllib.request import Request,urlopen,build_opener,ProxyHandler
+from urllib.request import Request,build_opener,ProxyHandler,HTTPRedirectHandler
+
+
+class NoRedirect(HTTPRedirectHandler):
+    def redirect_request(self,request,response,code,message,headers,new_url):
+        return None  # Never forward the native bridge bearer token elsewhere.
 
 def run():
     if os.name=='nt':
         import msvcrt
         msvcrt.setmode(sys.stdin.fileno(),os.O_BINARY);msvcrt.setmode(sys.stdout.fileno(),os.O_BINARY)
-    opener=build_opener(ProxyHandler({}))
+    opener=build_opener(ProxyHandler({}),NoRedirect())
     while True:
         header=sys.stdin.buffer.read(4)
         if not header:return

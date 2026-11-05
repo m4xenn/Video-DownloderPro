@@ -1,6 +1,15 @@
 import sys
 import os
 
+
+def _preload_media():
+    # Only imports: no source is opened and no HTTP request is made. Preparing
+    # this while WebView initializes avoids moving startup work to the first click.
+    try:
+        import services.site_resolver
+    except ImportError:
+        pass  # History/settings stay usable; source inspection reports the error.
+
 # app.py'den Flask uygulamamızı içe aktarıyoruz
 
 def start_window():
@@ -19,6 +28,9 @@ def start_window():
 
 def _start_window():
     import webview
+    webview.settings['ALLOW_DOWNLOADS']=False
+    webview.settings['IGNORE_SSL_ERRORS']=False
+    webview.settings['ALLOW_FILE_URLS']=False
     from app import app, download_manager, ensure_download_state
     from services.site_browser import site_browser
     from services.notification_service import notification_icon_path
@@ -30,6 +42,8 @@ def _start_window():
         pass  # Optional companion must not prevent normal application startup.
     site_browser.enabled = True
     ensure_download_state()
+    import threading
+    threading.Thread(target=_preload_media, daemon=True, name='media-preload').start()
     # Uygulama başlığını ve başlangıç sayfası özelliklerini ayarlıyoruz
     window = webview.create_window(
         'Video Downloader Pro',
@@ -38,7 +52,8 @@ def _start_window():
         height=750, 
         resizable=True,
         maximized=True,
-        min_size=(600, 500)
+        min_size=(600, 500),
+        background_color='#060914'
     )
     
     def cleanup():
@@ -47,6 +62,13 @@ def _start_window():
 
     shutdown = ShutdownController(window, download_manager, cleanup)
     window.events.closing += shutdown.on_closing
+    def protect_ui():
+        from services.browser_security import protect_main_window
+        try:protect_main_window(window)
+        except Exception:
+            # Never leave a privileged window open after guard initialization fails.
+            window.destroy()
+    window.events.loaded += protect_ui
 
     # Masaüstü penceresi başlatılıyor
     try:

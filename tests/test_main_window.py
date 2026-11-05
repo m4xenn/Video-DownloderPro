@@ -10,8 +10,10 @@ import main
 class WindowTests(unittest.TestCase):
     def test_launch_maximized_with_shared_app_icon(self):
         webview=Mock()
+        webview.settings={}
         webview.create_window.return_value.events.closed=MagicMock()
         webview.create_window.return_value.events.closing=MagicMock()
+        webview.create_window.return_value.events.loaded=MagicMock()
         application=SimpleNamespace(app=object(),download_manager=Mock(),ensure_download_state=Mock())
         browser=Mock()
         with patch.dict(sys.modules,{'webview':webview,'app':application,'services.site_browser':SimpleNamespace(site_browser=browser)}):

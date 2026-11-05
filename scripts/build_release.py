@@ -11,9 +11,12 @@ import sys
 import time
 
 ROOT = Path(__file__).resolve().parents[1]
+sys.path.insert(0,str(ROOT))
+from vdp_build_runtime import require_secure_python
 
 
 def main():
+    require_secure_python()
     parser = argparse.ArgumentParser()
     parser.add_argument('--version', help='New stable version, e.g. 1.1.2. Omit to use version.json.')
     parser.add_argument('--iscc', help='Path to Inno Setup 6 ISCC.exe')

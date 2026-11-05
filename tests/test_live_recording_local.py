@@ -8,11 +8,20 @@ from services.live_recording import record_live,LiveRecordingGapError
 from core.bandwidth import DownloadPaused
 
 class LiveLocalTests(unittest.TestCase):
+ def setUp(self):
+  # Only these generated fixtures may use their owned loopback server.
+  for target in ('services.live_network.require_public_link','services.secure_transport.pin_requests_session'):
+   fixture=patch(target,side_effect=(lambda value:value))
+   fixture.start();self.addCleanup(fixture.stop)
+  fixture=patch('services.live_network.pin_requests_session',side_effect=lambda value:value)
+  fixture.start();self.addCleanup(fixture.stop)
  @classmethod
  def setUpClass(cls):
   cls.bin=Path(os.environ['APPDATA'])/'YoutubePro/bin'
   if not (cls.bin/'ffmpeg.exe').is_file():raise unittest.SkipTest('FFmpeg required')
   cls.temp=tempfile.TemporaryDirectory(dir=ROOT/'build',prefix='live-record-test-');cls.base=Path(cls.temp.name)
+  from services.windows_sandbox import protect_workspace
+  protect_workspace(cls.base)
   subprocess.run([str(cls.bin/'ffmpeg.exe'),'-hide_banner','-loglevel','error','-f','lavfi','-i','testsrc2=s=320x180:r=10','-f','lavfi','-i','sine=frequency=440','-t','8','-c:v','libx264','-preset','ultrafast','-g','10','-c:a','aac','-hls_time','1','-hls_list_size','0',str(cls.base/'live.m3u8')],check=True,timeout=30)
   p=cls.base/'live.m3u8';p.write_text(p.read_text().replace('#EXT-X-ENDLIST',''))
   class Handler(http.server.SimpleHTTPRequestHandler):
@@ -46,6 +55,14 @@ class LiveLocalTests(unittest.TestCase):
   streams=json.loads(subprocess.check_output([str(self.bin/'ffprobe.exe'),'-v','error','-show_streams','-of','json',str(target)]))['streams']
   self.assertTrue(any(s['codec_type']=='video' for s in streams));self.assertTrue(any(s['codec_type']=='audio' for s in streams))
   self.assertLess(time.monotonic()-start,23);return result
+
+ def test_queue_can_reuse_only_the_locked_finalized_live_file(self):
+  from services.output_validation import validation_session,validate_output,_validate_output
+  with validation_session(),patch('services.output_validation._validate_output',wraps=_validate_output) as full:
+   self.verify('validation-reuse')
+   checked=validate_output(self.base/'validation-reuse.mp4',str(self.bin),True,expect_audio=True,include_duration=True,reuse_validation=True)
+   self.assertTrue(checked['video'] and checked['audio'])
+   self.assertEqual(full.call_count,1)
  def test_graceful_finish_publishes_playable_audio_video(self):self.verify('manual')
  def test_dynamic_dash_preserves_selected_video_and_audio(self):
   from services.dash_metadata import extract_dash
@@ -110,5 +127,20 @@ class LiveLocalTests(unittest.TestCase):
    record_live(info,target,str(self.bin),dict(format='video',live_record_minutes=1),lambda:time.monotonic()-start>2,lambda:False)
   self.assertTrue(target.with_suffix('.live.mkv').is_file());self.assertFalse(target.exists())
  def test_scheduled_wall_clock_finish(self):self.verify('scheduled',time.time()+6)
+ def test_unexpected_clean_ffmpeg_exit_preserves_partial_and_reports_gap(self):
+  from services import media_process
+  original=media_process.Popen
+  def quick_reload(args,*a,**k):
+   if '-progress' in args:
+    # Force a real successful FFmpeg exit at two seconds while the recorder
+    # still expects sixty. No fake media or fabricated process return code.
+    args=list(args);args[args.index('-t')+1]='2'
+   return original(args,*a,**k)
+  target=self.base/'stalled-clean-eof.mp4'
+  info=dict(url=self.url,is_live=True,vcodec='h264',acodec='aac',protocol='m3u8',ext='mp4')
+  with patch('services.media_discovery.public_url',lambda *a,**k:True),patch('services.media_process.Popen',side_effect=quick_reload),self.assertRaises(LiveRecordingGapError) as caught:
+   record_live(info,target,str(self.bin),dict(format='video',live_record_minutes=1),lambda:False,lambda:False)
+  self.assertTrue(target.with_suffix('.live.mkv').is_file());self.assertFalse(target.exists())
+  self.assertEqual(caught.exception.recording_diagnostics['stop_reason'],'unconfirmed_eof')
 
 if __name__=='__main__':unittest.main()
