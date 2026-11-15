@@ -1,5 +1,9 @@
 # Saha ve saldırgan senaryo kabulü — 15 Kasım 2026
 
+**Yayımlandı:** Aynı doğrulanmış dosya 15 Kasım 2026'da kararlı/en güncel 1.4.7
+olarak açıldı. [Yayın doğrulaması](../releases/PUBLISHED_1.4.7.md), aşağıdaki
+hazırlık zamanına ait yayımlanmadı ifadelerinin yerini alır.
+
 ## Sonuç güncellemesi — 15 Kasım 2026, 19:21 (İstanbul)
 
 **Sekiz saatlik test GEÇTİ.** Kayıt süresi 28.800,107 saniye; tüm ses/görüntünün

@@ -1,5 +1,10 @@
 # Stability release work — 4 November 2026
 
+**Latest, 15 November: 1.4.7 PUBLISHED stable/latest by explicit user request.**
+See docs/releases/PUBLISHED_1.4.7.md. Tested installer bytes, public download,
+source tag and update checks passed. Older pending/unpublished flags below are
+historical. Public release source commit: 50f13c74bd34e06391490f89b689785b263b30e7.
+
 **Latest, 15 November: eight-hour acceptance PASSED.** Recording 28800.107 s,
 full decode passed, steady RSS difference -17866752 bytes, seven source hashes
 matched. 630 Python/28 JavaScript tests, real 50-file queue, 40 frozen HTTP attack

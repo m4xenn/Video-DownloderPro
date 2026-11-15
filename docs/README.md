@@ -54,6 +54,8 @@ The application code lives in `src/`, automated checks in `tests/`, and develope
 
 ## Release reports
 
+- [1.4.7 publication verification](releases/PUBLISHED_1.4.7.md)
+
 - [1.4.7 release notes](releases/RELEASE_NOTES_1.4.7.md)
 - [1.4.7 field and adversarial acceptance](testing/FIELD_ACCEPTANCE_2026-11-15.md)
 
