@@ -27,7 +27,7 @@ def public_link(url, resolve=False):
         if parsed.scheme not in ('https','http') or not host or parsed.username is not None or parsed.password is not None:
             return False
         # Validate ports, including malformed and out-of-range values.
-        port=parsed.port or (443 if parsed.scheme=='https' else 80)
+        port=parsed.port if parsed.port is not None else (443 if parsed.scheme=='https' else 80)
         if not 1 <= port <= 65535 or '%' in host:
             return False
         if host=='localhost' or host.endswith(('.localhost','.local','.internal','.home','.lan')):

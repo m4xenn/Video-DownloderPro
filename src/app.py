@@ -36,7 +36,7 @@ import webview
 from state.app_state import state, state_actions
 from core.format_resolver import get_ydl_opts
 from services.notification_service import show_notification
-from services.folder_service import open_folder_dialog
+from services.folder_service import open_folder_dialog, FolderDialogError
 from services.updater_service import check_app_update as check_app_update_logic
 from services.component_updater import ComponentUpdater, component_status
 from core.queue_manager import DownloadManager
@@ -180,8 +180,8 @@ def save_settings_route():
     if not isinstance(data, dict):
         return jsonify(status='error', message='Geçersiz ayarlar.'), 400
     try:
-        settings = normalize_settings(dict(load_settings(), **data))
         with operation_lock:
+            settings = normalize_settings(dict(load_settings(), **data))
             download_manager.check_configuration(settings['concurrency_mode'], settings['concurrent_downloads'], bytes_per_second(settings))
             save_settings_to_file(settings)
             download_manager.configure(settings['concurrency_mode'], settings['concurrent_downloads'], bytes_per_second(settings))
@@ -234,13 +234,19 @@ def open_folder_endpoint():
     path = data.get('path') if isinstance(data, dict) else None
     if not isinstance(path, str) or not path:
         return jsonify(status='error', message='Geçersiz klasör yolu.'), 400
-    path = urllib.parse.unquote(path)
-    if os.path.exists(path):
-        folder = os.path.dirname(path)
+    # JSON paths are already decoded. Literal %xx is a valid filename.
+    try:
+        if not os.path.exists(path):
+            return jsonify(status='error', message=ui_message('error.local_file_missing')), 409
+        folder = path if os.path.isdir(path) else os.path.dirname(os.path.abspath(path))
         if platform.system() == "Windows":
             os.startfile(folder)
         elif platform.system() == "Darwin":
             subprocess.Popen(["open", folder])
+        else:
+            subprocess.Popen(['xdg-open', folder])
+    except (OSError, ValueError):
+        return jsonify(status='error', message=ui_message('error.file_access_denied')), 409
     return jsonify({"status": "success"})
 
 @app.route('/set-lang', methods=['POST'])
@@ -275,7 +281,10 @@ def home():
 
 @app.route('/select-folder', methods=['POST'])
 def select_folder():
-    path = open_folder_dialog()
+    try:
+        path = open_folder_dialog()
+    except FolderDialogError as error:
+        return jsonify(status='error', message=ui_message(error.key)), 409 if error.key=='folder_dialog_busy' else 503
     if path:
         state["current_download_path"] = path
         return jsonify({"status": "success", "path": path})

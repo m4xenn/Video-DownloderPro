@@ -38,7 +38,7 @@ def load_settings():
         if os.path.exists(filename):
             try:
                 with open(filename, encoding='utf-8') as source:
-                    return normalize_settings(json.load(source))
+                    return normalize_settings(json.load(source), strict=False)
             except (ValueError, OSError, TypeError):
                 continue
     return dict(DEFAULTS)

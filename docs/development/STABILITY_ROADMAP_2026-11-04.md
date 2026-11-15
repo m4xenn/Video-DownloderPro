@@ -1,5 +1,23 @@
 # Stability release work — 4 November 2026
 
+**Latest, 15 November: eight-hour acceptance PASSED.** Recording 28800.107 s,
+full decode passed, steady RSS difference -17866752 bytes, seven source hashes
+matched. 630 Python/28 JavaScript tests, real 50-file queue, 40 frozen HTTP attack
+requests and isolated install/upgrade passed. Local 1.4.7 acceptance.json now says
+passed/ready_for_publication:true/published:false. No publication performed.
+See docs/testing/FIELD_ACCEPTANCE_2026-11-15.md. Pending statements below are
+historical. The result notification monitor is removed after completion.
+
+**Current, 15 November: NEW RELEASE ACCEPTANCE IN PROGRESS.** User explicitly
+requested short/long field and adversarial tests after local 1.4.6. Eight-hour
+recording is running in exec 48975; live report:
+build/stability/release-acceptance-eight-hour/result.json. Seven motor hashes
+must remain unchanged. Real 50-file queue passed. Final regression exec 17752;
+candidate packaging exec 30841. New local candidate 1.4.7 is NOT publish-ready
+until the long test and final decode pass. See
+docs/testing/FIELD_ACCEPTANCE_2026-11-15.md. Previous "final/passed/published"
+statements below refer to older work, not this new acceptance request.
+
 **Final state, 5 November: user authorized publication; 1.4.3 PUBLISHED stable/latest.**
 See docs/releases/PUBLISHED_1.4.3.md for the unchanged tested installer hash,
 release source commit and public download/updater verification. Unpublished or

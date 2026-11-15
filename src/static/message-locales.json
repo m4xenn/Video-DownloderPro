@@ -125,7 +125,10 @@
     "error.invalid_container": "Invalid video container.",
     "error.invalid_recovery_folder": "Select a valid recovery folder.",
     "session.continuity_unknown": "Continuity unverified",
-    "session.export_folder": "Save parts to another folder"
+    "session.export_folder": "Save parts to another folder",
+    "folder_dialog_failed": "The folder picker could not be opened. Please try again.",
+    "folder_dialog_busy": "The folder picker is already open.",
+    "folder_desktop_required": "Open the desktop app to choose a folder."
   },
   "tr": {
     "downloads_complete": "Tüm indirmeler tamamlandı.",
@@ -253,7 +256,10 @@
     "error.invalid_container": "Geçersiz video kapsayıcısı.",
     "error.invalid_recovery_folder": "Geçerli bir kurtarma klasörü seçin.",
     "session.continuity_unknown": "Süreklilik doğrulanmadı",
-    "session.export_folder": "Parçaları başka klasöre kaydet"
+    "session.export_folder": "Parçaları başka klasöre kaydet",
+    "folder_dialog_failed": "Klasör seçme penceresi açılamadı. Lütfen tekrar deneyin.",
+    "folder_dialog_busy": "Klasör seçme penceresi zaten açık.",
+    "folder_desktop_required": "Klasör seçmek için masaüstü uygulamasını açın."
   },
   "de": {
     "downloads_complete": "Alle Downloads sind abgeschlossen.",
@@ -381,7 +387,10 @@
     "error.invalid_container": "Ungültiger Videocontainer.",
     "error.invalid_recovery_folder": "Wähle einen gültigen Wiederherstellungsordner.",
     "session.continuity_unknown": "Kontinuität unbestätigt",
-    "session.export_folder": "Teile in anderem Ordner speichern"
+    "session.export_folder": "Teile in anderem Ordner speichern",
+    "folder_dialog_failed": "Die Ordnerauswahl konnte nicht geöffnet werden. Bitte erneut versuchen.",
+    "folder_dialog_busy": "Die Ordnerauswahl ist bereits geöffnet.",
+    "folder_desktop_required": "Öffnen Sie die Desktop-App, um einen Ordner auszuwählen."
   },
   "es": {
     "downloads_complete": "Todas las descargas han terminado.",
@@ -509,7 +518,10 @@
     "error.invalid_container": "Contenedor de vídeo no válido.",
     "error.invalid_recovery_folder": "Seleccione una carpeta de recuperación válida.",
     "session.continuity_unknown": "Continuidad sin verificar",
-    "session.export_folder": "Guardar partes en otra carpeta"
+    "session.export_folder": "Guardar partes en otra carpeta",
+    "folder_dialog_failed": "No se pudo abrir el selector de carpetas. Inténtalo de nuevo.",
+    "folder_dialog_busy": "El selector de carpetas ya está abierto.",
+    "folder_desktop_required": "Abre la aplicación de escritorio para elegir una carpeta."
   },
   "fr": {
     "downloads_complete": "Tous les téléchargements sont terminés.",
@@ -637,7 +649,10 @@
     "error.invalid_container": "Conteneur vidéo invalide.",
     "error.invalid_recovery_folder": "Choisissez un dossier de récupération valide.",
     "session.continuity_unknown": "Continuité non vérifiée",
-    "session.export_folder": "Enregistrer les parties dans un autre dossier"
+    "session.export_folder": "Enregistrer les parties dans un autre dossier",
+    "folder_dialog_failed": "Impossible d’ouvrir le sélecteur de dossiers. Veuillez réessayer.",
+    "folder_dialog_busy": "Le sélecteur de dossiers est déjà ouvert.",
+    "folder_desktop_required": "Ouvrez l’application de bureau pour choisir un dossier."
   },
   "pt": {
     "downloads_complete": "Todos os downloads foram concluídos.",
@@ -765,7 +780,10 @@
     "error.invalid_container": "Contêiner de vídeo inválido.",
     "error.invalid_recovery_folder": "Selecione uma pasta de recuperação válida.",
     "session.continuity_unknown": "Continuidade não verificada",
-    "session.export_folder": "Salvar partes em outra pasta"
+    "session.export_folder": "Salvar partes em outra pasta",
+    "folder_dialog_failed": "Não foi possível abrir o seletor de pastas. Tente novamente.",
+    "folder_dialog_busy": "O seletor de pastas já está aberto.",
+    "folder_desktop_required": "Abra o aplicativo de desktop para escolher uma pasta."
   },
   "ru": {
     "downloads_complete": "Все загрузки завершены.",
@@ -893,7 +911,10 @@
     "error.invalid_container": "Недопустимый контейнер видео.",
     "error.invalid_recovery_folder": "Выберите допустимую папку восстановления.",
     "session.continuity_unknown": "Непрерывность не подтверждена",
-    "session.export_folder": "Сохранить части в другую папку"
+    "session.export_folder": "Сохранить части в другую папку",
+    "folder_dialog_failed": "Не удалось открыть окно выбора папки. Попробуйте ещё раз.",
+    "folder_dialog_busy": "Окно выбора папки уже открыто.",
+    "folder_desktop_required": "Откройте настольное приложение, чтобы выбрать папку."
   },
   "zh": {
     "downloads_complete": "所有下载已完成。",
@@ -1021,7 +1042,10 @@
     "error.invalid_container": "无效的视频容器。",
     "error.invalid_recovery_folder": "请选择有效的恢复文件夹。",
     "session.continuity_unknown": "连续性未经验证",
-    "session.export_folder": "将分段保存到其他文件夹"
+    "session.export_folder": "将分段保存到其他文件夹",
+    "folder_dialog_failed": "无法打开文件夹选择窗口，请重试。",
+    "folder_dialog_busy": "文件夹选择窗口已打开。",
+    "folder_desktop_required": "请打开桌面应用以选择文件夹。"
   },
   "ja": {
     "downloads_complete": "すべてのダウンロードが完了しました。",
@@ -1149,7 +1173,10 @@
     "error.invalid_container": "無効な動画コンテナです。",
     "error.invalid_recovery_folder": "有効な復元先フォルダーを選択してください。",
     "session.continuity_unknown": "連続性未確認",
-    "session.export_folder": "別のフォルダーにパートを保存"
+    "session.export_folder": "別のフォルダーにパートを保存",
+    "folder_dialog_failed": "フォルダー選択画面を開けませんでした。もう一度お試しください。",
+    "folder_dialog_busy": "フォルダー選択画面はすでに開いています。",
+    "folder_desktop_required": "フォルダーを選ぶにはデスクトップアプリを開いてください。"
   },
   "hi": {
     "downloads_complete": "सभी डाउनलोड पूरे हो गए हैं।",
@@ -1277,6 +1304,9 @@
     "error.invalid_container": "अमान्य वीडियो कंटेनर।",
     "error.invalid_recovery_folder": "मान्य पुनर्प्राप्ति फ़ोल्डर चुनें।",
     "session.continuity_unknown": "निरंतरता सत्यापित नहीं",
-    "session.export_folder": "भागों को दूसरे फ़ोल्डर में सहेजें"
+    "session.export_folder": "भागों को दूसरे फ़ोल्डर में सहेजें",
+    "folder_dialog_failed": "फ़ोल्डर चुनने की विंडो नहीं खुल सकी। कृपया फिर कोशिश करें।",
+    "folder_dialog_busy": "फ़ोल्डर चुनने की विंडो पहले से खुली है।",
+    "folder_desktop_required": "फ़ोल्डर चुनने के लिए डेस्कटॉप ऐप खोलें।"
   }
 }

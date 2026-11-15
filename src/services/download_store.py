@@ -8,6 +8,15 @@ import sqlite3
 from urllib.parse import parse_qs, urlencode, urlsplit, urlunsplit
 
 
+def track_metadata(value):
+    """A damaged optional metadata field must not break the entire history page."""
+    try:
+        data=json.loads(value)
+    except (ValueError,TypeError):
+        return {}
+    return data if isinstance(data,dict) else {}
+
+
 def media_key(url, info=None):
     if info and info.get('id'):
         extractor = info.get('extractor_key') or info.get('extractor') or info.get('ie_key')
@@ -118,25 +127,26 @@ class DownloadStore:
         if not self.path.exists():return {}
         with self.connection() as connection:
             row=connection.execute('SELECT track_options FROM history WHERE id=?',(identity,)).fetchone()
-            return json.loads(row[0]) if row else {}
+            return track_metadata(row[0]) if row else {}
 
     def update_history_track_state(self, identity, fields):
         if set(fields)-{'recording_parts','session_exports'}:raise ValueError('Invalid recording metadata.')
         with self.connection(True) as connection:
             row=connection.execute('SELECT track_options FROM history WHERE id=?',(identity,)).fetchone()
             if not row:raise ValueError('History entry missing.')
-            data=json.loads(row[0]);data.update(fields)
+            data=track_metadata(row[0]);data.update(fields)
             connection.execute('UPDATE history SET track_options=? WHERE id=?',(json.dumps(data),identity))
 
     @staticmethod
     def _public(row):
         record = dict(row)
-        tracks = json.loads(record.pop('track_options', '{}'))
+        tracks = track_metadata(record.pop('track_options', '{}'))
         record['live_record_minutes']=tracks.get('live_record_minutes')
         record['video_container']=tracks.get('video_container','mp4')
         record['quality_summary']=tracks.get('quality_summary',{})
         record['workflow_summary']=tracks.get('workflow_summary',{})
-        record['recording_parts_count']=sum(1 for p in tracks.get('recording_parts',[]) if isinstance(p,dict) and p.get('state') in ('recording','interrupted','captured') and isinstance(p.get('bytes'),(int,float)) and p['bytes']>0)
+        parts=tracks.get('recording_parts',[])
+        record['recording_parts_count']=sum(1 for p in (parts if isinstance(parts,list) else []) if isinstance(p,dict) and p.get('state') in ('recording','interrupted','captured') and isinstance(p.get('bytes'),(int,float)) and p['bytes']>0)
         record['recording_archive']=bool(tracks.get('recording_archive'))
         record.update(audio_language=tracks.get('audio_language', 'auto'), subtitle_language=tracks.get('subtitle_language', 'all'))
         record['file_exists'] = not record['recording_archive'] and Path(record['path']).is_file()

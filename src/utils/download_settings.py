@@ -8,6 +8,17 @@ DEFAULTS = {'concurrency_mode': 'auto', 'concurrent_downloads': 3,
 def normalize_settings(data, strict=True):
     if not isinstance(data, dict):
         raise ValueError('Ayarlar bir nesne olmalı.')
+    if not strict:
+        # A single damaged field must not discard unrelated saved preferences.
+        recovered=dict(data)
+        groups=[('concurrency_mode',),('transfer_mode',),('notification_mode',),
+                ('concurrent_downloads',),('auto_compress',),('speed_limit_mbps','speed_limit')]
+        for group in groups:
+            selection={key:data[key] for key in group if key in data}
+            try:normalize_settings(selection)
+            except (ValueError,TypeError):
+                for key in group:recovered.pop(key,None)
+        return normalize_settings(recovered)
     result = dict(DEFAULTS, **data)
     if result['concurrency_mode'] not in ('auto', 'manual'):
         raise ValueError('İndirme yönetimi otomatik veya manuel olmalı.')

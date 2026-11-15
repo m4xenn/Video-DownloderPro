@@ -1279,18 +1279,29 @@
             hiddenInput.value = selected.value;
         }
 
+        let folderSelectionPending = false;
         async function selectFolder() {
+            if (folderSelectionPending) return false;
+            folderSelectionPending = true;
+            const button = document.getElementById('pathBtn');
+            button.setAttribute('aria-busy', 'true');
             try {
-                document.getElementById('pathBtn').classList.remove('error');
+                button.classList.remove('error');
                 const response = await fetch('/select-folder', { method: 'POST' });
                 const data = await response.json();
-                if (data.status === 'success') {
+                if (response.ok && data.status === 'success' && typeof data.path === 'string') {
                     document.getElementById('pathDisplay').innerText = data.path;
                     document.getElementById('pathDisplay').style.color = "var(--text-main)";
                     showToast(translations[currentLang].tSuccess);
                     return true;
                 }
-            } catch (error) { console.error(error); }
+                if (!response.ok || data.status !== 'cancel') showToast(serverMessage(data, 'folder_dialog_failed'), true);
+            } catch (error) {
+                showToast(appMessage('folder_dialog_failed'), true);
+            } finally {
+                folderSelectionPending = false;
+                button.removeAttribute('aria-busy');
+            }
             return false;
         }
 

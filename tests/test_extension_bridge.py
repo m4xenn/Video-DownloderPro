@@ -40,7 +40,12 @@ class BridgeTests(unittest.TestCase):
   with self.assertRaises(HTTPError) as e:self.request({},token='wrong')
   self.assertEqual(e.exception.code,403)
  def test_web_origin(self):
-  with self.assertRaises(HTTPError):self.request({},origin='https://example.com')
+  # Reject-before-body can surface as a reset on Windows when unread bytes
+  # remain. Both outcomes must be fail-closed, with no exchange side effects.
+  with self.assertRaises((HTTPError,ConnectionError)) as error:self.request({},origin='https://example.com')
+  if isinstance(error.exception,HTTPError):self.assertEqual(error.exception.code,403)
+  self.assertEqual(self.b.seen,0);self.assertFalse(self.b.jobs)
+  self.assertIn('language',self.request({}))
  def test_disconnected_noop(self):self.assertIsNone(self.b.resolve('https://example.com'))
  def job(self):
   self.request({});result=[]

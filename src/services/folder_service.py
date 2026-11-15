@@ -7,33 +7,48 @@
 
 import platform
 import subprocess
+import threading
+
+_dialog_lock = threading.Lock()
+
+
+class FolderDialogError(RuntimeError):
+    def __init__(self, key='folder_dialog_failed'):
+        self.key = key
+        super().__init__(key)
 
 def open_folder_dialog():
-    """
-    Kullanıcının klasör seçebilmesi için OS native diyalog penceresi açar.
-    Windows için Tkinter, macOS için AppleScript (osascript) kullanır.
-    """
-    system_name = platform.system()
-    if system_name == "Darwin": # macOS
+    """Use the desktop's owned native picker; None means user cancellation."""
+    if not _dialog_lock.acquire(blocking=False):
+        raise FolderDialogError('folder_dialog_busy')
+    try:
+        import webview
+        if webview.windows:
+            try:
+                selected = webview.windows[0].create_file_dialog(webview.FileDialog.FOLDER)
+                if not selected:
+                    return None
+                if not isinstance(selected, (list, tuple)) or len(selected) != 1 or not isinstance(selected[0], str) or not selected[0]:
+                    raise FolderDialogError()
+                return selected[0]
+            except FolderDialogError:
+                raise
+            except Exception as error:
+                raise FolderDialogError() from error
+        if platform.system() != 'Darwin':
+            raise FolderDialogError('folder_desktop_required')
+        # Keep the standalone macOS fallback; selected paths are never code.
         try:
             script = 'POSIX path of (choose folder with prompt "Lütfen İndirme Konumunu Seçin")'
             proc = subprocess.run(['osascript', '-e', script], capture_output=True, text=True)
             if proc.returncode == 0:
-                return proc.stdout.strip()
-        except Exception as e:
-            print(f"Mac Dialog Hatası: {e}")
-            return None
-    else: # Windows
-        try:
-            import tkinter as tk
-            from tkinter import filedialog
-            root = tk.Tk()
-            root.withdraw()
-            root.wm_attributes('-topmost', 1)
-            folder_selected = filedialog.askdirectory()
-            root.destroy()
-            return folder_selected
-        except Exception as e:
-            print(f"Windows Dialog Hatası: {e}")
-            return None
-    return None
+                return proc.stdout.strip() or None
+            if '-128' in (proc.stderr or ''):
+                return None
+            raise FolderDialogError()
+        except FolderDialogError:
+            raise
+        except Exception as error:
+            raise FolderDialogError() from error
+    finally:
+        _dialog_lock.release()
